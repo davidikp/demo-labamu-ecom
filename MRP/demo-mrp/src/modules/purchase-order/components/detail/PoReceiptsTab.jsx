@@ -414,7 +414,7 @@ const PoReceiptsTab = ({
                         {line.assignmentId && line.assignmentId !== "-" && (
                           <div style={{ marginTop: "4px", width: "100%", lineHeight: "1.4" }}>
                             <span style={{ fontSize: "14px", color: "var(--neutral-on-surface-secondary)", whiteSpace: "normal", wordBreak: "break-word" }}>
-                              Assignment: <span style={{ color: "var(--feature-brand-primary)", textDecoration: "underline", cursor: "pointer" }}>{line.assignmentId}</span>
+                              Assignment: <span>{line.assignmentId}</span>
                             </span>
                             {line.outsourceSteps && line.outsourceSteps.length > 0 && (
                               <span style={{ display: "inline-flex", alignItems: "center", marginLeft: "4px", verticalAlign: "-2px" }}>

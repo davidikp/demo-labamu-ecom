@@ -64,9 +64,9 @@ export const InputField = ({
       ? <span style={{ color: "var(--neutral-on-surface-secondary)", fontSize: "var(--text-subtitle-1)", whiteSpace: "nowrap" }}>{suffix}</span>
       : undefined;
 
-    return (
+    const field = (
       <TextField
-        label={label}
+        label={headerRight ? undefined : label}
         required={required}
         placeholder={placeholder}
         value={formatNumberWithCommas(value)}
@@ -80,12 +80,31 @@ export const InputField = ({
         maxLength={maxLength}
         errorText={label ? error : undefined}
         helperText={label ? helperText : undefined}
-        state={!error && errorState ? "error" : undefined}
+        state={disabled ? "disabled" : !error && errorState ? "error" : undefined}
         leftIcon={leftIcon}
         rightIcon={rightIcon}
         inputMode="numeric"
         {...inputRest}
       />
+    );
+
+    if (!headerRight) return field;
+
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: "4px", width: "100%" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", height: "20px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "2px" }}>
+            {required && (
+              <span style={{ fontSize: "14px", fontWeight: "bold", lineHeight: "18px", color: "var(--status-red-primary)" }}>*</span>
+            )}
+            {label && (
+              <span style={{ fontSize: "12px", lineHeight: "18px", color: "var(--neutral-on-surface-primary)" }}>{label}</span>
+            )}
+          </div>
+          {headerRight}
+        </div>
+        {field}
+      </div>
     );
   }
 
@@ -100,9 +119,9 @@ export const InputField = ({
     ? <span style={{ color: "var(--neutral-on-surface-secondary)", fontSize: "var(--text-subtitle-1)", whiteSpace: "nowrap" }}>{suffix}</span>
     : undefined;
 
-  return (
+  const field = (
     <TextField
-      label={label}
+      label={headerRight ? undefined : label}
       required={required}
       placeholder={placeholder}
       value={value ?? ""}
@@ -113,10 +132,29 @@ export const InputField = ({
       multiline={multiline}
       errorText={label ? error : undefined}
       helperText={label ? helperText : undefined}
-      state={!error && errorState ? "error" : undefined}
+      state={disabled ? "disabled" : !error && errorState ? "error" : undefined}
       leftIcon={leftIcon}
       rightIcon={rightIcon}
       {...inputRest}
     />
+  );
+
+  if (!headerRight) return field;
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "4px", width: "100%" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", height: "20px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "2px" }}>
+          {required && (
+            <span style={{ fontSize: "14px", fontWeight: "bold", lineHeight: "18px", color: "var(--status-red-primary)" }}>*</span>
+          )}
+          {label && (
+            <span style={{ fontSize: "12px", lineHeight: "18px", color: "var(--neutral-on-surface-primary)" }}>{label}</span>
+          )}
+        </div>
+        {headerRight}
+      </div>
+      {field}
+    </div>
   );
 };

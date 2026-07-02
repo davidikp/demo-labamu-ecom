@@ -36,7 +36,7 @@ export const Tooltip: React.FC<{
             top: coords.top,
             left: coords.left,
             transform: placement === "top" ? "translate(-50%, -100%)" : "translate(-50%, 0)",
-            zIndex: 999,
+            zIndex: 30000,
           }}
           className={cn(
             "px-3 py-2 rounded-lb-sm",

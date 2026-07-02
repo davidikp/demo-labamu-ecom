@@ -544,10 +544,10 @@ const INDONESIAN_EXACT_TEXT = {
   "Invoice / AP List": "Daftar Faktur / Utang Usaha",
   "Mark the Final Invoice": "Tandai Faktur Terakhir",
   "Mark the latest invoice as final to confirm that no further invoices are expected for this PO. Once all related invoices are paid, the PO payment status can be completed.":
-    "Tandai tagihan terbaru sebagai tagihan terakhir untuk mengonfirmasi bahwa tidak akan ada tagihan lain untuk Purchase Order ini. Setelah semua tagihan terkait lunas, status pembayaran Purchase Order dapat berubah menjadi Dibayar.",
+    "Tandai faktur terbaru sebagai faktur terakhir untuk mengonfirmasi bahwa tidak akan ada faktur lain untuk Purchase Order ini. Setelah semua faktur terkait lunas, status pembayaran Purchase Order dapat berubah menjadi Dibayar.",
   "Mark as the final invoice": "Tandai sebagai Faktur Terakhir",
   "Mark this invoice as the final invoice for this PO. This confirms that no further invoices are expected once all related invoices are paid.":
-    "Tandai tagihan ini sebagai tagihan terakhir untuk Purchase Order ini. Ini menandakan bahwa tidak akan ada lagi tagihan setelah semua tagihan terkait dibayar.",
+    "Tandai faktur ini sebagai faktur terakhir untuk Purchase Order ini. Ini menandakan bahwa tidak akan ada lagi faktur setelah semua faktur terkait dibayar.",
   "Final Invoice": "Faktur Terakhir",
   "Marked Invoice as the Final Invoice": "Menandai Faktur sebagai Faktur Terakhir",
   "Unmarked Invoice as the Final Invoice":

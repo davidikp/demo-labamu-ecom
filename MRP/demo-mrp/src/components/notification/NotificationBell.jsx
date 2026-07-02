@@ -2,8 +2,9 @@ import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { IconButton } from "../atoms/IconButton.jsx";
 import { Button } from "../common/Button.jsx";
-import { Bell, Trash2, ChevronRight } from "../icons/Icons.jsx";
+import { Bell, ChevronRight, Trash2 } from "../icons/Icons.jsx";
 import { ChipTabs } from "../../ce-ui";
+import { Tooltip } from "../atoms/Tooltip.jsx";
 import { useNotifications } from "../../context/NotificationContext.jsx";
 
 export const timeAgo = (iso, language = "en") => {
@@ -80,28 +81,15 @@ export const NotificationBell = () => {
     id: { title: "Notifikasi", markAll: "Tandai semua dibaca", empty: "Anda sudah selesai.", emptyTitle: "Tidak ada notifikasi" },
   }[language === "id" ? "id" : "en"];
 
-  // Group notifications by module (newest-first preserved) to drive the filter
-  // chips, then show a flat list filtered to the active chip.
-  const groups = [];
-  const groupIndex = new Map();
-  notifications.forEach((item) => {
-    let g = groupIndex.get(item.module);
-    if (!g) {
-      g = { module: item.module, label: item.moduleLabel, color: item.color, items: [] };
-      groupIndex.set(item.module, g);
-      groups.push(g);
-    }
-    g.items.push(item);
-  });
-
   const allLabel = language === "id" ? "Semua" : "All";
+  const unreadLabel = language === "id" ? "Belum Dibaca" : "Unread";
   const tabs = [
     { id: "all", label: allLabel, count: notifications.length },
-    ...groups.map((g) => ({ id: g.module, label: t(g.label), count: g.items.length })),
+    { id: "unread", label: unreadLabel, count: unreadCount },
   ];
-  const effectiveTab = activeTab !== "all" && groupIndex.has(activeTab) ? activeTab : "all";
+  const effectiveTab = activeTab === "unread" ? "unread" : "all";
   const visibleNotifications =
-    effectiveTab === "all" ? notifications : groupIndex.get(effectiveTab).items;
+    effectiveTab === "unread" ? notifications.filter((item) => item.unread) : notifications;
 
   // Bucket the (chip-filtered) list by day: Today / Yesterday / This Week / Earlier.
   const dayLabels = {
@@ -137,8 +125,16 @@ export const NotificationBell = () => {
   const renderItem = (item) => (
     <div
       key={item.id}
-      onMouseEnter={(e) => (e.currentTarget.style.background = "var(--neutral-surface-grey-lighter)")}
-      onMouseLeave={(e) => (e.currentTarget.style.background = item.unread ? "var(--feature-brand-container-lighter)" : "transparent")}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.background = "var(--neutral-surface-grey-lighter)";
+        const del = e.currentTarget.querySelector(".notif-delete-btn");
+        if (del) del.style.opacity = "1";
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.background = item.unread ? "var(--feature-brand-container-lighter)" : "transparent";
+        const del = e.currentTarget.querySelector(".notif-delete-btn");
+        if (del) del.style.opacity = "0";
+      }}
       style={{
         display: "flex",
         gap: "10px",
@@ -155,30 +151,14 @@ export const NotificationBell = () => {
         <span style={{ width: "8px", flexShrink: 0 }} />
       )}
       <div style={{ minWidth: 0, flex: 1, display: "flex", flexDirection: "column", gap: "6px" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "8px", justifyContent: "space-between" }}>
-          <span
-            data-no-localize
-            style={{
-              fontSize: "10px",
-              fontWeight: 700,
-              letterSpacing: "0.02em",
-              textTransform: "uppercase",
-              color: item.color,
-              background: `${item.color}1A`,
-              padding: "2px 8px",
-              borderRadius: "6px",
-              whiteSpace: "nowrap",
-            }}
-          >
-            {t(item.moduleLabel)}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px" }}>
+          <span style={{ fontSize: "13px", fontWeight: item.unread ? 700 : 600, color: "var(--neutral-on-surface-primary)", lineHeight: 1.35 }}>
+            {t(item.title)}
           </span>
           <span data-no-localize style={{ fontSize: "11px", color: "var(--neutral-on-surface-tertiary)", whiteSpace: "nowrap", flexShrink: 0 }}>
             {timeAgo(item.createdAt, language)}
           </span>
         </div>
-        <span style={{ fontSize: "13px", fontWeight: item.unread ? 700 : 600, color: "var(--neutral-on-surface-primary)", lineHeight: 1.35 }}>
-          {t(item.title)}
-        </span>
         <span style={{ fontSize: "12px", color: "var(--neutral-on-surface-secondary)", lineHeight: 1.4 }}>
           {t(item.body)}
         </span>
@@ -189,14 +169,28 @@ export const NotificationBell = () => {
           >
             {t(item.cta)} <ChevronRight size={13} />
           </span>
-          <button
-            type="button"
-            title="Delete"
-            onClick={(e) => { e.stopPropagation(); deleteNotification(item.id); }}
-            style={{ border: "none", background: "transparent", cursor: "pointer", color: "var(--neutral-on-surface-tertiary)", padding: "2px", display: "inline-flex" }}
-          >
-            <Trash2 size={15} />
-          </button>
+          <Tooltip content="Delete">
+            <button
+              type="button"
+              className="notif-delete-btn"
+              onClick={(e) => { e.stopPropagation(); deleteNotification(item.id); }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = "var(--status-red-container-lighter, rgba(220, 38, 38, 0.1))")}
+              onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+              style={{
+                border: "none",
+                background: "transparent",
+                cursor: "pointer",
+                color: "var(--status-red-primary)",
+                padding: "4px",
+                borderRadius: "6px",
+                display: "inline-flex",
+                opacity: 0,
+                transition: "opacity 0.15s ease, background 0.15s ease",
+              }}
+            >
+              <Trash2 size={15} />
+            </button>
+          </Tooltip>
         </div>
       </div>
     </div>

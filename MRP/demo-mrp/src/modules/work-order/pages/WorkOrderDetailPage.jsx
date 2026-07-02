@@ -140,6 +140,7 @@ const SearchableVendorSelect = ({
   disabled = false,
   error = "",
   onChange,
+  clearable = false,
 }) => {
   const triggerRef = useRef(null);
   const menuRef = useRef(null);
@@ -272,7 +273,7 @@ const SearchableVendorSelect = ({
           autoComplete="off"
           style={{
             ...fieldStyle(disabled, !!committedValue || !!query, false),
-            borderColor: error 
+            borderColor: error
               ? "var(--status-red-primary)"
               : isFocused || isOpen
                 ? "var(--feature-brand-primary)"
@@ -281,13 +282,33 @@ const SearchableVendorSelect = ({
               isFocused || isOpen
                 ? "0 0 0 3px rgba(0, 104, 255, 0.08)"
                 : "none",
-            padding: "0 48px 0 16px",
+            padding: clearable && committedValue && !disabled ? "0 76px 0 16px" : "0 48px 0 16px",
             background: disabled
               ? "var(--neutral-surface-grey-lighter)"
               : "var(--neutral-surface-primary)",
             cursor: disabled ? "not-allowed" : "text",
           }}
         />
+        {clearable && committedValue && !disabled ? (
+          <CloseIcon
+            size={16}
+            color="var(--neutral-on-surface-secondary)"
+            style={{
+              position: "absolute",
+              right: "44px",
+              top: "50%",
+              transform: "translateY(-50%)",
+              cursor: "pointer",
+            }}
+            onClick={(e) => {
+              e.stopPropagation();
+              onChange?.("");
+              setQuery("");
+              setIsOpen(false);
+              setIsFocused(false);
+            }}
+          />
+        ) : null}
         <ChevronDownIcon
           size={20}
           color="var(--neutral-on-surface-secondary)"
@@ -1308,6 +1329,36 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
     previousEffectiveComp = effectiveTotalComp;
   });
 
+  const computeReadyToSend = (vendor) => {
+    if (!vendor || vendor.name === "Internal" || !vendor.assignedSteps || vendor.assignedSteps.length === 0) {
+      return 0;
+    }
+    const livePo = vendor.poNumber ? MOCK_PO_TABLE_DATA.find((po) => po.poNumber === vendor.poNumber) : null;
+    const isPoApproved = (livePo ? (livePo.statusKey === "issued" || livePo.statusKey === "completed") : false) || vendor.isPoApproved;
+    if (!isPoApproved) return 0;
+
+    const minStep = Math.min(...vendor.assignedSteps);
+    const sentAmt = parseInt(vendor.sentOutput, 10) || 0;
+    const assignedAmt = parseInt(vendor.output, 10) || 0;
+
+    const rowIndex = stagesWithTotals.findIndex((r) => r.step === minStep);
+    if (rowIndex === -1) return 0;
+
+    const prevCompleted = minStep === 1 ? TOTAL_QTY : (stagesWithTotals[rowIndex - 1]?.effectiveTotalComp || 0);
+    const currStage = stagesWithTotals[rowIndex];
+    const internalProg = currStage?.prog || 0;
+    const internalCompleted = currStage?.comp || 0;
+
+    const vendorsConsumed = vendors
+      .filter(v => v.name !== "Internal" && v.assignedSteps?.includes(minStep))
+      .reduce((sum, v) => sum + Math.max(parseInt(v.sentOutput, 10) || 0, parseInt(v.receivedOutput, 10) || 0), 0);
+
+    const totalConsumedByOthers = internalProg + internalCompleted + vendorsConsumed;
+    const availableToProcess = Math.max(0, prevCompleted - totalConsumedByOthers);
+
+    return Math.max(0, Math.min(availableToProcess, assignedAmt - sentAmt));
+  };
+
   let firstOutsourceStart = 0;
   let isFirstOutsourceCompleted = false;
   if (outsourceSteps.length > 0) {
@@ -1461,26 +1512,6 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
       }
       if (stepConflict) {
         setAssignedStepsError("Selected steps are already assigned to this vendor in another editable assignment.");
-        return;
-      }
-    }
-
-    if (singleVendorForm.name !== "Internal" && singleVendorForm.assignedSteps && singleVendorForm.assignedSteps.length > 1) {
-      const sortedSelected = [...singleVendorForm.assignedSteps].sort((a, b) => a - b);
-      const sortedAvailable = [...outsourceSteps].sort((a, b) => a - b);
-      
-      let isSequential = true;
-      let startIndex = sortedAvailable.indexOf(sortedSelected[0]);
-      
-      for (let i = 0; i < sortedSelected.length; i++) {
-        if (sortedAvailable[startIndex + i] !== sortedSelected[i]) {
-          isSequential = false;
-          break;
-        }
-      }
-      
-      if (!isSequential) {
-        setAssignedStepsError("Selected steps must be sequential based on the allowed outsource steps.");
         return;
       }
     }
@@ -2751,6 +2782,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
           logAssignmentId = v.assignmentId || "";
           
           const newReceipt = {
+            receiptId: `RCPT-${String((v.receipts || []).length + 1).padStart(4, "0")}`,
             amount: addedAmount,
             date: proofDate,
             attachment:
@@ -4889,7 +4921,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                       const internalCompleted = currStage?.comp || 0;
                       
                       const vendorsConsumed = vendors
-                        .filter(v => v.name !== "Internal" && v.id !== vendor.id && v.assignedSteps?.includes(minStep))
+                        .filter(v => v.name !== "Internal" && v.assignedSteps?.includes(minStep))
                         .reduce((sum, v) => sum + Math.max(parseInt(v.sentOutput, 10) || 0, parseInt(v.receivedOutput, 10) || 0), 0);
                         
                       const totalConsumedByOthers = internalProg + internalCompleted + vendorsConsumed;
@@ -6727,9 +6759,10 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                                 onClick={() => {
                                   if (isDisabled) return;
                                   setSingleVendorForm((prev) => {
-                                    const newSteps = !isChecked
-                                      ? [...(prev.assignedSteps || []), step]
-                                      : (prev.assignedSteps || []).filter((s) => s !== step);
+                                    const prevSteps = prev.assignedSteps || [];
+                                    const newSteps = prevSteps.includes(step)
+                                      ? prevSteps.filter((s) => s !== step)
+                                      : [...prevSteps, step];
                                     return { ...prev, assignedSteps: newSteps };
                                   });
                                   setAssignedStepsError("");
@@ -6738,16 +6771,6 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                                 <Checkbox
                                   checked={isChecked}
                                   disabled={isDisabled}
-                                  onChange={() => {
-                                    if (isDisabled) return;
-                                    setSingleVendorForm((prev) => {
-                                      const newSteps = !isChecked
-                                        ? [...(prev.assignedSteps || []), step]
-                                        : (prev.assignedSteps || []).filter((s) => s !== step);
-                                      return { ...prev, assignedSteps: newSteps };
-                                    });
-                                    setAssignedStepsError("");
-                                  }}
                                 />
                                 <span style={{ fontSize: "var(--text-body)", color: "var(--neutral-on-surface-primary)" }}>
                                   {stepLabel}
@@ -6902,6 +6925,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                         emptyMessage="No Editable Purchase Order Found"
                         disabled={singleVendorForm.name === "Internal"}
                         options={poOptions}
+                        clearable
                         onChange={(nextPoNumber) => {
                           const selectedPo = MOCK_PO_TABLE_DATA.find(
                             (po) => po.poNumber === nextPoNumber
@@ -6928,31 +6952,6 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                           });
                         }}
                       />
-                      {singleVendorForm.poNumber &&
-                        singleVendorForm.status === "Not Started" && (
-                          <Button
-                            variant="tertiary"
-                            style={{
-                              padding: "4px 8px",
-                              fontSize: "var(--text-desc)",
-                              marginTop: "24px",
-                              color: "var(--status-red-primary)",
-                            }}
-                            onClick={() =>
-                              setSingleVendorForm({
-                                ...singleVendorForm,
-                                poNumber: "",
-                                isPoApproved: false,
-                                poStatus: null,
-                                poBadge: null,
-                                poStatusKey: null,
-                                poDetailData: null,
-                              })
-                            }
-                          >
-                            Remove Selection
-                          </Button>
-                        )}
                     </div>
                     <div
                       style={{
@@ -7871,7 +7870,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                 suffix="pcs"
                 headerRight={
                   <StatusBadge variant="blue-light">
-                    Available: {selectedSendVendor ? Math.max(0, (selectedSendVendor.output || 0) - (selectedSendVendor.sentOutput || 0)) : 0} pcs
+                    Available: {selectedSendVendor ? computeReadyToSend(selectedSendVendor) : 0} pcs
                   </StatusBadge>
                 }
               />
@@ -8054,7 +8053,9 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                         {r.date}{r.time ? ` · ${r.time}` : ""}
                       </div>
                       <div style={poReferenceTableCellStyle()}>
-                        {assignmentLogTab === "send" ? r.releaseId || "-" : r.receiptId || r.receiptNumber || "-"}
+                        {assignmentLogTab === "send"
+                          ? r.releaseId || "-"
+                          : r.receiptId || r.receiptNumber || `RCPT-${String(i + 1).padStart(4, "0")}`}
                       </div>
                       <div
                         style={poReferenceTableCellStyle({
@@ -8092,7 +8093,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                       </div>
                       {assignmentLogTab === "send" && (
                         <div style={poReferenceTableCellStyle({ padding: "12px 0" })}>
-                          <Tooltip content="Export PDF" position="top">
+                          <Tooltip content="Export to PDF" position="top">
                             <IconButton
                               icon={DownloadIcon}
                               size="small"
@@ -8106,10 +8107,12 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                                     time: r.time || "",
                                     sendBy: r.sendBy || r.sentBy || "Natasha Smith",
                                     assignmentId: receiptHistoryVendor.assignmentId || "-",
-                                    woRef: receiptHistoryVendor.woNumber || "-",
+                                    woRef: initialData?.wo || "-",
                                     outsourceSteps: receiptHistoryVendor.assignedSteps || [],
                                     amount: r.amount,
                                     note: r.note || r.notes || "",
+                                    item: `Outsourced - ${initialData?.product || "Cabinet Premium"}`,
+                                    itemCode: initialData?.sku || "-",
                                   };
                                   await downloadVendorReleasePdf({ log, poNumber: receiptHistoryVendor.poNumber || "-", vendorInfo, company: MOCK_COMPANY, woRoutingStages: [] });
                                 } catch (e) {

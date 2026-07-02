@@ -3913,7 +3913,7 @@ export const PurchaseOrderCreatePage = ({
                       required
                       value={productModalForm.manualName}
                       maxLength={100}
-                      headerRight={`${String(productModalForm.manualName || "").length}/100`}
+                      showCounter
                       onChange={(e) => {
                         setProductModalForm({
                           ...productModalForm,
@@ -4040,7 +4040,7 @@ export const PurchaseOrderCreatePage = ({
                       multiline
                       value={productModalForm.manualDesc}
                       maxLength={1000}
-                      headerRight={`${String(productModalForm.manualDesc || "").length}/1000`}
+                      showCounter
                       onChange={(e) =>
                         setProductModalForm({
                           ...productModalForm,
@@ -4174,6 +4174,7 @@ export const PurchaseOrderCreatePage = ({
                       <div style={{ gridColumn: "1 / -1" }}>
                         <InputField
                           label="Name"
+                          required
                           value={productModalForm.manualName}
                           maxLength={100}
                           showCounter
@@ -4309,21 +4310,21 @@ export const PurchaseOrderCreatePage = ({
                     style={{
                       display: "flex",
                       flexDirection: "column",
-                      gap: "8px",
+                      gap: "4px",
                     }}
                   >
                     <div
                       style={{
                         display: "flex",
                         alignItems: "center",
-                        gap: "4px",
-                        fontSize: "var(--text-body)",
+                        gap: "2px",
+                        height: "20px",
                       }}
                     >
-                      <span style={{ color: "var(--status-red-primary)" }}>
+                      <span style={{ fontSize: "14px", fontWeight: "bold", lineHeight: "18px", color: "var(--status-red-primary)" }}>
                         *
                       </span>
-                      <span>Work Order</span>
+                      <span style={{ fontSize: "12px", lineHeight: "18px", color: "var(--neutral-on-surface-primary)" }}>Work Order</span>
                     </div>
                     {(() => {
                       const selectedWoIds = lines
@@ -4498,6 +4499,7 @@ export const PurchaseOrderCreatePage = ({
                       <div style={{ gridColumn: "1 / -1" }}>
                         <InputField
                           label="Name"
+                          required
                           value={productModalForm.manualName}
                           maxLength={100}
                           showCounter
@@ -4545,21 +4547,21 @@ export const PurchaseOrderCreatePage = ({
                         style={{
                           display: "flex",
                           flexDirection: "column",
-                          gap: "8px",
+                          gap: "4px",
                         }}
                       >
                         <div
                           style={{
                             display: "flex",
                             alignItems: "center",
-                            gap: "4px",
-                            fontSize: "var(--text-body)",
+                            gap: "2px",
+                            height: "20px",
                           }}
                         >
-                          <span style={{ color: "var(--status-red-primary)" }}>
+                          <span style={{ fontSize: "14px", fontWeight: "bold", lineHeight: "18px", color: "var(--status-red-primary)" }}>
                             *
                           </span>
-                          <span>Unit Price</span>
+                          <span style={{ fontSize: "12px", lineHeight: "18px", color: "var(--neutral-on-surface-primary)" }}>Unit Price</span>
                         </div>
                         <InputGroup
                           type="number"

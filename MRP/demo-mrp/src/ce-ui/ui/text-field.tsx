@@ -220,9 +220,9 @@ const handleInlineEnterEdit = () => {
     const fieldNode = (
       <div className="flex flex-col gap-1 w-full">
         {!fieldDesktop && label && (
-          <div className="flex items-center justify-between gap-0.5">
+          <div className="flex items-center justify-between gap-0.5 h-5">
             <div className="flex items-center gap-0.5">
-              {required && <span className="font-lb text-[14px] font-lb-bold text-lb-red">*</span>}
+              {required && <span className="font-lb text-[14px] leading-[18px] font-lb-bold text-lb-red">*</span>}
               <span className="font-lb text-[12px] text-lb-on-surface leading-[18px] tracking-[0.0825px]">
                 {label}
               </span>
@@ -267,7 +267,7 @@ const handleInlineEnterEdit = () => {
               className={cn(
                 textFieldVariants({ variant, size, state: inputState }),
                 "h-auto px-4 py-3 resize-none",
-                showCount && !!maxLength && "pb-6",
+                showCount && !!maxLength && (fieldDesktop || !label) && "pb-6",
                 className
               )}
               rows={rows}
@@ -376,7 +376,7 @@ const handleInlineEnterEdit = () => {
               {charCount}/{maxLength}
             </span>
           )}
-          {multiline && !richText && showCount && maxLength && (
+          {multiline && !richText && showCount && maxLength && (fieldDesktop || !label) && (
             <span className={cn("absolute bottom-2 right-3 font-lb text-[12px]", charCount > maxLength ? "text-lb-red" : "text-lb-on-surface-3")}>
               {charCount}/{maxLength}
             </span>
