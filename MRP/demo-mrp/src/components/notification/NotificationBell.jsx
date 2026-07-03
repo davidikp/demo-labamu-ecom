@@ -77,8 +77,8 @@ export const NotificationBell = () => {
   };
 
   const L = {
-    en: { title: "Notification", markAll: "Mark all as read", empty: "You're all caught up.", emptyTitle: "No notifications" },
-    id: { title: "Notifikasi", markAll: "Tandai semua dibaca", empty: "Anda sudah selesai.", emptyTitle: "Tidak ada notifikasi" },
+    en: { title: "Notification", markAll: "Mark all as read", empty: "You're all caught up.", emptyTitle: "No notifications", emptyUnreadTitle: "No unread notifications", emptyUnread: "You've read everything for now." },
+    id: { title: "Notifikasi", markAll: "Tandai semua dibaca", empty: "Anda sudah selesai.", emptyTitle: "Tidak ada notifikasi", emptyUnreadTitle: "Tidak ada notifikasi belum dibaca", emptyUnread: "Anda sudah membaca semuanya." },
   }[language === "id" ? "id" : "en"];
 
   const allLabel = language === "id" ? "Semua" : "All";
@@ -300,12 +300,14 @@ export const NotificationBell = () => {
           </div>
 
           <div style={{ flex: "1 1 auto", overflowY: "auto", minHeight: 0 }}>
-            {notifications.length === 0 ? (
+            {visibleNotifications.length === 0 ? (
               <div style={{ padding: "48px 24px", textAlign: "center", display: "flex", flexDirection: "column", gap: "6px" }}>
                 <span style={{ fontSize: "15px", fontWeight: 700, color: "var(--neutral-on-surface-primary)" }}>
-                  {L.emptyTitle}
+                  {effectiveTab === "unread" ? L.emptyUnreadTitle : L.emptyTitle}
                 </span>
-                <span style={{ fontSize: "13px", color: "var(--neutral-on-surface-secondary)" }}>{L.empty}</span>
+                <span style={{ fontSize: "13px", color: "var(--neutral-on-surface-secondary)" }}>
+                  {effectiveTab === "unread" ? L.emptyUnread : L.empty}
+                </span>
               </div>
             ) : (
               orderedBuckets.map((bucket) => (

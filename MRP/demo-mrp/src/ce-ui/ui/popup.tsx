@@ -19,6 +19,7 @@ export const Popup: React.FC<{
   children?: React.ReactNode
   className?: string
   testId?: string
+  style?: React.CSSProperties
 }> = ({
   open,
   onClose,
@@ -31,6 +32,7 @@ export const Popup: React.FC<{
   children,
   className,
   testId,
+  style,
 }) => {
   React.useEffect(() => {
     document.body.style.overflow = open ? "hidden" : ""
@@ -51,6 +53,7 @@ export const Popup: React.FC<{
   return (
     <div
       className={cn("fixed inset-0 z-[200] flex justify-center", platform === "mobile" ? "items-end" : "items-center")}
+      style={style}
       data-testid={toTestId(testId, "popup")}
     >
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />

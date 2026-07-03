@@ -96,6 +96,7 @@ export const Dropdown: React.FC<{
   const searchInputRef = React.useRef<HTMLInputElement>(null)
   const listRef = React.useRef<HTMLDivElement>(null)
   const sentinelRef = React.useRef<HTMLDivElement>(null)
+  const [autoPosition, setAutoPosition] = React.useState<"top" | "bottom" | null>(null)
 
   React.useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -104,6 +105,25 @@ export const Dropdown: React.FC<{
     document.addEventListener("mousedown", handler)
     return () => document.removeEventListener("mousedown", handler)
   }, [])
+
+  // Flip the menu above the trigger when there isn't enough room below —
+  // the caller's `menuPosition` prop still wins when explicitly set.
+  React.useLayoutEffect(() => {
+    if (!open) {
+      setAutoPosition(null)
+      return
+    }
+    const trigger = ref.current
+    if (!trigger || typeof window === "undefined") return
+    const estimatedMenuHeight = Math.min(300, 16 + Math.max(filtered.length, 1) * 40) + (isSearchable ? 48 : 0)
+    const rect = trigger.getBoundingClientRect()
+    const spaceBelow = window.innerHeight - rect.bottom
+    const spaceAbove = rect.top
+    setAutoPosition(spaceBelow < estimatedMenuHeight + 8 && spaceAbove > spaceBelow ? "top" : "bottom")
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open])
+
+  const resolvedMenuPosition = menuPosition !== "bottom" ? menuPosition : autoPosition ?? menuPosition
 
   React.useEffect(() => {
     if (!open || !onLoadMore || !hasMore || loading) return
@@ -272,7 +292,9 @@ export const Dropdown: React.FC<{
                 })
               )
             ) : (
-              displayValue || resolvedPlaceholder
+              <span className="block w-full min-w-0 overflow-hidden whitespace-nowrap text-ellipsis">
+                {displayValue || resolvedPlaceholder}
+              </span>
             )}
 
             <span className="absolute top-1/2 -translate-y-1/2 right-3 flex items-center gap-1 pointer-events-none">
@@ -304,7 +326,7 @@ export const Dropdown: React.FC<{
             <div
               className={cn(
                 "absolute left-0 right-0 z-[1000] bg-lb-surface border border-lb-line-2 rounded-lb-sm shadow-lb-filter flex flex-col",
-                menuPosition === "top" ? "bottom-[calc(100%+4px)]" : "top-[calc(100%+4px)]"
+                resolvedMenuPosition === "top" ? "bottom-[calc(100%+4px)]" : "top-[calc(100%+4px)]"
               )}
             >
               {isSearchable && (

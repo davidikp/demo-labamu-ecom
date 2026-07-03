@@ -67,13 +67,13 @@ const IssueColumn = ({ label, groups, renderBatch }) => {
         minWidth: 0,
         display: "flex",
         gap: "10px",
-        border: "1px solid var(--status-orange-primary)",
-        background: "var(--status-orange-container)",
+        border: "1px solid var(--lb-orange-text)",
+        background: "var(--lb-orange-bg)",
         borderRadius: "var(--radius-card)",
         padding: "16px 20px",
       }}
     >
-      <Info size={18} color="var(--status-orange-primary)" style={{ flexShrink: 0, marginTop: "2px" }} />
+      <Info size={18} color="var(--lb-orange-text)" style={{ flexShrink: 0, marginTop: "2px" }} />
       <div
         style={{
           minWidth: 0,
@@ -81,7 +81,7 @@ const IssueColumn = ({ label, groups, renderBatch }) => {
           display: "flex",
           flexDirection: "column",
           gap: "6px",
-          color: "var(--status-orange-primary)",
+          color: "var(--lb-orange-text)",
           fontSize: "var(--text-title-3)",
           lineHeight: 1.5,
         }}
@@ -132,7 +132,7 @@ const IssueColumn = ({ label, groups, renderBatch }) => {
               opacity: showFade ? 1 : 0,
               transition: "opacity 0.15s ease",
               background:
-                "linear-gradient(to bottom, rgba(255, 244, 230, 0), var(--status-orange-container))",
+                "linear-gradient(to bottom, rgba(255, 237, 213, 0), var(--lb-orange-bg))",
             }}
           />
         </div>
@@ -375,9 +375,9 @@ export const MaterialPreparationDrawer = ({
               <tr>
                 <th style={thStyle({ width: "44px" })}>No</th>
                 <th style={thStyle({ width: "84px" })}>Type</th>
-                <th style={thStyle({ width: "280px" })}>Material</th>
+                <th style={thStyle({ width: "240px" })}>Material</th>
                 <th style={thStyle({ width: "120px" })}>Requested Qty</th>
-                <th style={thStyle({ width: "356px" })}>Fulfillable Qty</th>
+                <th style={thStyle({ width: "396px" })}>Fulfillable Qty</th>
                 <th style={thStyle({ width: "96px" })}>Shortage Qty</th>
                 <th style={thStyle({ width: "120px" })}>Status</th>
               </tr>
