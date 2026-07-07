@@ -45,11 +45,11 @@ const singleField = (amount) => ({ mode: "single", amount, lines: [] });
 const breakdownField = (lines) => ({ mode: "breakdown", amount: 0, lines });
 
 export const DEFAULT_COGS = () => ({
-  labour: singleField(0),
+  labour: breakdownField([line("", 0)]),
   packing: singleField(0),
-  shipping: breakdownField([line("", 0)]),
+  shipping: singleField(0),
   overhead: singleField(0),
-  other: breakdownField([line("", 0)]),
+  other: singleField(0),
 });
 
 // Accepts either the current per-field cogs shape or the legacy Phase 1 flat

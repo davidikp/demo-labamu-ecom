@@ -24,12 +24,19 @@ import {
 } from "../utils/bomUtils.js";
 import { AbcClassificationBadge, DetailCard, detailTableHeaderRowStyle, detailTableRowStyle } from "../components/BomShared.jsx";
 import { CostFieldAccordion } from "../components/CostFieldAccordion.jsx";
+import { ChipTabBar } from "../../../components/molecules/ChipTabBar.jsx";
+
+const DETAIL_TABS = [
+  { id: "materials", label: "Materials" },
+  { id: "routing", label: "Routing" },
+  { id: "cogs", label: "Forecasted COGS" },
+];
 
 const COGS_FIELDS = [
   { key: "labour", title: "Labour Cost", icon: Users, description: "Cost of human labour to produce one unit" },
   { key: "packing", title: "Packing Cost", icon: FileText, description: "Cost of packaging this product for delivery" },
-  { key: "shipping", title: "Shipping Cost", icon: Upload, isNew: true, description: "Cost of moving goods from supplier to customer" },
-  { key: "overhead", title: "Overhead Cost", icon: Building2, isNew: true, description: "Indirect factory costs not tied to a task" },
+  { key: "shipping", title: "Shipping Cost", icon: Upload, description: "Cost of moving goods from supplier to customer" },
+  { key: "overhead", title: "Overhead Cost", icon: Building2, description: "Indirect factory costs not tied to a task" },
   { key: "other", title: "Other Cost", icon: CircleDollarSign, description: "Additional production cost not covered above" },
 ];
 
@@ -38,7 +45,8 @@ const ROUTING_GRID_COLUMNS = "60px minmax(200px, 2.5fr) minmax(120px, 1fr) 100px
 
 export const BomDetailPage = ({ onNavigate, initialData }) => {
   const bom = (initialData?.id && getBom(initialData.id)) || initialData;
-  const [showMaterialBreakdown, setShowMaterialBreakdown] = useState(false);
+  const [showMaterialBreakdown, setShowMaterialBreakdown] = useState(true);
+  const [activeTab, setActiveTab] = useState("materials");
 
   if (!bom) {
     return (
@@ -117,6 +125,9 @@ export const BomDetailPage = ({ onNavigate, initialData }) => {
         </div>
       </div>
 
+      <ChipTabBar tabs={DETAIL_TABS} activeTab={activeTab} onChange={setActiveTab} />
+
+      {activeTab === "materials" ? (
       <DetailCard title="Materials">
         <div style={{ overflowX: bom.materials?.length ? "auto" : "hidden", width: "100%" }}>
           <div style={{ minWidth: "100%", width: "100%", display: "flex", flexDirection: "column" }}>
@@ -162,7 +173,9 @@ export const BomDetailPage = ({ onNavigate, initialData }) => {
           </div>
         </div>
       </DetailCard>
+      ) : null}
 
+      {activeTab === "routing" ? (
       <DetailCard title="Routing">
         <div style={{ overflowX: bom.routing?.length ? "auto" : "hidden", width: "100%" }}>
           <div style={{ minWidth: "100%", width: "100%", display: "flex", flexDirection: "column" }}>
@@ -192,21 +205,13 @@ export const BomDetailPage = ({ onNavigate, initialData }) => {
           </div>
         </div>
       </DetailCard>
+      ) : null}
 
+      {activeTab === "cogs" ? (
       <DetailCard title="Forecasted Cost of Goods Sold">
         <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: "14px", alignItems: "center" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <div
-                style={{ cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
-                onClick={() => setShowMaterialBreakdown((v) => !v)}
-              >
-                {showMaterialBreakdown ? (
-                  <ChevronDownIcon size={16} color="var(--neutral-on-surface-tertiary)" />
-                ) : (
-                  <ChevronRightIcon size={16} color="var(--neutral-on-surface-tertiary)" />
-                )}
-              </div>
               <Box size={16} color="var(--neutral-on-surface-tertiary)" />
               <div style={{ display: "flex", flexDirection: "column" }}>
                 <span style={{ display: "flex", alignItems: "center", gap: "6px", color: "var(--neutral-on-surface-primary)", fontWeight: "bold" }}>
@@ -221,6 +226,18 @@ export const BomDetailPage = ({ onNavigate, initialData }) => {
             <span style={{ fontWeight: "bold", fontSize: "16px", color: "var(--neutral-on-surface-primary)" }}>
               {formatIDR(materialCost)}
             </span>
+          </div>
+
+          <div style={{ paddingLeft: "24px" }}>
+            <Button
+              variant="tertiary"
+              size="small"
+              rightIcon={showMaterialBreakdown ? ChevronDownIcon : ChevronRightIcon}
+              onClick={() => setShowMaterialBreakdown((v) => !v)}
+              style={{ alignSelf: "flex-start", padding: 0 }}
+            >
+              {showMaterialBreakdown ? "Hide Cost Breakdown" : "See Cost Breakdown"}
+            </Button>
           </div>
 
           {showMaterialBreakdown ? (
@@ -268,6 +285,7 @@ export const BomDetailPage = ({ onNavigate, initialData }) => {
           <span>{formatIDR(totalCogs)}</span>
         </div>
       </DetailCard>
+      ) : null}
     </div>
   );
 };

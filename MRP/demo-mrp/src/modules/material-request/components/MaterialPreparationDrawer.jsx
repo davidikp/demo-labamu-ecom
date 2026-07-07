@@ -491,13 +491,21 @@ export const MaterialPreparationDrawer = ({
                                       }}
                                       placeholder="Qty"
                                       suffix={it.unit}
-                                      error={
-                                        submitted && c.lineOverBatch?.[lineIdx]
-                                          ? `Exceeds batch qty (${lineMax})`
-                                          : undefined
-                                      }
-                                      errorState={submitted && c.exceeds}
+                                      errorState={!!c.lineOverBatch?.[lineIdx] || (submitted && c.exceeds)}
                                     />
+                                    {c.lineOverBatch?.[lineIdx] && (
+                                      <span
+                                        style={{
+                                          display: "block",
+                                          marginTop: "4px",
+                                          whiteSpace: "nowrap",
+                                          color: "var(--status-red-primary)",
+                                          fontSize: "var(--text-body)",
+                                        }}
+                                      >
+                                        Exceeds batch qty ({lineMax})
+                                      </span>
+                                    )}
                                   </div>
                                   <IconButton
                                     icon={DeleteIcon}

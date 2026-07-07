@@ -23,8 +23,8 @@ import { RoutingLineModal } from "../components/RoutingLineModal.jsx";
 const COGS_FIELDS = [
   { key: "labour", title: "Labour Cost", icon: Users, description: "Cost of human labour to produce one unit" },
   { key: "packing", title: "Packing Cost", icon: FileText, description: "Cost of packaging this product for delivery" },
-  { key: "shipping", title: "Shipping Cost", icon: Upload, isNew: true, description: "Cost of moving goods from supplier to customer" },
-  { key: "overhead", title: "Overhead Cost", icon: Building2, isNew: true, description: "Indirect factory costs not tied to a task" },
+  { key: "shipping", title: "Shipping Cost", icon: Upload, description: "Cost of moving goods from supplier to customer" },
+  { key: "overhead", title: "Overhead Cost", icon: Building2, description: "Indirect factory costs not tied to a task" },
   { key: "other", title: "Other Cost", icon: CircleDollarSign, description: "Additional production cost not covered above" },
 ];
 
@@ -161,6 +161,7 @@ export const BomCreatePage = ({ onNavigate, initialData, isSidebarCollapsed }) =
 
   const [materialModal, setMaterialModal] = useState(null); // { index } | { index: null } for add
   const [routingModal, setRoutingModal] = useState(null);
+  const [showErrors, setShowErrors] = useState(false);
 
   // Custom (non-native) drag for Routing rows: a floating card follows the
   // cursor while a grey placeholder box — sized to the real row — marks the
@@ -267,12 +268,19 @@ export const BomCreatePage = ({ onNavigate, initialData, isSidebarCollapsed }) =
     materialCost +
     COGS_FIELDS.reduce((sum, { key }) => sum + fieldTotal(cogs[key]), 0);
 
-  const canSave = name.trim().length > 0;
+  const nameError = showErrors && !name.trim() ? "Field cannot be empty" : null;
+  const materialsError = showErrors && materials.length === 0 ? "Please add at least one material" : null;
+  const routingError = showErrors && routing.length === 0 ? "Please add at least one routing step" : null;
+
+  const canSave = name.trim().length > 0 && materials.length > 0 && routing.length > 0;
 
   const handleCancel = () => onNavigate(isEdit ? "detail" : "list", existingBom);
 
   const handleSave = () => {
-    if (!canSave) return;
+    if (!canSave) {
+      setShowErrors(true);
+      return;
+    }
     const payload = {
       name: name.trim(),
       description,
@@ -317,13 +325,21 @@ export const BomCreatePage = ({ onNavigate, initialData, isSidebarCollapsed }) =
           <div style={{ padding: "18px 20px 20px 20px", display: "flex", flexDirection: "column", gap: "16px" }}>
             <div style={rowWrapStyle}>
               {fieldLabelCol("BOM Name", true)}
-              <InputField
-                placeholder="e.g. European Working Desk"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                maxLength={100}
-                showCounter
-              />
+              <div>
+                <InputField
+                  placeholder="e.g. European Working Desk"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  maxLength={100}
+                  showCounter
+                  errorState={!!nameError}
+                />
+                {nameError ? (
+                  <div style={{ color: "var(--status-red-primary)", fontSize: "var(--text-title-4)", marginTop: "4px" }}>
+                    {nameError}
+                  </div>
+                ) : null}
+              </div>
             </div>
             <div style={rowWrapStyle}>
               {fieldLabelCol("Status")}
@@ -359,6 +375,11 @@ export const BomCreatePage = ({ onNavigate, initialData, isSidebarCollapsed }) =
               Add Material
             </Button>
           )}
+          {materialsError ? (
+            <div style={{ padding: "4px 20px 0 20px", color: "var(--status-red-primary)", fontSize: "var(--text-title-4)" }}>
+              {materialsError}
+            </div>
+          ) : null}
           <div style={{ padding: "18px 20px 20px 20px", display: "flex", flexDirection: "column", gap: "12px" }}>
             {materials.length ? (
               <div style={{ overflowX: "auto", width: "100%" }}>
@@ -426,6 +447,11 @@ export const BomCreatePage = ({ onNavigate, initialData, isSidebarCollapsed }) =
               Add Routing
             </Button>
           )}
+          {routingError ? (
+            <div style={{ padding: "4px 20px 0 20px", color: "var(--status-red-primary)", fontSize: "var(--text-title-4)" }}>
+              {routingError}
+            </div>
+          ) : null}
           <div style={{ padding: "18px 20px 20px 20px", display: "flex", flexDirection: "column", gap: "12px" }}>
             {routing.length ? (
               <div style={{ overflowX: "auto", width: "100%" }}>
@@ -598,7 +624,7 @@ export const BomCreatePage = ({ onNavigate, initialData, isSidebarCollapsed }) =
         <Button size="medium" variant="tertiary" onClick={handleCancel} style={{ color: "var(--status-red-primary)" }}>
           Cancel
         </Button>
-        <Button size="medium" variant="filled" onClick={handleSave} disabled={!canSave}>
+        <Button size="medium" variant="filled" onClick={handleSave}>
           Save
         </Button>
       </div>
