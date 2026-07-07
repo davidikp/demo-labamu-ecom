@@ -19,6 +19,9 @@ import { PurchaseOrderCreatePage } from "./modules/purchase-order/pages/Purchase
 import { PurchaseOrderSettingsPage } from "./modules/purchase-order/pages/PurchaseOrderSettingsPage.jsx";
 import { WorkOrderListPage } from "./modules/work-order/pages/WorkOrderListPage.jsx";
 import { WorkOrderDetailPage } from "./modules/work-order/pages/WorkOrderDetailPage.jsx";
+import { BomListPage } from "./modules/bill-of-materials/pages/BomListPage.jsx";
+import { BomDetailPage } from "./modules/bill-of-materials/pages/BomDetailPage.jsx";
+import { BomCreatePage } from "./modules/bill-of-materials/pages/BomCreatePage.jsx";
 import { OrderListPage } from "./modules/orders/pages/OrderListPage.jsx";
 import { OrderDetailPage } from "./modules/orders/pages/OrderDetailPage.jsx";
 import { OrderSettingsPage } from "./modules/orders/pages/OrderSettingsPage.jsx";
@@ -120,6 +123,11 @@ const TRANSLATIONS = {
       settings: "Settings",
       new: "New PO",
     },
+    bill_of_materials: {
+      title: "Bill of Materials",
+      description: "Manage the mapping of products to Bill of Materials",
+      new: "Add BOM",
+    },
   },
   id: {
     sidebar: {
@@ -183,6 +191,11 @@ const TRANSLATIONS = {
       settings: "Pengaturan",
       new: "PO Baru",
     },
+    bill_of_materials: {
+      title: "Daftar Material",
+      description: "Kelola pemetaan produk ke Daftar Material",
+      new: "Tambah BOM",
+    },
   },
 };
 
@@ -191,6 +204,7 @@ const MODULE_TO_ROUTE = {
   email_outbox: "email-outbox",
   work_order: "work-order",
   purchase_order: "purchase-order",
+  bill_of_materials: "bill-of-materials",
   orders: "orders",
   materials: "materials",
   material_request: "material-request",
@@ -645,6 +659,31 @@ const ModuleRenderer = ({
         </div>
       </div>
     );
+  }
+
+  if (activeModule === "bill_of_materials") {
+    if (viewState.view === "list") {
+      return <BomListPage onNavigate={onNavigate} t={t} />;
+    }
+    if (viewState.view === "detail") {
+      return (
+        <BomDetailPage
+          key={(viewState.data?.id || "bom-detail") + (viewState.data?._navVersion ? `-${viewState.data._navVersion}` : "")}
+          onNavigate={onNavigate}
+          initialData={viewState.data}
+        />
+      );
+    }
+    if (viewState.view === "create") {
+      return (
+        <BomCreatePage
+          key={viewState.data?.id || "bom-create"}
+          onNavigate={onNavigate}
+          initialData={viewState.data}
+          isSidebarCollapsed={isSidebarCollapsed}
+        />
+      );
+    }
   }
 
   if (activeModule === "work_order") {
@@ -1127,7 +1166,7 @@ export default function App() {
     >
       <LabamuStyles />
       <NotificationSeeder />
-      <SimulateEventPanel />
+      {currentActiveModule === "dashboard" ? <SimulateEventPanel /> : null}
       <div style={{ display: "flex", flex: 1, width: "100%" }}>
         <Sidebar
           isCollapsed={isSidebarCollapsed}
