@@ -71,7 +71,7 @@ export const BomListPage = ({ onNavigate, t }) => {
           {t("bill_of_materials.title", "Bill of Materials")}
         </h1>
         <Button variant="filled" leftIcon={AddIcon} onClick={() => onNavigate("create")}>
-          {t("bill_of_materials.new", "Add BOM")}
+          {t("bill_of_materials.new", "New BOM")}
         </Button>
       </div>
 
