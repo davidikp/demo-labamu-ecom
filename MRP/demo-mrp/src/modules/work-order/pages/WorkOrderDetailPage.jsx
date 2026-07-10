@@ -5706,9 +5706,9 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
               >
                 <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
                   <span style={{ fontSize: "12px", color: "var(--neutral-on-surface-secondary)" }}>Forecasted COGS (BOM)</span>
-                  <span style={{ fontSize: "16px", color: "var(--neutral-on-surface-secondary)" }}>
+                  <span style={{ fontSize: "16px", fontWeight: "bold", color: "var(--neutral-on-surface-primary)" }}>
                     {formatIDR(forecastedPerUnit)} / pcs{" "}
-                    <span style={{ fontSize: "12px", color: "var(--neutral-on-surface-secondary)" }}>
+                    <span style={{ fontSize: "12px", fontWeight: "normal", color: "var(--neutral-on-surface-secondary)" }}>
                       ({formatIDR(totalForecastedCogs)} for {TOTAL_QTY} pcs)
                     </span>
                   </span>
