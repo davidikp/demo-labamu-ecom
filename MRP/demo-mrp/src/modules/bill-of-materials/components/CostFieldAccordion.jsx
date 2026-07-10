@@ -18,7 +18,7 @@ const newLine = () => ({ id: `new-line-${nextLineId++}`, label: "", amount: 0 })
 // chevron — the header is always shown, and only the breakdown line list
 // (when the field actually has a breakdown) gets its own "See/Hide Cost
 // Breakdown" toggle, defaulting to expanded.
-export const CostFieldAccordion = ({ icon: Icon, title, description, isNew, field, onChange, readOnly = false, onAddItem }) => {
+export const CostFieldAccordion = ({ icon: Icon, title, description, isNew, field, onChange, readOnly = false, onAddItem, invalidLineIds }) => {
   const [expanded, setExpanded] = useState(true);
   const [breakdownVisible, setBreakdownVisible] = useState(true);
   const total = fieldTotal(field);
@@ -28,8 +28,7 @@ export const CostFieldAccordion = ({ icon: Icon, title, description, isNew, fiel
   const updateLine = (idx, patch) =>
     onChange({ ...field, lines: field.lines.map((l, i) => (i === idx ? { ...l, ...patch } : l)) });
   const addLine = () => onChange({ ...field, lines: [...field.lines, newLine()] });
-  const removeLine = (idx) =>
-    onChange({ ...field, lines: field.lines.length > 1 ? field.lines.filter((_, i) => i !== idx) : field.lines });
+  const removeLine = (idx) => onChange({ ...field, lines: field.lines.filter((_, i) => i !== idx) });
 
   const header = (
     <div style={{ display: "flex", justifyContent: "space-between", fontSize: "14px", alignItems: "flex-start" }}>
@@ -40,20 +39,20 @@ export const CostFieldAccordion = ({ icon: Icon, title, description, isNew, fiel
             onClick={() => setExpanded(!expanded)}
           >
             {expanded ? (
-              <ChevronDownIcon size={16} color="var(--neutral-on-surface-tertiary)" />
+              <ChevronDownIcon size={16} color="var(--neutral-on-surface-secondary)" />
             ) : (
-              <ChevronRightIcon size={16} color="var(--neutral-on-surface-tertiary)" />
+              <ChevronRightIcon size={16} color="var(--neutral-on-surface-secondary)" />
             )}
           </div>
         ) : null}
-        {Icon ? <Icon size={16} color="var(--neutral-on-surface-tertiary)" style={{ marginTop: "2px" }} /> : null}
+        {Icon ? <Icon size={16} color="var(--neutral-on-surface-secondary)" style={{ marginTop: "2px" }} /> : null}
         <div style={{ display: "flex", flexDirection: "column" }}>
           <span style={{ display: "flex", alignItems: "center", gap: "6px", color: "var(--neutral-on-surface-primary)", fontWeight: "bold" }}>
             {title}
             {isNew ? <StatusBadge variant="blue-light">New</StatusBadge> : null}
           </span>
           {description ? (
-            <span style={{ fontSize: "12px", color: "var(--neutral-on-surface-tertiary)" }}>{description}</span>
+            <span style={{ fontSize: "12px", color: "var(--neutral-on-surface-secondary)" }}>{description}</span>
           ) : null}
         </div>
       </div>
@@ -125,36 +124,60 @@ export const CostFieldAccordion = ({ icon: Icon, title, description, isNew, fiel
         <div style={{ display: "flex", flexDirection: "column", gap: "8px", paddingLeft: "32px" }}>
           {isBreakdown ? (
             <>
-              {field.lines.map((l, idx) => (
-                <div key={l.id || idx} style={{ display: "flex", gap: "12px", alignItems: "center" }}>
-                  <div style={{ flex: 2 }}>
-                    <InputField
-                      placeholder="Breakdown item name"
-                      value={l.label}
-                      onChange={(e) => updateLine(idx, { label: e.target.value })}
-                    />
+              {field.lines.map((l, idx) => {
+                // Frozen at the last Save click (invalidLineIds), not recomputed on
+                // every keystroke — so a freshly added row never shows an error until
+                // Save is pressed again, while fixing a flagged row still clears it live.
+                const lineError = invalidLineIds?.has(l.id) && !l.label?.trim() ? "Field cannot be empty" : null;
+                return (
+                  <div
+                    key={l.id || idx}
+                    style={{ display: "flex", gap: "12px", alignItems: "center", marginBottom: lineError ? "20px" : 0 }}
+                  >
+                    <div style={{ flex: 2, position: "relative" }}>
+                      <InputField
+                        placeholder="Breakdown item name"
+                        value={l.label}
+                        onChange={(e) => updateLine(idx, { label: e.target.value })}
+                        errorState={!!lineError}
+                      />
+                      {lineError ? (
+                        <div
+                          style={{
+                            position: "absolute",
+                            top: "100%",
+                            left: 0,
+                            color: "var(--status-red-primary)",
+                            fontSize: "var(--text-body)",
+                            marginTop: "4px",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {lineError}
+                        </div>
+                      ) : null}
+                    </div>
+                    <div style={{ width: "180px" }}>
+                      <InputField
+                        type="number"
+                        prefix="IDR"
+                        value={l.amount}
+                        onChange={(e) => updateLine(idx, { amount: Number(e.target.value) || 0 })}
+                      />
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        onClick={() => removeLine(idx)}
+                        style={{ borderColor: "var(--status-red-primary)" }}
+                      >
+                        <DeleteIcon size={16} color="var(--status-red-primary)" />
+                      </Button>
+                    </div>
                   </div>
-                  <div style={{ width: "180px" }}>
-                    <InputField
-                      type="number"
-                      prefix="IDR"
-                      value={l.amount}
-                      onChange={(e) => updateLine(idx, { amount: Number(e.target.value) || 0 })}
-                    />
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <Button
-                      variant="outlined"
-                      size="small"
-                      onClick={() => removeLine(idx)}
-                      disabled={field.lines.length === 1}
-                      style={field.lines.length === 1 ? undefined : { borderColor: "var(--status-red-primary)" }}
-                    >
-                      <DeleteIcon size={16} color={field.lines.length === 1 ? undefined : "var(--status-red-primary)"} />
-                    </Button>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
               <Button variant="outlined" size="small" leftIcon={AddIcon} onClick={addLine} style={{ alignSelf: "flex-start" }}>
                 Add Cost Item
               </Button>

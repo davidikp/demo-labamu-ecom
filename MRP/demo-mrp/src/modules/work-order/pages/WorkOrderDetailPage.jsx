@@ -132,7 +132,7 @@ const ACTUAL_COST_COMPOSITION_COLORS = {
   labour: "var(--feature-product-primary)",
   packing: "var(--feature-cashier-primary)",
   shipping: "var(--status-yellow-primary)",
-  overhead: "var(--status-grey-primary)",
+  overhead: "var(--neutral-on-surface-secondary)",
   other: "var(--feature-invoice-primary)",
   outsourcing: "var(--status-red-primary)",
 };
@@ -5481,7 +5481,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
             const matchedLine =
               linkedPo?.lines?.find((l) => l.woRef === initialData?.wo) || linkedPo?.lines?.[0] || null;
             const unitCost = matchedLine?.price || 0;
-            const receivedQty = Number(v.receivedOutput) || 0;
+            const assignedQty = Number(v.output) || 0;
             const includedSteps = (v.assignedSteps || [])
               .map((step) => routingStages.find((s) => s.step === step)?.route || routingStages.find((s) => s.step === step)?.op || `Step ${step}`)
               .join(", ");
@@ -5491,9 +5491,9 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
               assignmentId: v.assignmentId || "-",
               includedSteps: includedSteps || "-",
               poNumber: v.poNumber || "-",
-              receivedQty,
+              assignedQty,
               unitCost,
-              subtotal: unitCost * receivedQty,
+              subtotal: unitCost * assignedQty,
               rawVendor: v,
             };
           });
@@ -5527,11 +5527,11 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                 <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: "14px", alignItems: "flex-start" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                      {Icon ? <Icon size={16} color="var(--neutral-on-surface-tertiary)" style={{ marginTop: "2px" }} /> : null}
+                      {Icon ? <Icon size={16} color="var(--neutral-on-surface-secondary)" style={{ marginTop: "2px" }} /> : null}
                       <div style={{ display: "flex", flexDirection: "column" }}>
                         <span style={{ color: "var(--neutral-on-surface-primary)", fontWeight: "bold" }}>{title}</span>
                         {description ? (
-                          <span style={{ fontSize: "12px", color: "var(--neutral-on-surface-tertiary)" }}>{description}</span>
+                          <span style={{ fontSize: "12px", color: "var(--neutral-on-surface-secondary)" }}>{description}</span>
                         ) : null}
                       </div>
                     </div>
@@ -5541,7 +5541,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                       </span>
                       <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                         <ActualVsForecastBadge actual={total} forecast={forecastTotal} />
-                        <span style={{ fontSize: "14px", color: "var(--neutral-on-surface-tertiary)" }}>
+                        <span style={{ fontSize: "14px", color: "var(--neutral-on-surface-secondary)" }}>
                           {formatIDR(perUnit)} / pcs
                         </span>
                       </div>
@@ -5589,13 +5589,12 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                                       onClick={() => openEditCostItemModal(key, idx)}
                                     />
                                   </Tooltip>
-                                  <Tooltip content={lines.length === 1 ? "Minimum 1 item required" : "Delete Cost Item"}>
+                                  <Tooltip content="Delete Cost Item">
                                     <IconButton
                                       icon={DeleteIcon}
                                       size="small"
                                       color="var(--status-red-primary)"
                                       hoverBackground="#FAE6E8"
-                                      disabled={lines.length === 1}
                                       onClick={() => removeActualCostRow(key, idx)}
                                     />
                                   </Tooltip>
@@ -5603,7 +5602,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                               </div>
                             ))
                           ) : (
-                            <div style={{ padding: "16px", textAlign: "center", fontSize: "var(--text-title-3)", color: "var(--neutral-on-surface-tertiary)" }}>
+                            <div style={{ padding: "16px", textAlign: "center", fontSize: "var(--text-title-3)", color: "var(--neutral-on-surface-secondary)" }}>
                               No cost items added yet.
                             </div>
                           )}
@@ -5645,7 +5644,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                 }}
               >
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-                  <span style={{ fontSize: "var(--text-title-3)", color: "var(--neutral-on-surface-tertiary)" }}>
+                  <span style={{ fontSize: "var(--text-title-3)", color: "var(--neutral-on-surface-secondary)" }}>
                     Cost Composition
                   </span>
                   <span style={{ fontSize: "14px", color: "var(--neutral-on-surface-primary)" }}>
@@ -5706,19 +5705,19 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                 }}
               >
                 <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-                  <span style={{ fontSize: "12px", color: "var(--neutral-on-surface-tertiary)" }}>Forecasted COGS (BOM)</span>
+                  <span style={{ fontSize: "12px", color: "var(--neutral-on-surface-secondary)" }}>Forecasted COGS (BOM)</span>
                   <span style={{ fontSize: "16px", color: "var(--neutral-on-surface-secondary)" }}>
                     {formatIDR(forecastedPerUnit)} / pcs{" "}
-                    <span style={{ fontSize: "12px", color: "var(--neutral-on-surface-tertiary)" }}>
+                    <span style={{ fontSize: "12px", color: "var(--neutral-on-surface-secondary)" }}>
                       ({formatIDR(totalForecastedCogs)} for {TOTAL_QTY} pcs)
                     </span>
                   </span>
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-                  <span style={{ fontSize: "12px", color: "var(--neutral-on-surface-tertiary)" }}>Actual COGS (current)</span>
+                  <span style={{ fontSize: "12px", color: "var(--neutral-on-surface-secondary)" }}>Actual COGS (current)</span>
                   <span style={{ fontSize: "16px", fontWeight: "bold", color: "var(--neutral-on-surface-primary)" }}>
                     {formatIDR(actualPerUnit)} / pcs{" "}
-                    <span style={{ fontSize: "12px", fontWeight: "normal", color: "var(--neutral-on-surface-tertiary)" }}>
+                    <span style={{ fontSize: "12px", fontWeight: "normal", color: "var(--neutral-on-surface-secondary)" }}>
                       ({formatIDR(totalActualCogs)} for {TOTAL_QTY} pcs)
                     </span>
                   </span>
@@ -5733,13 +5732,13 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
               <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: "14px", alignItems: "center" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                    <Box size={16} color="var(--neutral-on-surface-tertiary)" />
+                    <Box size={16} color="var(--neutral-on-surface-secondary)" />
                     <div style={{ display: "flex", flexDirection: "column" }}>
                       <span style={{ display: "flex", alignItems: "center", gap: "6px", color: "var(--neutral-on-surface-primary)", fontWeight: "bold" }}>
                         Material Cost
                         <StatusBadge variant="grey-light">Auto-calculated</StatusBadge>
                       </span>
-                      <span style={{ fontSize: "12px", color: "var(--neutral-on-surface-tertiary)" }}>
+                      <span style={{ fontSize: "12px", color: "var(--neutral-on-surface-secondary)" }}>
                         Sum of BOM qty × avg stock cost per material
                       </span>
                     </div>
@@ -5750,7 +5749,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                     </span>
                     <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                       <ActualVsForecastBadge actual={materialCost} forecast={computeMaterialCost(linkedBom?.materials || [])} />
-                      <span style={{ fontSize: "14px", color: "var(--neutral-on-surface-tertiary)" }}>
+                      <span style={{ fontSize: "14px", color: "var(--neutral-on-surface-secondary)" }}>
                         {formatIDR(TOTAL_QTY > 0 ? materialCost / TOTAL_QTY : 0)} / pcs
                       </span>
                     </div>
@@ -5801,14 +5800,14 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                                   onClick={() => toggleActualCostMaterial(line.materialId)}
                                 >
                                   {isExpanded ? (
-                                    <ChevronDownIcon size={14} color="var(--neutral-on-surface-tertiary)" />
+                                    <ChevronDownIcon size={14} color="var(--neutral-on-surface-secondary)" />
                                   ) : (
-                                    <ChevronRightIcon size={14} color="var(--neutral-on-surface-tertiary)" />
+                                    <ChevronRightIcon size={14} color="var(--neutral-on-surface-secondary)" />
                                   )}
                                 </div>
                                 <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
                                   <span style={{ fontSize: "var(--text-title-3)" }}>{line.name}</span>
-                                  <span style={{ fontSize: "12px", color: "var(--neutral-on-surface-tertiary)" }}>{line.sku}</span>
+                                  <span style={{ fontSize: "12px", color: "var(--neutral-on-surface-secondary)" }}>{line.sku}</span>
                                 </div>
                               </div>
                               <span style={{ fontSize: "var(--text-title-3)" }}>BOM</span>
@@ -5828,7 +5827,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                                   background: "var(--neutral-surface-grey-lighter)",
                                 }}
                               >
-                                <span style={{ fontSize: "var(--text-title-3)", color: "var(--neutral-on-surface-tertiary)", paddingLeft: "22px" }}>
+                                <span style={{ fontSize: "var(--text-title-3)", color: "var(--neutral-on-surface-secondary)", paddingLeft: "22px" }}>
                                   {batchNo}
                                 </span>
                                 <span />
@@ -5858,10 +5857,10 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                   <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", fontSize: "14px", alignItems: "flex-start" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                        <Truck size={16} color="var(--neutral-on-surface-tertiary)" style={{ marginTop: "2px" }} />
+                        <Truck size={16} color="var(--neutral-on-surface-secondary)" style={{ marginTop: "2px" }} />
                         <div style={{ display: "flex", flexDirection: "column" }}>
                           <span style={{ color: "var(--neutral-on-surface-primary)", fontWeight: "bold" }}>Outsourcing Cost</span>
-                          <span style={{ fontSize: "12px", color: "var(--neutral-on-surface-tertiary)" }}>
+                          <span style={{ fontSize: "12px", color: "var(--neutral-on-surface-secondary)" }}>
                             Cost of routing steps outsourced to external vendors
                           </span>
                         </div>
@@ -5870,7 +5869,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                         <span style={{ fontWeight: "bold", fontSize: "16px", color: "var(--neutral-on-surface-primary)" }}>
                           {formatIDR(outsourcingTotal)}
                         </span>
-                        <span style={{ fontSize: "14px", color: "var(--neutral-on-surface-tertiary)" }}>
+                        <span style={{ fontSize: "14px", color: "var(--neutral-on-surface-secondary)" }}>
                           {formatIDR(TOTAL_QTY > 0 ? outsourcingTotal / TOTAL_QTY : 0)} / pcs
                         </span>
                       </div>
@@ -5883,7 +5882,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                           <span>Assignment ID</span>
                           <span>Included Step</span>
                           <span>Purchase Order</span>
-                          <span>Received Qty</span>
+                          <span>Assigned Qty</span>
                           <span>Unit Cost</span>
                           <span style={{ textAlign: "right" }}>Subtotal</span>
                         </div>
@@ -5925,7 +5924,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                             ) : (
                               <span style={{ fontSize: "var(--text-title-3)" }}>{row.poNumber}</span>
                             )}
-                            <span style={{ fontSize: "var(--text-title-3)" }}>{row.receivedQty}</span>
+                            <span style={{ fontSize: "var(--text-title-3)" }}>{row.assignedQty}</span>
                             <span style={{ fontSize: "var(--text-title-3)" }}>{formatIDR(row.unitCost)}</span>
                             <span style={{ fontSize: "var(--text-title-3)", textAlign: "right" }}>{formatIDR(row.subtotal)}</span>
                           </div>
@@ -5937,17 +5936,22 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
               ) : null}
 
               <div style={{ borderTop: "1px solid var(--neutral-line-separator-1)" }} />
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  fontSize: "var(--text-title-1)",
-                  fontWeight: "var(--font-weight-black)",
-                }}
-              >
-                <span>Total Actual COGS</span>
-                <span>{formatIDR(totalActualCogs)}</span>
+              <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    fontSize: "var(--text-title-1)",
+                    fontWeight: "var(--font-weight-black)",
+                  }}
+                >
+                  <span>Total Actual COGS</span>
+                  <span>{formatIDR(totalActualCogs)}</span>
+                </div>
+                <span style={{ fontSize: "14px", color: "var(--neutral-on-surface-secondary)", textAlign: "right" }}>
+                  {formatIDR(actualPerUnit)} / pcs
+                </span>
               </div>
             </DetailCard>
           );
@@ -8834,14 +8838,20 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
               />
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-              <label style={{ fontSize: "var(--text-body)", fontWeight: "var(--font-weight-medium)", color: "var(--neutral-on-surface-primary)" }}>
+              <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "var(--text-body)", fontWeight: "var(--font-weight-medium)", color: "var(--neutral-on-surface-primary)" }}>
                 Forecasted Cost per Unit
+                <Tooltip content="The estimated cost per finished unit from the Bill of Materials">
+                  <Info size={14} color="var(--neutral-on-surface-secondary)" />
+                </Tooltip>
               </label>
               <InputField type="number" prefix="IDR" value={Math.round(modalForecastPerUnit)} disabled />
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-              <label style={{ fontSize: "var(--text-body)", fontWeight: "var(--font-weight-medium)", color: "var(--neutral-on-surface-primary)" }}>
+              <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "var(--text-body)", fontWeight: "var(--font-weight-medium)", color: "var(--neutral-on-surface-primary)" }}>
                 Total Cost per Unit
+                <Tooltip content="The actual cost allocated to produce one finished unit in this Work Order">
+                  <Info size={14} color="var(--neutral-on-surface-secondary)" />
+                </Tooltip>
               </label>
               <InputField
                 type="number"
@@ -8853,8 +8863,11 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
               />
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-              <label style={{ fontSize: "var(--text-body)", fontWeight: "var(--font-weight-medium)", color: "var(--neutral-on-surface-primary)" }}>
+              <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "var(--text-body)", fontWeight: "var(--font-weight-medium)", color: "var(--neutral-on-surface-primary)" }}>
                 Total Cost This WO
+                <Tooltip content="The total actual cost allocated for this cost item across the entire Work Order">
+                  <Info size={14} color="var(--neutral-on-surface-secondary)" />
+                </Tooltip>
               </label>
               <InputField
                 type="number"

@@ -162,6 +162,7 @@ export const BomCreatePage = ({ onNavigate, initialData, isSidebarCollapsed }) =
   const [materialModal, setMaterialModal] = useState(null); // { index } | { index: null } for add
   const [routingModal, setRoutingModal] = useState(null);
   const [showErrors, setShowErrors] = useState(false);
+  const [invalidCogsLineIds, setInvalidCogsLineIds] = useState(new Set());
 
   // Custom (non-native) drag for Routing rows: a floating card follows the
   // cursor while a grey placeholder box — sized to the real row — marks the
@@ -277,8 +278,6 @@ export const BomCreatePage = ({ onNavigate, initialData, isSidebarCollapsed }) =
     if (field?.mode !== "breakdown") return true;
     return (field.lines || []).every((l) => l.label?.trim());
   });
-  const cogsError = showErrors && !cogsLinesValid ? "Every cost breakdown item needs a name" : null;
-
   const canSave = name.trim().length > 0 && materials.length > 0 && routing.length > 0 && cogsLinesValid;
 
   const handleCancel = () => onNavigate(isEdit ? "detail" : "list", existingBom);
@@ -286,6 +285,15 @@ export const BomCreatePage = ({ onNavigate, initialData, isSidebarCollapsed }) =
   const handleSave = () => {
     if (!canSave) {
       setShowErrors(true);
+      const invalidIds = new Set();
+      COGS_FIELDS.forEach(({ key }) => {
+        const field = cogs[key];
+        if (field?.mode !== "breakdown") return;
+        (field.lines || []).forEach((l) => {
+          if (!l.label?.trim()) invalidIds.add(l.id);
+        });
+      });
+      setInvalidCogsLineIds(invalidIds);
       return;
     }
     const payload = {
@@ -342,7 +350,7 @@ export const BomCreatePage = ({ onNavigate, initialData, isSidebarCollapsed }) =
                   errorState={!!nameError}
                 />
                 {nameError ? (
-                  <div style={{ color: "var(--status-red-primary)", fontSize: "var(--text-title-4)", marginTop: "4px" }}>
+                  <div style={{ color: "var(--status-red-primary)", fontSize: "var(--text-body)", marginTop: "4px" }}>
                     {nameError}
                   </div>
                 ) : null}
@@ -383,7 +391,7 @@ export const BomCreatePage = ({ onNavigate, initialData, isSidebarCollapsed }) =
             </Button>
           )}
           {materialsError ? (
-            <div style={{ padding: "4px 20px 0 20px", color: "var(--status-red-primary)", fontSize: "var(--text-title-4)" }}>
+            <div style={{ padding: "4px 20px 0 20px", color: "var(--status-red-primary)", fontSize: "var(--text-body)" }}>
               {materialsError}
             </div>
           ) : null}
@@ -455,7 +463,7 @@ export const BomCreatePage = ({ onNavigate, initialData, isSidebarCollapsed }) =
             </Button>
           )}
           {routingError ? (
-            <div style={{ padding: "4px 20px 0 20px", color: "var(--status-red-primary)", fontSize: "var(--text-title-4)" }}>
+            <div style={{ padding: "4px 20px 0 20px", color: "var(--status-red-primary)", fontSize: "var(--text-body)" }}>
               {routingError}
             </div>
           ) : null}
@@ -599,12 +607,10 @@ export const BomCreatePage = ({ onNavigate, initialData, isSidebarCollapsed }) =
                     isNew={isNew}
                     field={cogs[key]}
                     onChange={(nextField) => updateCogsField(key, nextField)}
+                    invalidLineIds={invalidCogsLineIds}
                   />
                 </React.Fragment>
               ))}
-              {cogsError ? (
-                <span style={{ fontSize: "var(--text-body)", color: "var(--status-red-primary)" }}>{cogsError}</span>
-              ) : null}
               <div style={{ borderTop: "1px solid var(--neutral-line-separator-1)" }} />
               <div style={{ display: "flex", justifyContent: "space-between" }}>
                 <span style={summaryTotalLabelStyle}>Total Forecasted COGS</span>

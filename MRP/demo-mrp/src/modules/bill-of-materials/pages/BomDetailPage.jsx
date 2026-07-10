@@ -47,7 +47,7 @@ const COST_COMPOSITION_COLORS = {
   labour: "var(--feature-product-primary)",
   packing: "var(--feature-cashier-primary)",
   shipping: "var(--status-yellow-primary)",
-  overhead: "var(--status-grey-primary)",
+  overhead: "var(--neutral-on-surface-secondary)",
   other: "var(--feature-invoice-primary)",
 };
 
@@ -242,7 +242,7 @@ export const BomDetailPage = ({ onNavigate, initialData }) => {
               }}
             >
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-                <span style={{ fontSize: "var(--text-title-3)", color: "var(--neutral-on-surface-tertiary)" }}>
+                <span style={{ fontSize: "var(--text-title-3)", color: "var(--neutral-on-surface-secondary)" }}>
                   Cost Composition
                 </span>
                 <span style={{ fontSize: "14px", color: "var(--neutral-on-surface-primary)" }}>
@@ -294,13 +294,13 @@ export const BomDetailPage = ({ onNavigate, initialData }) => {
         <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: "14px", alignItems: "center" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <Box size={16} color="var(--neutral-on-surface-tertiary)" />
+              <Box size={16} color="var(--neutral-on-surface-secondary)" />
               <div style={{ display: "flex", flexDirection: "column" }}>
                 <span style={{ display: "flex", alignItems: "center", gap: "6px", color: "var(--neutral-on-surface-primary)", fontWeight: "bold" }}>
                   Material Cost
                   <StatusBadge variant="grey-light">Auto-calculated</StatusBadge>
                 </span>
-                <span style={{ fontSize: "12px", color: "var(--neutral-on-surface-tertiary)" }}>
+                <span style={{ fontSize: "12px", color: "var(--neutral-on-surface-secondary)" }}>
                   Sum of BOM qty × avg stock cost per material
                 </span>
               </div>
@@ -343,7 +343,7 @@ export const BomDetailPage = ({ onNavigate, initialData }) => {
                       >
                         <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
                           <span style={{ fontSize: "var(--text-title-3)" }}>{line.name}</span>
-                          <span style={{ fontSize: "12px", color: "var(--neutral-on-surface-tertiary)" }}>{line.sku}</span>
+                          <span style={{ fontSize: "12px", color: "var(--neutral-on-surface-secondary)" }}>{line.sku}</span>
                         </div>
                         <span style={{ fontSize: "var(--text-title-3)" }}>{formatIDR(unitPrice)}</span>
                         <span style={{ fontSize: "var(--text-title-3)" }}>
@@ -377,7 +377,7 @@ export const BomDetailPage = ({ onNavigate, initialData }) => {
           }}
         >
           <span>Total Forecasted COGS</span>
-          <span>{formatIDR(totalCogs)}</span>
+          <span>{formatIDR(totalCogs)} per unit</span>
         </div>
       </DetailCard>
       ) : null}
