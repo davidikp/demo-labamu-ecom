@@ -955,8 +955,8 @@ const INDONESIAN_EXACT_TEXT = {
   "Additional production cost not covered above": "Biaya produksi tambahan yang tidak termasuk dalam kategori di atas.",
   "e.g. Overtime labour": "Mis. Lembur Tenaga Kerja",
   "The estimated cost per finished unit from the Bill of Materials": "Estimasi biaya per unit produk jadi berdasarkan Bill of Materials (BOM).",
-  "The actual cost allocated to produce one finished unit in this Work Order": "Biaya aktual yang dialokasikan untuk menghasilkan satu unit produk pada Work Order ini.",
-  "The total actual cost allocated for this cost item across the entire Work Order": "Total biaya aktual yang dialokasikan untuk item biaya ini pada seluruh Work Order.",
+  "The actual cost allocated to produce one finished unit in this Work Order": "Biaya aktual yang dialokasikan untuk menghasilkan satu unit produk pada Perintah Kerja ini.",
+  "The total actual cost for this cost item in this Work Order": "Total biaya aktual yang dialokasikan untuk item biaya ini pada Perintah Kerja ini",
   "Material Cost (auto-calculated from selected materials)": "Biaya bahan baku (dihitung otomatis berdasarkan bahan baku yang dipilih)",
   "Forecasted COGS": "Estimasi HPP",
   "Actual COGS": "HPP Aktual",
@@ -1004,6 +1004,26 @@ const INDONESIAN_EXACT_TEXT = {
   "Extra needed in case some pieces need to be redone": "Tambahan bahan baku diperlukan jika sebagian produk perlu dikerjakan ulang.",
   "Customer changed the requirement and needs more material": "Pelanggan mengubah kebutuhan sehingga diperlukan tambahan bahan baku.",
   "Material used during machine calibration before production starts": "Bahan baku digunakan saat proses kalibrasi mesin sebelum produksi dimulai.",
+
+  // --- WO Actual COGS — Add/Edit Cost Item modal ---
+  "Cost Item Name": "Nama Item Biaya",
+
+  // --- WO Actual COGS — cost item activity log titles ---
+  "Labour Cost Item Added": "Item Biaya Tenaga Kerja Ditambahkan",
+  "Labour Cost Item Edited": "Item Biaya Tenaga Kerja Diubah",
+  "Labour Cost Item Deleted": "Item Biaya Tenaga Kerja Dihapus",
+  "Packing Cost Item Added": "Item Biaya Pengemasan Ditambahkan",
+  "Packing Cost Item Edited": "Item Biaya Pengemasan Diubah",
+  "Packing Cost Item Deleted": "Item Biaya Pengemasan Dihapus",
+  "Shipping Cost Item Added": "Item Biaya Pengiriman Ditambahkan",
+  "Shipping Cost Item Edited": "Item Biaya Pengiriman Diubah",
+  "Shipping Cost Item Deleted": "Item Biaya Pengiriman Dihapus",
+  "Overhead Cost Item Added": "Item Biaya Overhead Ditambahkan",
+  "Overhead Cost Item Edited": "Item Biaya Overhead Diubah",
+  "Overhead Cost Item Deleted": "Item Biaya Overhead Dihapus",
+  "Other Cost Item Added": "Item Biaya Lainnya Ditambahkan",
+  "Other Cost Item Edited": "Item Biaya Lainnya Diubah",
+  "Other Cost Item Deleted": "Item Biaya Lainnya Dihapus",
 };
 
 const INDONESIAN_FRAGMENT_REPLACEMENTS = [
@@ -1176,6 +1196,12 @@ const INDONESIAN_DYNAMIC_TEXT = [
   {
     pattern: /^\((.+) for (\d+) pcs\)$/i,
     replacer: (_, amount, qty) => `(${amount} untuk ${qty} pcs)`,
+  },
+  {
+    // WO Actual COGS — cost item added/edited/deleted activity log description
+    pattern: /^(.+) with Total Cost per Unit: (.+) and Total Cost This WO: (.+)$/i,
+    replacer: (_, itemName, perUnit, totalWo) =>
+      `${itemName} dengan Biaya Aktual per Unit: ${perUnit} dan Total Biaya Perintah Kerja Ini: ${totalWo}`,
   },
 ];
 
