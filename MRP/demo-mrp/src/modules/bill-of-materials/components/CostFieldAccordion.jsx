@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import { AddIcon, ChevronDownIcon, ChevronRightIcon, DeleteIcon } from "../../../components/icons/Icons.jsx";
 import { Button } from "../../../components/common/Button.jsx";
 import { StatusBadge } from "../../../components/common/StatusBadge.jsx";
-import { Checkbox } from "../../../components/common/Checkbox.jsx";
 import { InputField } from "../../../components/molecules/InputField.jsx";
 import { fieldTotal, formatIDR } from "../utils/bomUtils.js";
 
@@ -19,27 +18,12 @@ const newLine = () => ({ id: `new-line-${nextLineId++}`, label: "", amount: 0 })
 // chevron — the header is always shown, and only the breakdown line list
 // (when the field actually has a breakdown) gets its own "See/Hide Cost
 // Breakdown" toggle, defaulting to expanded.
-export const CostFieldAccordion = ({ icon: Icon, title, description, isNew, field, onChange, readOnly = false }) => {
+export const CostFieldAccordion = ({ icon: Icon, title, description, isNew, field, onChange, readOnly = false, onAddItem }) => {
   const [expanded, setExpanded] = useState(true);
   const [breakdownVisible, setBreakdownVisible] = useState(true);
   const total = fieldTotal(field);
   const isBreakdown = field.mode === "breakdown";
 
-  // Preserve the field's value across a mode switch instead of silently
-  // dropping it — switching to Breakdown with no existing lines seeds one
-  // line with the current flat amount (min-1-row rule); switching to Single
-  // carries over the current breakdown subtotal.
-  const setBreakdownEnabled = (enabled) => {
-    if (enabled && field.lines.length === 0) {
-      onChange({ ...field, mode: "breakdown", lines: [{ ...newLine(), amount: field.amount || 0 }] });
-      return;
-    }
-    if (!enabled) {
-      onChange({ ...field, mode: "single", amount: total });
-      return;
-    }
-    onChange({ ...field, mode: "breakdown" });
-  };
   const setAmount = (amount) => onChange({ ...field, amount: Number(amount) || 0 });
   const updateLine = (idx, patch) =>
     onChange({ ...field, lines: field.lines.map((l, i) => (i === idx ? { ...l, ...patch } : l)) });
@@ -80,20 +64,15 @@ export const CostFieldAccordion = ({ icon: Icon, title, description, isNew, fiel
         </span>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "4px" }}>
-          <div style={{ width: "200px" }}>
-            <InputField
-              type="number"
-              prefix="IDR"
-              value={isBreakdown ? total : field.amount}
-              disabled={isBreakdown}
-              onChange={(e) => setAmount(e.target.value)}
-            />
-          </div>
           {isBreakdown ? (
-            <span style={{ fontSize: "11px", color: "var(--neutral-on-surface-tertiary)", textAlign: "right" }}>
-              Calculated from cost breakdown below
+            <span style={{ fontWeight: "bold", fontSize: "16px", color: "var(--neutral-on-surface-primary)" }}>
+              {formatIDR(total)}
             </span>
-          ) : null}
+          ) : (
+            <div style={{ width: "200px" }}>
+              <InputField type="number" prefix="IDR" value={field.amount} onChange={(e) => setAmount(e.target.value)} />
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -127,6 +106,11 @@ export const CostFieldAccordion = ({ icon: Icon, title, description, isNew, fiel
                   </div>
                 ))
               : null}
+            {breakdownVisible && onAddItem ? (
+              <Button variant="outlined" size="small" leftIcon={AddIcon} onClick={onAddItem} style={{ alignSelf: "flex-start" }}>
+                Add Cost Item
+              </Button>
+            ) : null}
           </div>
         ) : null}
       </div>
@@ -139,11 +123,6 @@ export const CostFieldAccordion = ({ icon: Icon, title, description, isNew, fiel
 
       {expanded ? (
         <div style={{ display: "flex", flexDirection: "column", gap: "8px", paddingLeft: "32px" }}>
-          <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer" }}>
-            <Checkbox checked={isBreakdown} onChange={setBreakdownEnabled} />
-            <span style={{ fontSize: "14px", color: "var(--neutral-on-surface-primary)" }}>Cost Breakdown</span>
-          </label>
-
           {isBreakdown ? (
             <>
               {field.lines.map((l, idx) => (

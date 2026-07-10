@@ -128,7 +128,8 @@ export const MOCK_WO_TABLE_DATA = [
     createdBy: "John Doe",
     status: "In Progress",
     statusKey: "in_progress",
-    sBadge: "yellow"
+    sBadge: "yellow",
+    bomId: "BOM-000002",
   },
   {
     wo: "WO-202604-002",
@@ -144,7 +145,8 @@ export const MOCK_WO_TABLE_DATA = [
     createdBy: "Jane Smith",
     status: "In Progress",
     statusKey: "in_progress",
-    sBadge: "yellow"
+    sBadge: "yellow",
+    bomId: "BOM-000001",
   },
   {
     wo: "WO-202604-003",
@@ -160,7 +162,8 @@ export const MOCK_WO_TABLE_DATA = [
     createdBy: "John Doe",
     status: "Completed",
     statusKey: "completed",
-    sBadge: "green"
+    sBadge: "green",
+    bomId: "BOM-000003",
   },
   {
     wo: "WO-202604-004",
@@ -176,7 +179,8 @@ export const MOCK_WO_TABLE_DATA = [
     createdBy: "Jane Smith",
     status: "Canceled",
     statusKey: "canceled",
-    sBadge: "red"
+    sBadge: "red",
+    bomId: "BOM-000004",
   },
   {
     wo: "WO-202604-005",
@@ -192,7 +196,8 @@ export const MOCK_WO_TABLE_DATA = [
     createdBy: "John Doe",
     status: "Not Started",
     statusKey: "not_started",
-    sBadge: "grey"
+    sBadge: "grey",
+    bomId: "BOM-000005",
   },
   {
     wo: "WO-202604-006",
@@ -208,7 +213,8 @@ export const MOCK_WO_TABLE_DATA = [
     createdBy: "Jane Smith",
     status: "Not Started",
     statusKey: "not_started",
-    sBadge: "grey"
+    sBadge: "grey",
+    bomId: "BOM-000006",
   },
   {
     wo: "WO-202604-007",
@@ -224,7 +230,8 @@ export const MOCK_WO_TABLE_DATA = [
     createdBy: "John Doe",
     status: "In Progress",
     statusKey: "in_progress",
-    sBadge: "yellow"
+    sBadge: "yellow",
+    bomId: "BOM-000007",
   },
   {
     wo: "WO-202604-008",
@@ -240,7 +247,8 @@ export const MOCK_WO_TABLE_DATA = [
     createdBy: "Jane Smith",
     status: "Completed",
     statusKey: "completed",
-    sBadge: "green"
+    sBadge: "green",
+    bomId: "BOM-000001",
   },
   {
     wo: "WO-202604-009",
@@ -256,7 +264,8 @@ export const MOCK_WO_TABLE_DATA = [
     createdBy: "John Doe",
     status: "Completed",
     statusKey: "completed",
-    sBadge: "green"
+    sBadge: "green",
+    bomId: "BOM-000002",
   },
   {
     wo: "WO-202603-001",
@@ -273,6 +282,7 @@ export const MOCK_WO_TABLE_DATA = [
     status: "In Progress",
     statusKey: "in_progress",
     sBadge: "yellow",
+    bomId: "BOM-000003",
     outsourceSteps: [1, 2],
     routingStages: [
       {
@@ -322,6 +332,7 @@ export const MOCK_WO_TABLE_DATA = [
     status: "In Progress",
     statusKey: "in_progress",
     sBadge: "yellow",
+    bomId: "BOM-000004",
     routingStages: [
       { step: 1, route: "Prep", op: "Sanding", prog: 0, comp: 24 },
       { step: 2, route: "Main", op: "Assembly", prog: 0, comp: 0 },
@@ -343,6 +354,7 @@ export const MOCK_WO_TABLE_DATA = [
     status: "Not Started",
     statusKey: "not_started",
     sBadge: "grey",
+    bomId: "BOM-000005",
     orderStart: "2026-06-02",
     orderEnd: "2026-08-30",
     image: null,
@@ -362,6 +374,7 @@ export const MOCK_WO_TABLE_DATA = [
     status: "Ready to Process",
     statusKey: "ready_to_process",
     sBadge: "blue",
+    bomId: "BOM-000006",
   },
   {
     wo: "WO-2026-03-025-00008",
@@ -378,6 +391,7 @@ export const MOCK_WO_TABLE_DATA = [
     status: "In Progress",
     statusKey: "in_progress",
     sBadge: "yellow",
+    bomId: "BOM-000007",
     image: null,
     outsourceSteps: [2, 3],
     vendors: [
@@ -489,6 +503,7 @@ export const MOCK_WO_TABLE_DATA = [
     status: "In Progress",
     statusKey: "in_progress",
     sBadge: "yellow",
+    bomId: "BOM-000001",
   },
   {
     wo: "WO-2024-08-012-00001",
@@ -505,6 +520,7 @@ export const MOCK_WO_TABLE_DATA = [
     status: "Completed",
     statusKey: "completed",
     sBadge: "green",
+    bomId: "BOM-000002",
     outsourceSteps: [2, 3],
     vendors: [
       {
@@ -572,6 +588,7 @@ export const MOCK_WO_TABLE_DATA = [
     status: "Canceled",
     statusKey: "canceled",
     sBadge: "red",
+    bomId: "BOM-000003",
     outsourceSteps: [1, 2],
     vendors: [
       {

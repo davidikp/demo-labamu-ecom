@@ -272,7 +272,14 @@ export const BomCreatePage = ({ onNavigate, initialData, isSidebarCollapsed }) =
   const materialsError = showErrors && materials.length === 0 ? "Please add at least one material" : null;
   const routingError = showErrors && routing.length === 0 ? "Please add at least one routing step" : null;
 
-  const canSave = name.trim().length > 0 && materials.length > 0 && routing.length > 0;
+  const cogsLinesValid = COGS_FIELDS.every(({ key }) => {
+    const field = cogs[key];
+    if (field?.mode !== "breakdown") return true;
+    return (field.lines || []).every((l) => l.label?.trim());
+  });
+  const cogsError = showErrors && !cogsLinesValid ? "Every cost breakdown item needs a name" : null;
+
+  const canSave = name.trim().length > 0 && materials.length > 0 && routing.length > 0 && cogsLinesValid;
 
   const handleCancel = () => onNavigate(isEdit ? "detail" : "list", existingBom);
 
@@ -595,9 +602,12 @@ export const BomCreatePage = ({ onNavigate, initialData, isSidebarCollapsed }) =
                   />
                 </React.Fragment>
               ))}
+              {cogsError ? (
+                <span style={{ fontSize: "var(--text-body)", color: "var(--status-red-primary)" }}>{cogsError}</span>
+              ) : null}
               <div style={{ borderTop: "1px solid var(--neutral-line-separator-1)" }} />
               <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <span style={summaryTotalLabelStyle}>Total COGS</span>
+                <span style={summaryTotalLabelStyle}>Total Forecasted COGS</span>
                 <span style={summaryTotalValueStyle}>{formatIDR(totalCogs)}</span>
               </div>
             </div>

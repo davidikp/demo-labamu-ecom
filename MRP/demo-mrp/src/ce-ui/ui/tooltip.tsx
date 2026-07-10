@@ -39,9 +39,9 @@ export const Tooltip: React.FC<{
             zIndex: 30000,
           }}
           className={cn(
-            "px-3 py-2 rounded-lb-sm",
+            "px-3 py-2 rounded-lb-sm max-w-[220px] text-center",
             "bg-lb-on-surface text-lb-on-surface-rev",
-            "font-lb text-[12px] leading-[18px] whitespace-nowrap",
+            "font-lb text-[12px] leading-[18px]",
             "shadow-lb pointer-events-none"
           )}
         >

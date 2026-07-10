@@ -45,11 +45,11 @@ const singleField = (amount) => ({ mode: "single", amount, lines: [] });
 const breakdownField = (lines) => ({ mode: "breakdown", amount: 0, lines });
 
 export const DEFAULT_COGS = () => ({
-  labour: breakdownField([line("", 0)]),
-  packing: singleField(0),
-  shipping: singleField(0),
-  overhead: singleField(0),
-  other: singleField(0),
+  labour: breakdownField([line("Labour cost", 0)]),
+  packing: breakdownField([line("Packing cost", 0)]),
+  shipping: breakdownField([line("Shipping cost", 0)]),
+  overhead: breakdownField([line("Overhead cost", 0)]),
+  other: breakdownField([line("Other cost", 0)]),
 });
 
 // Accepts either the current per-field cogs shape or the legacy Phase 1 flat
@@ -90,13 +90,13 @@ const INITIAL_BOMS = [
       { step: 4, name: "Working Desk Making: Shipping", operation: "-", hours: 1 },
     ],
     cogs: {
-      labour: singleField(2760000),
-      packing: singleField(320000),
+      labour: breakdownField([line("Assembly labour", 2760000)]),
+      packing: breakdownField([line("Packing labour & materials", 320000)]),
       shipping: breakdownField([
         line("Inbound - Supplier to Factory", 180000),
         line("FOB Fee - Container 20' Export", 90000),
       ]),
-      overhead: singleField(150000),
+      overhead: breakdownField([line("Factory overhead allocation", 150000)]),
       other: breakdownField([line("Finishing consumables", 120000)]),
     },
   },
@@ -120,10 +120,10 @@ const INITIAL_BOMS = [
       { step: 4, name: "Dining Table Making: Shipping", operation: "-", hours: 1 },
     ],
     cogs: {
-      labour: singleField(3200000),
-      packing: singleField(350000),
+      labour: breakdownField([line("Assembly labour", 3200000)]),
+      packing: breakdownField([line("Packing labour & materials", 350000)]),
       shipping: breakdownField([line("Inbound - Supplier to Factory", 200000)]),
-      overhead: singleField(180000),
+      overhead: breakdownField([line("Factory overhead allocation", 180000)]),
       other: breakdownField([line("Finishing consumables", 150000)]),
     },
   },
@@ -137,7 +137,11 @@ const INITIAL_BOMS = [
     updatedAt: "2026-05-06",
     materials: [material("mat-001", 1), material("mat-010", 4)],
     routing: [{ step: 1, name: "General Assembly", operation: "-", hours: 2 }],
-    cogs: { ...DEFAULT_COGS(), labour: singleField(500000), packing: singleField(80000) },
+    cogs: {
+      ...DEFAULT_COGS(),
+      labour: breakdownField([line("Assembly labour", 500000)]),
+      packing: breakdownField([line("Packing labour & materials", 80000)]),
+    },
   },
   {
     id: "BOM-000004",
@@ -149,7 +153,11 @@ const INITIAL_BOMS = [
     updatedAt: "2026-05-06",
     materials: [material("mat-002", 2)],
     routing: [{ step: 1, name: "General Assembly", operation: "-", hours: 1 }],
-    cogs: { ...DEFAULT_COGS(), labour: singleField(300000), packing: singleField(50000) },
+    cogs: {
+      ...DEFAULT_COGS(),
+      labour: breakdownField([line("Assembly labour", 300000)]),
+      packing: breakdownField([line("Packing labour & materials", 50000)]),
+    },
   },
   {
     id: "BOM-000005",
@@ -161,7 +169,11 @@ const INITIAL_BOMS = [
     updatedAt: "2026-05-06",
     materials: [material("mat-003", 5)],
     routing: [{ step: 1, name: "General Assembly", operation: "-", hours: 1 }],
-    cogs: { ...DEFAULT_COGS(), labour: singleField(250000), packing: singleField(40000) },
+    cogs: {
+      ...DEFAULT_COGS(),
+      labour: breakdownField([line("Assembly labour", 250000)]),
+      packing: breakdownField([line("Packing labour & materials", 40000)]),
+    },
   },
   {
     id: "BOM-000006",
@@ -173,7 +185,11 @@ const INITIAL_BOMS = [
     updatedAt: "2026-05-06",
     materials: [material("mat-004", 1), material("mat-005", 10)],
     routing: [{ step: 1, name: "General Assembly", operation: "-", hours: 1 }],
-    cogs: { ...DEFAULT_COGS(), labour: singleField(400000), packing: singleField(60000) },
+    cogs: {
+      ...DEFAULT_COGS(),
+      labour: breakdownField([line("Assembly labour", 400000)]),
+      packing: breakdownField([line("Packing labour & materials", 60000)]),
+    },
   },
   {
     id: "BOM-000007",
@@ -190,9 +206,9 @@ const INITIAL_BOMS = [
     ],
     cogs: {
       ...DEFAULT_COGS(),
-      labour: singleField(4500000),
-      packing: singleField(400000),
-      overhead: singleField(300000),
+      labour: breakdownField([line("Assembly labour", 4500000)]),
+      packing: breakdownField([line("Packing labour & materials", 400000)]),
+      overhead: breakdownField([line("Factory overhead allocation", 300000)]),
       other: breakdownField([line("Tooling costs", 200000)]),
     },
   },

@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Send } from "lucide-react";
-import { AddIcon, Box, Building2, CheckIcon, ChevronDownIcon, ChevronLeftIcon, ChevronUpIcon, CloseIcon, DeleteIcon, DocumentIcon, DownloadIcon, EditIcon, Info, Minus, Plus } from "../../../components/icons/Icons.jsx";
+import { Send, Truck } from "lucide-react";
+import { AddIcon, Box, Building2, CheckIcon, ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon, ChevronUpIcon, CircleDollarSign, CloseIcon, DeleteIcon, DocumentIcon, DownloadIcon, EditIcon, FileText, Info, Minus, Plus, Upload, Users } from "../../../components/icons/Icons.jsx";
 import { Button } from "../../../components/common/Button.jsx";
 import { Checkbox } from "../../../components/common/Checkbox.jsx";
 import { DropdownSelect } from "../../../components/common/DropdownSelect.jsx";
@@ -16,6 +16,9 @@ import { MOCK_COMPANY } from "../../../data/company.js";
 import { MOCK_VENDORS } from "../../../data/vendors.js";
 import { MOCK_PO_TABLE_DATA } from "../../purchase-order/mock/purchaseOrderMocks.js";
 import { MOCK_WO_TABLE_DATA } from "../mock/workOrderMocks.js";
+import { getBom, DEFAULT_COGS, resolveMaterialOption } from "../../bill-of-materials/mock/bomMocks.js";
+import { computeMaterialCost, computeTotalCogs, fieldTotal, formatIDR } from "../../bill-of-materials/utils/bomUtils.js";
+import { DetailCard, detailTableHeaderRowStyle, detailTableRowStyle } from "../../bill-of-materials/components/BomShared.jsx";
 import { getRequests, addRequest, getStockBatchesForSku } from "../../material-request/mock/materialRequestMocks.js";
 import { formatCurrency, formatNumberWithCommas, parseNumberFromCommas } from "../../../utils/format/formatUtils.js";
 import { normalizeProofDocuments, createUploadDocumentRecord, validateUploadFile } from "../../../utils/upload/uploadUtils.js";
@@ -28,6 +31,8 @@ import {
 } from "../../purchase-order/styles/purchaseOrderInputStyles.js";
 
 export let activityLogsCache = {};
+
+let nextActualCostLineId = 1;
 
 export const addWoActivityLog = (woNumber, title, desc = undefined) => {
   if (!woNumber) return;
@@ -108,6 +113,71 @@ const EXCEEDING_REASON_OPTIONS = [
   { value: "Machine setup", label: "Machine setup", description: "Material used during machine calibration before production starts" },
   { value: "Other", label: "Other" },
 ];
+
+// Same cost fields/logic as the Bill of Materials module's Forecasted COGS
+// (see modules/bill-of-materials/pages/BomDetailPage.jsx COGS_FIELDS) — Actual
+// COGS on a Work Order tracks the same shape, sourced from the linked BOM.
+const ACTUAL_COGS_FIELDS = [
+  { key: "labour", title: "Labour Cost", icon: Users, description: "Cost of human labour to produce one unit" },
+  { key: "packing", title: "Packing Cost", icon: FileText, description: "Cost of packaging this product for delivery" },
+  { key: "shipping", title: "Shipping Cost", icon: Upload, description: "Cost of moving goods from supplier to customer" },
+  { key: "overhead", title: "Overhead Cost", icon: Building2, description: "Indirect factory costs not tied to a task" },
+  { key: "other", title: "Other Cost", icon: CircleDollarSign, description: "Additional production cost not covered above" },
+];
+
+// Same palette convention as BomDetailPage's Cost Composition bar — reuse
+// design tokens rather than introduce new colors.
+const ACTUAL_COST_COMPOSITION_COLORS = {
+  material: "var(--feature-brand-primary)",
+  labour: "var(--feature-product-primary)",
+  packing: "var(--feature-cashier-primary)",
+  shipping: "var(--status-yellow-primary)",
+  overhead: "var(--status-grey-primary)",
+  other: "var(--feature-invoice-primary)",
+  outsourcing: "var(--status-red-primary)",
+};
+
+// Renders a small "X% over/under forecast" pill comparing an actual amount
+// against its forecasted (BOM) counterpart. Returns null when there's no
+// forecast baseline to compare against (e.g. Outsourcing has none in BOM).
+const ActualVsForecastBadge = ({ actual, forecast, style }) => {
+  if (!forecast) return null;
+  const diffPct = ((actual - forecast) / forecast) * 100;
+  const isOver = diffPct > 0.05;
+  const isUnder = diffPct < -0.05;
+  const color = isOver
+    ? "var(--status-red-primary)"
+    : isUnder
+      ? "var(--status-green-primary)"
+      : "var(--status-grey-on-container)";
+  const bg = isOver
+    ? "var(--status-red-container)"
+    : isUnder
+      ? "var(--status-green-container)"
+      : "var(--status-grey-container)";
+  return (
+    <span
+      style={{
+        fontSize: "11px",
+        fontWeight: "600",
+        color,
+        background: bg,
+        padding: "2px 8px",
+        borderRadius: "var(--radius-full)",
+        whiteSpace: "nowrap",
+        ...style,
+      }}
+    >
+      {isOver || isUnder ? (isOver ? "▲" : "▼") + ` ${Math.abs(diffPct).toFixed(1)}% ${isOver ? "over" : "under"} forecast` : "On forecast"}
+    </span>
+  );
+};
+
+const ACTUAL_COST_TABLE_GRID_COLUMNS = "minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) 80px";
+const MATERIAL_ACTUAL_COST_GRID_COLUMNS =
+  "minmax(0, 2fr) minmax(0, 0.7fr) minmax(0, 0.9fr) minmax(0, 0.9fr) minmax(0, 0.9fr) minmax(0, 0.9fr)";
+const OUTSOURCING_COST_GRID_COLUMNS =
+  "minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 1.2fr) minmax(0, 1.1fr) minmax(0, 0.8fr) minmax(0, 0.9fr) minmax(0, 0.9fr)";
 
 // Request history for the ongoing work order; other work orders start with none.
 const ONGOING_REQUEST_HISTORY = [
@@ -1171,6 +1241,68 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
   );
   const [isRoutingUpdatesExpanded, setIsRoutingUpdatesExpanded] = useState(false);
 
+  // Linked BOM is derived automatically from the work order's own record
+  // (seeded bomId) — same BOM whose materials populate the Details tab's
+  // Materials section — never user-selectable.
+  const cachedWoForCogs = initialData?.wo
+    ? MOCK_WO_TABLE_DATA.find((w) => w.wo === initialData.wo)
+    : null;
+  const actualCogsBomId = initialData?.bomId || cachedWoForCogs?.bomId || null;
+  const [actualCogs, setActualCogs] = useState(() => {
+    const savedCogs = initialData?.actualCogs || cachedWoForCogs?.actualCogs;
+    if (savedCogs) return savedCogs;
+    // Brand-new Actual COGS: seed each cost type's single default line with
+    // its linked BOM's forecasted total, so Total Cost per Unit starts out
+    // equal to Forecasted Cost per Unit until the user edits it.
+    const base = DEFAULT_COGS();
+    const linkedBomForDefaults = actualCogsBomId ? getBom(actualCogsBomId) : null;
+    if (!linkedBomForDefaults) return base;
+    return Object.fromEntries(
+      Object.entries(base).map(([key, field]) => {
+        const forecastTotal = fieldTotal(linkedBomForDefaults.cogs?.[key]);
+        return [key, { ...field, lines: field.lines.map((l) => ({ ...l, amount: forecastTotal })) }];
+      })
+    );
+  });
+  const [showActualMaterialBreakdown, setShowActualMaterialBreakdown] = useState(true);
+  const [expandedActualCostMaterials, setExpandedActualCostMaterials] = useState({});
+  const toggleActualCostMaterial = (materialId) =>
+    setExpandedActualCostMaterials((prev) => ({ ...prev, [materialId]: !prev[materialId] }));
+  const [showActualCostFieldBreakdown, setShowActualCostFieldBreakdown] = useState({});
+  const toggleActualCostFieldBreakdown = (key) =>
+    setShowActualCostFieldBreakdown((prev) => ({ ...prev, [key]: prev[key] === false ? true : false }));
+
+  // Cost-item rows are view-only by default; adding/editing a row goes
+  // through a modal (costItemModal), while delete acts directly on the row.
+  const [costItemModal, setCostItemModal] = useState(null);
+  const openAddCostItemModal = (key, defaultAmount = 0) =>
+    setCostItemModal({ key, idx: null, label: "", amount: defaultAmount });
+  const openEditCostItemModal = (key, idx) => {
+    const line = actualCogs[key].lines[idx];
+    setCostItemModal({ key, idx, label: line.label, amount: line.amount });
+  };
+  const closeCostItemModal = () => setCostItemModal(null);
+  const saveCostItemModal = () => {
+    if (!costItemModal) return;
+    const { key, idx, label, amount } = costItemModal;
+    const nextLine = { label, amount: Number(amount) || 0 };
+    setActualCogs((prev) => {
+      const field = prev[key];
+      const lines = field.mode === "breakdown" ? field.lines : [];
+      const nextLines =
+        idx == null
+          ? [...lines, { id: `wo-cost-line-${nextActualCostLineId++}`, ...nextLine }]
+          : lines.map((l, i) => (i === idx ? { ...l, ...nextLine } : l));
+      return { ...prev, [key]: { ...field, mode: "breakdown", lines: nextLines } };
+    });
+    closeCostItemModal();
+  };
+  const removeActualCostRow = (key, idx) =>
+    setActualCogs((prev) => ({
+      ...prev,
+      [key]: { ...prev[key], lines: prev[key].lines.filter((_, i) => i !== idx) },
+    }));
+
   const handlePlannedDateChange = (step, value) => {
     setRoutingStages((prev) =>
       prev.map((stage) =>
@@ -1231,9 +1363,11 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                     : MOCK_WO_TABLE_DATA[woIndex].sBadge,
         start: displayStartDate,
         end: displayEndDate,
+        bomId: actualCogsBomId,
+        actualCogs,
       };
     }
-  }, [vendors, routingStages, outsourceSteps, woStatus, displayStartDate, displayEndDate]);
+  }, [vendors, routingStages, outsourceSteps, woStatus, displayStartDate, displayEndDate, actualCogsBomId, actualCogs]);
 
   useEffect(() => {
     const currentTotalVendorReceived = vendors
@@ -3952,6 +4086,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
           <ChipTabBar
             tabs={[
               { id: "details", label: "Details" },
+              { id: "cogs", label: "Actual COGS" },
               { id: "logs", label: "Logs" },
             ]}
             activeTab={activeTab}
@@ -5334,6 +5469,489 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
         </>
         </div>
         )}
+
+        {activeTab === "cogs" && (() => {
+          const linkedBom = actualCogsBomId ? getBom(actualCogsBomId) : null;
+          const materialCost = computeMaterialCost(linkedBom?.materials || []);
+
+          const outsourcingVendors = (vendors || []).filter((v) => v.name !== "Internal" && v.assignedSteps?.length);
+          const hasOutsourcing = outsourceSteps?.length > 0 && outsourcingVendors.length > 0;
+          const outsourcingRows = outsourcingVendors.map((v) => {
+            const linkedPo = v.poNumber ? MOCK_PO_TABLE_DATA.find((po) => po.poNumber === v.poNumber) : null;
+            const matchedLine =
+              linkedPo?.lines?.find((l) => l.woRef === initialData?.wo) || linkedPo?.lines?.[0] || null;
+            const unitCost = matchedLine?.price || 0;
+            const receivedQty = Number(v.receivedOutput) || 0;
+            const includedSteps = (v.assignedSteps || [])
+              .map((step) => routingStages.find((s) => s.step === step)?.route || routingStages.find((s) => s.step === step)?.op || `Step ${step}`)
+              .join(", ");
+            return {
+              id: v.id ?? v.assignmentId ?? v.name,
+              vendor: v.name,
+              assignmentId: v.assignmentId || "-",
+              includedSteps: includedSteps || "-",
+              poNumber: v.poNumber || "-",
+              receivedQty,
+              unitCost,
+              subtotal: unitCost * receivedQty,
+              rawVendor: v,
+            };
+          });
+          const outsourcingTotal = outsourcingRows.reduce((sum, r) => sum + r.subtotal, 0);
+
+          const compositionSegments = [
+            { key: "material", label: "Material Cost", amount: materialCost },
+            { key: "labour", label: "Labour Cost", amount: fieldTotal(actualCogs.labour) },
+            { key: "packing", label: "Packing Cost", amount: fieldTotal(actualCogs.packing) },
+            { key: "shipping", label: "Shipping Cost", amount: fieldTotal(actualCogs.shipping) },
+            { key: "overhead", label: "Overhead Cost", amount: fieldTotal(actualCogs.overhead) },
+            { key: "other", label: "Other Cost", amount: fieldTotal(actualCogs.other) },
+            ...(hasOutsourcing ? [{ key: "outsourcing", label: "Outsourcing Cost", amount: outsourcingTotal }] : []),
+          ];
+          const totalActualCogs = compositionSegments.reduce((sum, s) => sum + s.amount, 0);
+          const totalForecastedCogs = computeTotalCogs(linkedBom);
+          const forecastedPerUnit = TOTAL_QTY > 0 ? totalForecastedCogs / TOTAL_QTY : 0;
+          const actualPerUnit = TOTAL_QTY > 0 ? totalActualCogs / TOTAL_QTY : 0;
+
+          const editableCostTable = ({ key, title, icon: Icon, description }) => {
+            const field = actualCogs[key];
+            const lines = field?.lines || [];
+            const total = fieldTotal(field);
+            const forecastTotal = fieldTotal(linkedBom?.cogs?.[key]);
+            const perUnit = TOTAL_QTY > 0 ? total / TOTAL_QTY : 0;
+            const forecastPerUnit = TOTAL_QTY > 0 ? forecastTotal / TOTAL_QTY : 0;
+            const isBreakdownVisible = showActualCostFieldBreakdown[key] !== false;
+            return (
+              <React.Fragment key={key}>
+                <div style={{ borderTop: "1px solid var(--neutral-line-separator-2)" }} />
+                <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "14px", alignItems: "flex-start" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      {Icon ? <Icon size={16} color="var(--neutral-on-surface-tertiary)" style={{ marginTop: "2px" }} /> : null}
+                      <div style={{ display: "flex", flexDirection: "column" }}>
+                        <span style={{ color: "var(--neutral-on-surface-primary)", fontWeight: "bold" }}>{title}</span>
+                        {description ? (
+                          <span style={{ fontSize: "12px", color: "var(--neutral-on-surface-tertiary)" }}>{description}</span>
+                        ) : null}
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "4px" }}>
+                      <span style={{ fontWeight: "bold", fontSize: "16px", color: "var(--neutral-on-surface-primary)" }}>
+                        {formatIDR(total)}
+                      </span>
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                        <ActualVsForecastBadge actual={total} forecast={forecastTotal} />
+                        <span style={{ fontSize: "14px", color: "var(--neutral-on-surface-tertiary)" }}>
+                          {formatIDR(perUnit)} / pcs
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{ paddingLeft: "24px", display: "flex", flexDirection: "column", gap: "8px" }}>
+                    <Button
+                      variant="tertiary"
+                      size="small"
+                      rightIcon={isBreakdownVisible ? ChevronDownIcon : ChevronRightIcon}
+                      onClick={() => toggleActualCostFieldBreakdown(key)}
+                      style={{ alignSelf: "flex-start", padding: 0 }}
+                    >
+                      {isBreakdownVisible ? "Hide Cost Breakdown" : "See Cost Breakdown"}
+                    </Button>
+
+                    {isBreakdownVisible ? (
+                      <>
+                        <div style={{ width: "100%", display: "flex", flexDirection: "column" }}>
+                          <div style={detailTableHeaderRowStyle(ACTUAL_COST_TABLE_GRID_COLUMNS)}>
+                            <span>Cost Item</span>
+                            <span>Forecasted Cost per Unit</span>
+                            <span>Total Cost per Unit</span>
+                            <span>Total Cost This WO</span>
+                            <span style={{ textAlign: "right" }}>Actions</span>
+                          </div>
+                          {lines.length ? (
+                            lines.map((line, idx) => (
+                              <div key={line.id || idx} style={detailTableRowStyle(ACTUAL_COST_TABLE_GRID_COLUMNS, idx === lines.length - 1)}>
+                                <span style={{ fontSize: "var(--text-title-3)" }}>{line.label || "-"}</span>
+                                <span style={{ fontSize: "var(--text-title-3)", color: "var(--neutral-on-surface-primary)" }}>
+                                  {formatIDR(Math.round(forecastPerUnit))}
+                                </span>
+                                <span style={{ fontSize: "var(--text-title-3)" }}>
+                                  {formatIDR(TOTAL_QTY > 0 ? Math.round((Number(line.amount) || 0) / TOTAL_QTY) : 0)}
+                                </span>
+                                <span style={{ fontSize: "var(--text-title-3)" }}>{formatIDR(line.amount)}</span>
+                                <div style={{ display: "flex", gap: "4px", justifyContent: "flex-end" }}>
+                                  <Tooltip content="Edit Cost Item">
+                                    <IconButton
+                                      icon={EditIcon}
+                                      size="small"
+                                      color="var(--feature-brand-primary)"
+                                      onClick={() => openEditCostItemModal(key, idx)}
+                                    />
+                                  </Tooltip>
+                                  <Tooltip content={lines.length === 1 ? "Minimum 1 item required" : "Delete Cost Item"}>
+                                    <IconButton
+                                      icon={DeleteIcon}
+                                      size="small"
+                                      color="var(--status-red-primary)"
+                                      hoverBackground="#FAE6E8"
+                                      disabled={lines.length === 1}
+                                      onClick={() => removeActualCostRow(key, idx)}
+                                    />
+                                  </Tooltip>
+                                </div>
+                              </div>
+                            ))
+                          ) : (
+                            <div style={{ padding: "16px", textAlign: "center", fontSize: "var(--text-title-3)", color: "var(--neutral-on-surface-tertiary)" }}>
+                              No cost items added yet.
+                            </div>
+                          )}
+                        </div>
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          leftIcon={AddIcon}
+                          onClick={() => openAddCostItemModal(key, forecastTotal)}
+                          style={{ alignSelf: "flex-start" }}
+                        >
+                          Add Cost Item
+                        </Button>
+                      </>
+                    ) : null}
+                  </div>
+                </div>
+              </React.Fragment>
+            );
+          };
+
+          return (
+            <DetailCard title="Actual Cost of Goods Sold">
+              <span style={{ fontSize: "var(--text-title-3)", color: "var(--neutral-on-surface-secondary)", marginTop: "-12px" }}>
+                Linked Bill of Materials:{" "}
+                <span style={{ color: "var(--neutral-on-surface-primary)" }}>
+                  {initialData?.product || "Wooden Chair"} Classic Model BOM
+                </span>
+              </span>
+
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "10px",
+                  padding: "16px",
+                  borderRadius: "12px",
+                  border: "1px solid var(--neutral-line-separator-1)",
+                }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+                  <span style={{ fontSize: "var(--text-title-3)", color: "var(--neutral-on-surface-tertiary)" }}>
+                    Cost Composition
+                  </span>
+                  <span style={{ fontSize: "14px", color: "var(--neutral-on-surface-primary)" }}>
+                    {formatIDR(totalActualCogs)} total
+                  </span>
+                </div>
+                <div
+                  style={{
+                    display: "flex",
+                    width: "100%",
+                    height: "8px",
+                    borderRadius: "var(--radius-full)",
+                    overflow: "hidden",
+                    background: "var(--neutral-surface-grey-lighter)",
+                  }}
+                >
+                  {compositionSegments.map(({ key, amount }) => {
+                    const pct = totalActualCogs > 0 ? (amount / totalActualCogs) * 100 : 0;
+                    return pct > 0 ? (
+                      <div key={key} style={{ width: `${pct}%`, background: ACTUAL_COST_COMPOSITION_COLORS[key] }} />
+                    ) : null;
+                  })}
+                </div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "16px" }}>
+                  {compositionSegments.map(({ key, label, amount }) => {
+                    const pct = totalActualCogs > 0 ? Math.round((amount / totalActualCogs) * 100) : 0;
+                    return (
+                      <div key={key} style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                        <span
+                          style={{
+                            width: "8px",
+                            height: "8px",
+                            borderRadius: "50%",
+                            background: ACTUAL_COST_COMPOSITION_COLORS[key],
+                            display: "inline-block",
+                          }}
+                        />
+                        <span style={{ fontSize: "12px", color: "var(--neutral-on-surface-secondary)" }}>
+                          {label} · {pct}%
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  flexWrap: "wrap",
+                  gap: "16px",
+                  padding: "16px",
+                  borderRadius: "12px",
+                  background: "var(--neutral-surface-primary)",
+                  border: "1px solid var(--neutral-line-separator-1)",
+                }}
+              >
+                <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                  <span style={{ fontSize: "12px", color: "var(--neutral-on-surface-tertiary)" }}>Forecasted COGS (BOM)</span>
+                  <span style={{ fontSize: "16px", color: "var(--neutral-on-surface-secondary)" }}>
+                    {formatIDR(forecastedPerUnit)} / pcs{" "}
+                    <span style={{ fontSize: "12px", color: "var(--neutral-on-surface-tertiary)" }}>
+                      ({formatIDR(totalForecastedCogs)} for {TOTAL_QTY} pcs)
+                    </span>
+                  </span>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                  <span style={{ fontSize: "12px", color: "var(--neutral-on-surface-tertiary)" }}>Actual COGS (current)</span>
+                  <span style={{ fontSize: "16px", fontWeight: "bold", color: "var(--neutral-on-surface-primary)" }}>
+                    {formatIDR(actualPerUnit)} / pcs{" "}
+                    <span style={{ fontSize: "12px", fontWeight: "normal", color: "var(--neutral-on-surface-tertiary)" }}>
+                      ({formatIDR(totalActualCogs)} for {TOTAL_QTY} pcs)
+                    </span>
+                  </span>
+                </div>
+                <ActualVsForecastBadge
+                  actual={totalActualCogs}
+                  forecast={totalForecastedCogs}
+                  style={{ fontSize: "13px", padding: "6px 14px" }}
+                />
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "14px", alignItems: "center" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    <Box size={16} color="var(--neutral-on-surface-tertiary)" />
+                    <div style={{ display: "flex", flexDirection: "column" }}>
+                      <span style={{ display: "flex", alignItems: "center", gap: "6px", color: "var(--neutral-on-surface-primary)", fontWeight: "bold" }}>
+                        Material Cost
+                        <StatusBadge variant="grey-light">Auto-calculated</StatusBadge>
+                      </span>
+                      <span style={{ fontSize: "12px", color: "var(--neutral-on-surface-tertiary)" }}>
+                        Sum of BOM qty × avg stock cost per material
+                      </span>
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "4px" }}>
+                    <span style={{ fontWeight: "bold", fontSize: "16px", color: "var(--neutral-on-surface-primary)" }}>
+                      {formatIDR(materialCost)}
+                    </span>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      <ActualVsForecastBadge actual={materialCost} forecast={computeMaterialCost(linkedBom?.materials || [])} />
+                      <span style={{ fontSize: "14px", color: "var(--neutral-on-surface-tertiary)" }}>
+                        {formatIDR(TOTAL_QTY > 0 ? materialCost / TOTAL_QTY : 0)} / pcs
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {linkedBom?.materials?.length ? (
+                  <div style={{ paddingLeft: "24px" }}>
+                    <Button
+                      variant="tertiary"
+                      size="small"
+                      rightIcon={showActualMaterialBreakdown ? ChevronDownIcon : ChevronRightIcon}
+                      onClick={() => setShowActualMaterialBreakdown((v) => !v)}
+                      style={{ alignSelf: "flex-start", padding: 0 }}
+                    >
+                      {showActualMaterialBreakdown ? "Hide Cost Breakdown" : "See Cost Breakdown"}
+                    </Button>
+                  </div>
+                ) : null}
+
+                {showActualMaterialBreakdown && linkedBom?.materials?.length ? (
+                  <div style={{ paddingLeft: "32px" }}>
+                    <div style={{ width: "100%", display: "flex", flexDirection: "column" }}>
+                      <div style={detailTableHeaderRowStyle(MATERIAL_ACTUAL_COST_GRID_COLUMNS)}>
+                        <span>Material</span>
+                        <span>Type</span>
+                        <span>Quantity Used</span>
+                        <span>Forecasted Cost per Unit</span>
+                        <span>Total Cost per Unit</span>
+                        <span style={{ textAlign: "right" }}>Total Cost This WO</span>
+                      </div>
+                      {linkedBom.materials.map((line, idx) => {
+                        const option = resolveMaterialOption(line.materialId);
+                        const unitPrice = option?.averageCost || 0;
+                        const qty = Number(line.quantity || 0);
+                        const rowTotal = unitPrice * qty;
+                        const perUnit = TOTAL_QTY > 0 ? rowTotal / TOTAL_QTY : 0;
+                        const batches = getStockBatchesForSku(line.sku) || [];
+                        const batchNo = batches[0]?.batch || `BATCH-${line.materialId}`;
+                        const isExpanded = !!expandedActualCostMaterials[line.materialId];
+                        const isLast = idx === linkedBom.materials.length - 1;
+                        return (
+                          <React.Fragment key={line.materialId || idx}>
+                            <div style={detailTableRowStyle(MATERIAL_ACTUAL_COST_GRID_COLUMNS, isLast && !isExpanded)}>
+                              <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                                <div
+                                  style={{ cursor: "pointer", display: "flex", alignItems: "center" }}
+                                  onClick={() => toggleActualCostMaterial(line.materialId)}
+                                >
+                                  {isExpanded ? (
+                                    <ChevronDownIcon size={14} color="var(--neutral-on-surface-tertiary)" />
+                                  ) : (
+                                    <ChevronRightIcon size={14} color="var(--neutral-on-surface-tertiary)" />
+                                  )}
+                                </div>
+                                <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                                  <span style={{ fontSize: "var(--text-title-3)" }}>{line.name}</span>
+                                  <span style={{ fontSize: "12px", color: "var(--neutral-on-surface-tertiary)" }}>{line.sku}</span>
+                                </div>
+                              </div>
+                              <span style={{ fontSize: "var(--text-title-3)" }}>BOM</span>
+                              <span style={{ fontSize: "var(--text-title-3)" }}>
+                                {qty} {line.unit || ""}
+                              </span>
+                              <span style={{ fontSize: "var(--text-title-3)", color: "var(--neutral-on-surface-primary)" }}>
+                                {formatIDR(perUnit)}
+                              </span>
+                              <span style={{ fontSize: "var(--text-title-3)" }}>{formatIDR(perUnit)}</span>
+                              <span style={{ fontSize: "var(--text-title-3)", textAlign: "right" }}>{formatIDR(rowTotal)}</span>
+                            </div>
+                            {isExpanded ? (
+                              <div
+                                style={{
+                                  ...detailTableRowStyle(MATERIAL_ACTUAL_COST_GRID_COLUMNS, isLast),
+                                  background: "var(--neutral-surface-grey-lighter)",
+                                }}
+                              >
+                                <span style={{ fontSize: "var(--text-title-3)", color: "var(--neutral-on-surface-tertiary)", paddingLeft: "22px" }}>
+                                  {batchNo}
+                                </span>
+                                <span />
+                                <span style={{ fontSize: "var(--text-title-3)" }}>
+                                  {qty} {line.unit || ""}
+                                </span>
+                                <span style={{ fontSize: "var(--text-title-3)", color: "var(--neutral-on-surface-primary)" }}>
+                                  {formatIDR(unitPrice)}
+                                </span>
+                                <span style={{ fontSize: "var(--text-title-3)" }}>{formatIDR(perUnit)}</span>
+                                <span style={{ fontSize: "var(--text-title-3)", textAlign: "right" }}>{formatIDR(rowTotal)}</span>
+                              </div>
+                            ) : null}
+                          </React.Fragment>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+
+              {ACTUAL_COGS_FIELDS.map(editableCostTable)}
+
+              {hasOutsourcing ? (
+                <React.Fragment>
+                  <div style={{ borderTop: "1px solid var(--neutral-line-separator-2)" }} />
+                  <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: "14px", alignItems: "flex-start" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                        <Truck size={16} color="var(--neutral-on-surface-tertiary)" style={{ marginTop: "2px" }} />
+                        <div style={{ display: "flex", flexDirection: "column" }}>
+                          <span style={{ color: "var(--neutral-on-surface-primary)", fontWeight: "bold" }}>Outsourcing Cost</span>
+                          <span style={{ fontSize: "12px", color: "var(--neutral-on-surface-tertiary)" }}>
+                            Cost of routing steps outsourced to external vendors
+                          </span>
+                        </div>
+                      </div>
+                      <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "4px" }}>
+                        <span style={{ fontWeight: "bold", fontSize: "16px", color: "var(--neutral-on-surface-primary)" }}>
+                          {formatIDR(outsourcingTotal)}
+                        </span>
+                        <span style={{ fontSize: "14px", color: "var(--neutral-on-surface-tertiary)" }}>
+                          {formatIDR(TOTAL_QTY > 0 ? outsourcingTotal / TOTAL_QTY : 0)} / pcs
+                        </span>
+                      </div>
+                    </div>
+
+                    <div style={{ paddingLeft: "24px" }}>
+                      <div style={{ width: "100%", display: "flex", flexDirection: "column" }}>
+                        <div style={detailTableHeaderRowStyle(OUTSOURCING_COST_GRID_COLUMNS)}>
+                          <span>Vendor</span>
+                          <span>Assignment ID</span>
+                          <span>Included Step</span>
+                          <span>Purchase Order</span>
+                          <span>Received Qty</span>
+                          <span>Unit Cost</span>
+                          <span style={{ textAlign: "right" }}>Subtotal</span>
+                        </div>
+                        {outsourcingRows.map((row, idx) => (
+                          <div key={row.id} style={detailTableRowStyle(OUTSOURCING_COST_GRID_COLUMNS, idx === outsourcingRows.length - 1)}>
+                            <span style={{ fontSize: "var(--text-title-3)" }}>{row.vendor}</span>
+                            <span style={{ fontSize: "var(--text-title-3)" }}>{row.assignmentId}</span>
+                            <span style={{ fontSize: "var(--text-title-3)" }}>{row.includedSteps}</span>
+                            {row.poNumber !== "-" ? (
+                              <span
+                                onClick={() => {
+                                  scrollToTop();
+                                  onNavigate("po_detail", {
+                                    ...buildDummyPoDetailData(row.poNumber, row.rawVendor),
+                                    from: "work_order_detail",
+                                    returnTo: {
+                                      view: "detail",
+                                      data: {
+                                        ...initialData,
+                                        vendors,
+                                        routingStages,
+                                        outsourceSteps,
+                                        statusKey: woStatus,
+                                        start: displayStartDate,
+                                        end: displayEndDate,
+                                      },
+                                    },
+                                  });
+                                }}
+                                style={{
+                                  fontSize: "var(--text-title-3)",
+                                  color: "var(--feature-brand-primary)",
+                                  cursor: "pointer",
+                                  textDecoration: "underline",
+                                }}
+                              >
+                                {row.poNumber}
+                              </span>
+                            ) : (
+                              <span style={{ fontSize: "var(--text-title-3)" }}>{row.poNumber}</span>
+                            )}
+                            <span style={{ fontSize: "var(--text-title-3)" }}>{row.receivedQty}</span>
+                            <span style={{ fontSize: "var(--text-title-3)" }}>{formatIDR(row.unitCost)}</span>
+                            <span style={{ fontSize: "var(--text-title-3)", textAlign: "right" }}>{formatIDR(row.subtotal)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </React.Fragment>
+              ) : null}
+
+              <div style={{ borderTop: "1px solid var(--neutral-line-separator-1)" }} />
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  fontSize: "var(--text-title-1)",
+                  fontWeight: "var(--font-weight-black)",
+                }}
+              >
+                <span>Total Actual COGS</span>
+                <span>{formatIDR(totalActualCogs)}</span>
+              </div>
+            </DetailCard>
+          );
+        })()}
 
         {activeTab === "logs" && (
           <div
@@ -8174,6 +8792,79 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
               </div>
             </div>
           </GeneralModal>
+        );
+      })() : null}
+
+      {costItemModal ? (() => {
+        const modalLinkedBom = actualCogsBomId ? getBom(actualCogsBomId) : null;
+        const modalForecastTotal = fieldTotal(modalLinkedBom?.cogs?.[costItemModal.key]);
+        const modalForecastPerUnit = TOTAL_QTY > 0 ? modalForecastTotal / TOTAL_QTY : 0;
+        return (
+        <GeneralModal
+          isOpen={!!costItemModal}
+          width="480px"
+          title={costItemModal.idx == null ? "Add Cost Item" : "Edit Cost Item"}
+          onClose={closeCostItemModal}
+          footer={
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px", width: "100%" }}>
+              <Button
+                variant="filled"
+                size="large"
+                style={{ width: "100%" }}
+                disabled={!costItemModal.label.trim()}
+                onClick={saveCostItemModal}
+              >
+                {costItemModal.idx == null ? "Add Item" : "Save Changes"}
+              </Button>
+              <Button variant="outlined" size="large" style={{ width: "100%" }} onClick={closeCostItemModal}>
+                Cancel
+              </Button>
+            </div>
+          }
+        >
+          <div style={{ display: "flex", flexDirection: "column", gap: "20px", padding: "16px 0" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+              <label style={{ fontSize: "var(--text-body)", fontWeight: "var(--font-weight-medium)", color: "var(--neutral-on-surface-primary)" }}>
+                Cost Item Name
+              </label>
+              <InputField
+                placeholder="e.g. Overtime labour"
+                value={costItemModal.label}
+                onChange={(e) => setCostItemModal((prev) => ({ ...prev, label: e.target.value }))}
+              />
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+              <label style={{ fontSize: "var(--text-body)", fontWeight: "var(--font-weight-medium)", color: "var(--neutral-on-surface-primary)" }}>
+                Forecasted Cost per Unit
+              </label>
+              <InputField type="number" prefix="IDR" value={Math.round(modalForecastPerUnit)} disabled />
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+              <label style={{ fontSize: "var(--text-body)", fontWeight: "var(--font-weight-medium)", color: "var(--neutral-on-surface-primary)" }}>
+                Total Cost per Unit
+              </label>
+              <InputField
+                type="number"
+                prefix="IDR"
+                value={TOTAL_QTY > 0 ? Math.round((Number(costItemModal.amount) || 0) / TOTAL_QTY) : 0}
+                onChange={(e) =>
+                  setCostItemModal((prev) => ({ ...prev, amount: (Number(e.target.value) || 0) * TOTAL_QTY }))
+                }
+              />
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+              <label style={{ fontSize: "var(--text-body)", fontWeight: "var(--font-weight-medium)", color: "var(--neutral-on-surface-primary)" }}>
+                Total Cost This WO
+              </label>
+              <InputField
+                type="number"
+                prefix="IDR"
+                value={costItemModal.amount}
+                onChange={(e) => setCostItemModal((prev) => ({ ...prev, amount: e.target.value }))}
+              />
+            </div>
+          </div>
+        </GeneralModal>
         );
       })() : null}
     </div>
