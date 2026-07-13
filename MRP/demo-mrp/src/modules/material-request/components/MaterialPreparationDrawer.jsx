@@ -326,7 +326,7 @@ export const MaterialPreparationDrawer = ({
               Material Preparation
             </h2>
             <p style={{ margin: 0, fontSize: "var(--text-title-3)", color: "var(--neutral-on-surface-secondary)" }}>
-              By continuing, you confirm the allocated materials and will begin preparing items as shown
+              Confirm the allocated materials to begin preparing the requested items
             </p>
           </div>
           <IconButton

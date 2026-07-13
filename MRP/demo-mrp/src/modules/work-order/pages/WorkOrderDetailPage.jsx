@@ -3273,7 +3273,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
               }}
             >
               <h2 className="ds-modal-title" style={{ margin: 0 }}>
-                Request Material
+                Material Requests
               </h2>
               <IconButton
                 icon={CloseIcon}
@@ -3498,7 +3498,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                         icon={DeleteIcon}
                         disabled={requestDraft.length === 1}
                         onClick={() => removeDraftRow(row.rowId)}
-                        color="var(--status-red-primary)"
+                        color={requestDraft.length === 1 ? undefined : "var(--status-red-primary)"}
                       />
                     </div>
                   </div>
@@ -3735,7 +3735,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
         width="720px"
       >
         <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-          {shortageMaterials.length > 0 ? (
+          {shortageMaterials.length > 0 && woStatus !== "completed" ? (
             <div
               style={{
                 display: "flex",
@@ -4172,13 +4172,15 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                     View Request History
                   </Button>
                 ) : null}
-                <Button
-                  variant="outlined"
-                  leftIcon={AddIcon}
-                  onClick={() => openRequestModal(false)}
-                >
-                  Request Material
-                </Button>
+                {woStatus !== "completed" ? (
+                  <Button
+                    variant="outlined"
+                    leftIcon={AddIcon}
+                    onClick={() => openRequestModal(false)}
+                  >
+                    Request Material
+                  </Button>
+                ) : null}
               </div>
             ) : null}
           </div>
@@ -5572,7 +5574,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                       <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                         <ActualVsForecastBadge actual={total} forecast={forecastTotal} />
                         <span style={{ fontSize: "14px", color: "var(--neutral-on-surface-secondary)" }}>
-                          {formatIDR(perUnit)} / pcs
+                          {formatIDR(perUnit)} / unit
                         </span>
                       </div>
                     </div>
@@ -5737,7 +5739,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                 <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
                   <span style={{ fontSize: "12px", color: "var(--neutral-on-surface-secondary)" }}>Forecasted COGS (BOM)</span>
                   <span style={{ fontSize: "16px", fontWeight: "bold", color: "var(--neutral-on-surface-primary)" }}>
-                    {formatIDR(forecastedPerUnit)} / pcs{" "}
+                    {formatIDR(forecastedPerUnit)} / unit{" "}
                     <span style={{ fontSize: "12px", fontWeight: "normal", color: "var(--neutral-on-surface-secondary)" }}>
                       ({formatIDR(totalForecastedCogs)} for {TOTAL_QTY} pcs)
                     </span>
@@ -5746,7 +5748,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                 <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
                   <span style={{ fontSize: "12px", color: "var(--neutral-on-surface-secondary)" }}>Actual COGS (current)</span>
                   <span style={{ fontSize: "16px", fontWeight: "bold", color: "var(--neutral-on-surface-primary)" }}>
-                    {formatIDR(actualPerUnit)} / pcs{" "}
+                    {formatIDR(actualPerUnit)} / unit{" "}
                     <span style={{ fontSize: "12px", fontWeight: "normal", color: "var(--neutral-on-surface-secondary)" }}>
                       ({formatIDR(totalActualCogs)} for {TOTAL_QTY} pcs)
                     </span>
@@ -5780,7 +5782,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                     <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                       <ActualVsForecastBadge actual={materialCost} forecast={computeMaterialCost(linkedBom?.materials || [])} />
                       <span style={{ fontSize: "14px", color: "var(--neutral-on-surface-secondary)" }}>
-                        {formatIDR(TOTAL_QTY > 0 ? materialCost / TOTAL_QTY : 0)} / pcs
+                        {formatIDR(TOTAL_QTY > 0 ? materialCost / TOTAL_QTY : 0)} / unit
                       </span>
                     </div>
                   </div>
@@ -5900,7 +5902,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                           {formatIDR(outsourcingTotal)}
                         </span>
                         <span style={{ fontSize: "14px", color: "var(--neutral-on-surface-secondary)" }}>
-                          {formatIDR(TOTAL_QTY > 0 ? outsourcingTotal / TOTAL_QTY : 0)} / pcs
+                          {formatIDR(TOTAL_QTY > 0 ? outsourcingTotal / TOTAL_QTY : 0)} / unit
                         </span>
                       </div>
                     </div>
@@ -5980,7 +5982,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                   <span>{formatIDR(totalActualCogs)}</span>
                 </div>
                 <span style={{ fontSize: "14px", color: "var(--neutral-on-surface-secondary)", textAlign: "right" }}>
-                  {formatIDR(actualPerUnit)} / pcs
+                  {formatIDR(actualPerUnit)} / unit
                 </span>
               </div>
             </DetailCard>

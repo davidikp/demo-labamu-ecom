@@ -377,7 +377,7 @@ export const BomDetailPage = ({ onNavigate, initialData }) => {
           }}
         >
           <span>Total Forecasted COGS</span>
-          <span>{formatIDR(totalCogs)} / Pcs</span>
+          <span>{formatIDR(totalCogs)} / Unit</span>
         </div>
       </DetailCard>
       ) : null}
