@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { IconButton } from "../atoms/IconButton.jsx";
 import { Button } from "../common/Button.jsx";
-import { Bell, ChevronRight, Trash2 } from "../icons/Icons.jsx";
+import { Bell, Trash2 } from "../icons/Icons.jsx";
 import { ChipTabs } from "../../ce-ui";
 import { Tooltip } from "../atoms/Tooltip.jsx";
 import { useNotifications } from "../../context/NotificationContext.jsx";
@@ -150,24 +150,18 @@ export const NotificationBell = () => {
       ) : (
         <span style={{ width: "8px", flexShrink: 0 }} />
       )}
-      <div style={{ minWidth: 0, flex: 1, display: "flex", flexDirection: "column", gap: "6px" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px" }}>
+      <div style={{ minWidth: 0, flex: 1, display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "8px" }}>
+        <div style={{ minWidth: 0, flex: 1, display: "flex", flexDirection: "column", gap: "4px" }}>
           <span style={{ fontSize: "13px", fontWeight: item.unread ? 700 : 600, color: "var(--neutral-on-surface-primary)", lineHeight: 1.35 }}>
             {t(item.title)}
           </span>
-          <span data-no-localize style={{ fontSize: "11px", color: "var(--neutral-on-surface-tertiary)", whiteSpace: "nowrap", flexShrink: 0 }}>
-            {timeAgo(item.createdAt, language)}
+          <span style={{ fontSize: "12px", color: "var(--neutral-on-surface-secondary)", lineHeight: 1.4 }}>
+            {t(item.body)}
           </span>
         </div>
-        <span style={{ fontSize: "12px", color: "var(--neutral-on-surface-secondary)", lineHeight: 1.4 }}>
-          {t(item.body)}
-        </span>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "2px" }}>
-          <span
-            style={{ display: "inline-flex", alignItems: "center", gap: "2px", fontSize: "12px", fontWeight: 700, color: "var(--feature-brand-primary)" }}
-            onClick={(e) => { e.stopPropagation(); handleOpenItem(item); }}
-          >
-            {t(item.cta)} <ChevronRight size={13} />
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "4px", flexShrink: 0 }}>
+          <span data-no-localize style={{ fontSize: "11px", color: "var(--neutral-on-surface-tertiary)", whiteSpace: "nowrap" }}>
+            {timeAgo(item.createdAt, language)}
           </span>
           <Tooltip content="Delete">
             <button

@@ -26,7 +26,7 @@ const QuickActionCard = ({ data, onAdd, onViewList }) => (
       border: "1px solid var(--neutral-line-separator-1, #E5E7EB)",
       padding: "20px 24px",
       display: "flex",
-      alignItems: "center",
+      alignItems: "flex-start",
       gap: "12px",
       cursor: "pointer",
       transition: "border-color 0.15s ease",
@@ -34,8 +34,8 @@ const QuickActionCard = ({ data, onAdd, onViewList }) => (
     }}
   >
     <div style={{ minWidth: 0, flex: 1, display: "flex", flexDirection: "column", gap: "3px" }}>
-      <span style={{ fontSize: "16px", fontWeight: 700, color: "#1A1D23", whiteSpace: "nowrap" }}>{data.label}</span>
-      <span style={{ fontSize: "14px", color: "#9CA3AF", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+      <span style={{ fontSize: "16px", fontWeight: 700, color: "#1A1D23", overflowWrap: "break-word" }}>{data.label}</span>
+      <span style={{ fontSize: "14px", color: "#9CA3AF", overflowWrap: "break-word" }}>
         <b data-no-localize style={{ color: "#1A1D23", fontSize: "14px" }}>{data.count}</b> · {data.sub}
       </span>
     </div>

@@ -33,8 +33,8 @@ export const TodoPanel = () => {
   const [statusFilter, setStatusFilter] = useState([]); // empty = all
 
   const L = {
-    en: { title: "Need To Do", module: "Module", status: "Status", allModule: "All Modules", allStatus: "All Status", search: "Search to-do", empty: "You are all caught up — no actions needed right now." },
-    id: { title: "Perlu Dikerjakan", module: "Modul", status: "Status", allModule: "Semua Modul", allStatus: "Semua Status", search: "Cari tugas", empty: "Anda sudah selesai — tidak ada tindakan yang diperlukan saat ini." },
+    en: { title: "Need To Do", module: "Module", status: "Status", allModule: "All Modules", allStatus: "All Status", search: "Search to-do", empty: "You are all caught up — no actions needed right now.", seeDetail: "See Detail" },
+    id: { title: "Perlu Dikerjakan", module: "Modul", status: "Status", allModule: "Semua Modul", allStatus: "Semua Status", search: "Cari tugas", empty: "Anda sudah selesai — tidak ada tindakan yang diperlukan saat ini.", seeDetail: "Lihat Detail" },
   }[language === "id" ? "id" : "en"];
 
   // Filter option lists (multi-select; empty selection = all).
@@ -135,7 +135,7 @@ export const TodoPanel = () => {
                   </div>
                   <div style={{ flexShrink: 0 }}>
                     <Button variant="outlined" size="small" onClick={() => i.entityRoute && navigate(i.entityRoute)}>
-                      {t(i.todo.action)}
+                      {L.seeDetail}
                     </Button>
                   </div>
                 </div>
