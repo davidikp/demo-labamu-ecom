@@ -35,10 +35,10 @@ const PoActionValidationModals = ({
   getDecisionMeta,
   handleSubmitDecision,
 
-  // Canceled WO Blocker
-  showCanceledWOBlocker,
-  setShowCanceledWOBlocker,
-  canceledWOsFound,
+  // Cancelled WO Blocker
+  showCancelledWOBlocker,
+  setShowCancelledWOBlocker,
+  cancelledWOsFound,
 }) => {
   return (
     <>
@@ -329,13 +329,13 @@ const PoActionValidationModals = ({
         </div>
       </GeneralModal>
 
-      <CanceledWorkOrderBlockerModal
-        isOpen={showCanceledWOBlocker}
-        onClose={() => setShowCanceledWOBlocker(false)}
-        canceledWOs={canceledWOsFound}
+      <CancelledWorkOrderBlockerModal
+        isOpen={showCancelledWOBlocker}
+        onClose={() => setShowCancelledWOBlocker(false)}
+        cancelledWOs={cancelledWOsFound}
         mode="detail"
         onEditPO={() => {
-          setShowCanceledWOBlocker(false);
+          setShowCancelledWOBlocker(false);
           handleEditPo();
         }}
       />
@@ -343,10 +343,10 @@ const PoActionValidationModals = ({
   );
 };
 
-const CanceledWorkOrderBlockerModal = ({
+const CancelledWorkOrderBlockerModal = ({
   isOpen,
   onClose,
-  canceledWOs,
+  cancelledWOs,
   mode = "edit",
   onEditPO,
 }) => (
@@ -354,8 +354,8 @@ const CanceledWorkOrderBlockerModal = ({
     isOpen={isOpen}
     onClose={onClose}
     width="520px"
-    title="Canceled Work Orders Found"
-    description="Some work orders in this purchase order have already been canceled."
+    title="Cancelled Work Orders Found"
+    description="Some work orders in this purchase order have already been cancelled."
   >
     <div
       style={{
@@ -388,7 +388,7 @@ const CanceledWorkOrderBlockerModal = ({
             gap: "8px",
           }}
         >
-          {canceledWOs.map((wo) => (
+          {cancelledWOs.map((wo) => (
             <div
               key={wo}
               style={{

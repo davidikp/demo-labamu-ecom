@@ -193,7 +193,7 @@ export const MOCK_PO_TABLE_DATA = [
     vendorName: "PT Sumber Berkah",
     amount: "IDR 7,000,000",
     createdDate: "2026-03-25",
-    status: "Canceled",
+    status: "Cancelled",
     statusKey: "rejected",
     sBadge: "red",
     subtotal: 7000000,
@@ -540,7 +540,7 @@ export const MOCK_PO_TABLE_DATA = [
       {
         id: 1,
         type: "wo",
-        item: "Outsourced - Luxury Cabinet Canceled",
+        item: "Outsourced - Luxury Cabinet Cancelled",
         code: "CAB-LUX-CAN",
         desc: "Generated from WO-202603-099 with assignment WOA-0099. It covers these routing stages:\n- Step 1: Cutting\n- Step 2: Assembly",
         woRef: "WO-202603-099",

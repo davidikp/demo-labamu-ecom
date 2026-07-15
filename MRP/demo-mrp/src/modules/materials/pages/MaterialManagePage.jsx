@@ -29,7 +29,7 @@ const cellStyle = (overrides) => ({
 
 
 const RadioGroup = ({ options, value, onChange }) => (
-  <div style={{ display: "flex", gap: "24px", marginTop: "4px" }}>
+  <div style={{ display: "flex", gap: "24px" }}>
     {options.map((opt) => (
       <label key={opt.value} style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer" }}>
         <div 
@@ -418,6 +418,7 @@ export const MaterialManagePage = ({ onNavigate, showSnackbar, t }) => {
         onClose={() => setIsCategoryModalOpen(false)}
         title={modalMode === "Add" ? "Add Category" : "Edit Category"}
         width="480px"
+        hideFooterDivider
         footer={
           <div style={{ display: "flex", gap: "12px", width: "100%" }}>
             <Button variant="outlined" size="large" onClick={() => setIsCategoryModalOpen(false)} style={{ flex: 1 }}>
@@ -430,23 +431,23 @@ export const MaterialManagePage = ({ onNavigate, showSnackbar, t }) => {
         }
       >
         <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
-          <InputField 
-            label="Name" 
+          <InputField
+            label="Name"
             required
-            headerRight={`${categoryForm.name.length}/100`}
+            showCounter
             error={categoryErrors.name}
             value={categoryForm.name}
-            onChange={(e) => { 
+            onChange={(e) => {
               setCategoryForm({ ...categoryForm, name: e.target.value });
               if (e.target.value.trim()) setCategoryErrors(prev => ({ ...prev, name: null }));
             }}
             placeholder="Enter category name"
             maxLength={100}
           />
-          
-          <InputField 
-            label="Description" 
-            headerRight={`${categoryForm.description.length}/1000`}
+
+          <InputField
+            label="Description"
+            showCounter
             multiline={true}
             value={categoryForm.description}
             onChange={(e) => setCategoryForm({ ...categoryForm, description: e.target.value })}
@@ -484,10 +485,10 @@ export const MaterialManagePage = ({ onNavigate, showSnackbar, t }) => {
         }
       >
         <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
-          <InputField 
-            label="Name" 
+          <InputField
+            label="Name"
             required
-            headerRight={`${uomForm.name.length}/100`}
+            showCounter
             error={uomErrors.name}
             value={uomForm.name}
             onChange={(e) => {
@@ -498,13 +499,13 @@ export const MaterialManagePage = ({ onNavigate, showSnackbar, t }) => {
             maxLength={100}
           />
 
-          <InputField 
-            label="UOM Alias" 
-            headerRight={`${uomForm.alias.length}/100`}
+          <InputField
+            label="UOM Alias"
+            showCounter
             value={uomForm.alias}
             onChange={(e) => setUomForm({ ...uomForm, alias: e.target.value })}
             placeholder="e.g. kg, pcs, m"
-            maxLength={100}
+            maxLength={3}
           />
 
           {modalMode === "Edit" && (

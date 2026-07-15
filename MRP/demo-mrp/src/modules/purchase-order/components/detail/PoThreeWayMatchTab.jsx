@@ -1,7 +1,7 @@
 import React from "react";
 import {
   CheckCircleIcon,
-  CanceledCircleIcon,
+  CancelledCircleIcon,
   ImageAssetIcon,
 } from "../../../../components/icons/Icons.jsx";
 import { TablePaginationFooter } from "../../../../components/table/TablePaginationFooter.jsx";
@@ -291,7 +291,7 @@ const PoThreeWayMatchTab = ({
                             <div
                               style={{ display: "flex", alignItems: "center" }}
                             >
-                              <CanceledCircleIcon
+                              <CancelledCircleIcon
                                 size={16}
                                 color="var(--status-red-primary)"
                               />
@@ -330,7 +330,7 @@ const PoThreeWayMatchTab = ({
                             <div
                               style={{ display: "flex", alignItems: "center" }}
                             >
-                              <CanceledCircleIcon
+                              <CancelledCircleIcon
                                 size={16}
                                 color="var(--status-red-primary)"
                               />

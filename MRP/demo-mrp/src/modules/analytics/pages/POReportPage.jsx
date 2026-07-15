@@ -771,7 +771,7 @@ const POReportPage = ({ onNavigate, t }) => {
               else if (po.status === "Need Revision") poVariant = "yellow";
               else if (po.status === "Issued") poVariant = "blue";
               else if (po.status === "Completed") poVariant = "green";
-              else if (po.status === "Canceled") poVariant = "red";
+              else if (po.status === "Cancelled") poVariant = "red";
 
               return (
                 <div 

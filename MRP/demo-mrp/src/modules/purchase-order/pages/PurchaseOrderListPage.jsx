@@ -108,7 +108,7 @@ export const PurchaseOrderListPage = ({ onNavigate, t }) => {
     { key: "Issued", label: "Issued", activeColor: "blue-light" },
     { key: "Completed", label: "Completed", activeColor: "green-light" },
     { key: "Need Revision", label: "Need Revision", activeColor: "yellow-light" },
-    { key: "Canceled", label: "Canceled", activeColor: "red-light" },
+    { key: "Cancelled", label: "Cancelled", activeColor: "red-light" },
   ];
 
   const paymentStatusCards = [

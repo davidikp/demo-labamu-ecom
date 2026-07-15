@@ -1048,8 +1048,8 @@ const drawWatermark = (ctx, status) => {
   let watermarkText = "";
   const statusLower = String(status).toLowerCase();
 
-  if (statusLower === "rejected" || statusLower === "canceled") {
-    watermarkText = "Canceled";
+  if (statusLower === "rejected" || statusLower === "cancelled") {
+    watermarkText = "Cancelled";
   } else if (statusLower === "completed") {
     watermarkText = "Completed";
   } else if (statusLower === "ready_to_send" || statusLower === "waiting for approval") {

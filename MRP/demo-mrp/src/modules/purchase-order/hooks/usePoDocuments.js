@@ -126,9 +126,9 @@ export const usePoDocuments = ({
 
   // --- Handlers ---
   const handleUploadDocument = useCallback(() => {
-    if (currentStatus === "Canceled") {
+    if (currentStatus === "Cancelled") {
       setDocumentUploadError(
-        "Documents cannot be uploaded for canceled purchase orders"
+        "Documents cannot be uploaded for cancelled purchase orders"
       );
       return;
     }

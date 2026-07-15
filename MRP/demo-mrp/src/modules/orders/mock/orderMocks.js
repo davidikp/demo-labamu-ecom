@@ -51,10 +51,10 @@ export const MOCK_ORDER_TABLE_DATA = [
     createdAt: "2026-04-04",
     priority: "High",
     pVariant: "red-light",
-    status: "Canceled",
+    status: "Cancelled",
     sBadge: "red",
     orderType: "Rework",
-    canceledMessage: "Supplier unable to fulfill the raw material requirement due to supply chain issues.",
+    cancelledMessage: "Supplier unable to fulfill the raw material requirement due to supply chain issues.",
   },
   {
     orderNo: "ORD-202604-005",

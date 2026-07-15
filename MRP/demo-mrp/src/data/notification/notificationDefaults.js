@@ -25,7 +25,7 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
         id: "po_revision_cancel",
         title: "Purchase Order revision and cancellation",
         description:
-          "Alert requesters when a purchase order needs revision or is canceled.",
+          "Alert requesters when a purchase order needs revision or is cancelled.",
         module: "Purchase Order",
         enabled: true,
         delivery: "Instant",

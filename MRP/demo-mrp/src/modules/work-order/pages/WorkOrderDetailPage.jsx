@@ -186,7 +186,7 @@ const ONGOING_REQUEST_HISTORY = [
   { id: "REQ0129030", date: "10/02/2025; 15:00", by: "Richard Mille", status: "Preparing" },
   { id: "REQ0129029", date: "08/02/2025; 15:00", by: "Abigail Husni", status: "Transferring" },
   { id: "REQ0129028", date: "08/02/2025; 15:00", by: "Zoe Adams", status: "Completed" },
-  { id: "REQ0129027", date: "08/02/2025; 15:00", by: "Zoe Adams", status: "Canceled" },
+  { id: "REQ0129027", date: "08/02/2025; 15:00", by: "Zoe Adams", status: "Cancelled" },
 ];
 
 const initialRequestHistory = (woId) =>
@@ -197,7 +197,7 @@ const REQUEST_STATUS_VARIANT = {
   Preparing: "yellow",
   Transferring: "orange",
   Completed: "green",
-  Canceled: "red",
+  Cancelled: "red",
 };
 
 const SearchableVendorSelect = ({
@@ -503,9 +503,9 @@ export const WorkOrderDetailPage = ({ onNavigate, isSidebarCollapsed, initialDat
     const statusKey = initialData?.statusKey || "not_started";
     const startDate = initialData?.start || "2026-03-20";
     
-    if (statusKey === "canceled") {
+    if (statusKey === "cancelled") {
       mockLogs.push({
-        name: "Natasha Smith", email: "natasha@company.com", title: "Canceled", timestamp: `${startDate} at 14:00`
+        name: "Natasha Smith", email: "natasha@company.com", title: "Cancelled", timestamp: `${startDate} at 14:00`
       });
     }
     
@@ -881,12 +881,13 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
   const [woStatus, setWoStatus] = useState(
     initialData?.statusKey || "not_started"
   );
-  const isCanceled = woStatus === "canceled";
+  const isCancelled = woStatus === "cancelled";
   const [showSuccessToast, setShowSuccessToast] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
 
   const [readyStartDate, setReadyStartDate] = useState("");
   const [readyEndDate, setReadyEndDate] = useState("");
+  const [isCompleteModalOpen, setIsCompleteModalOpen] = useState(false);
 
   // --- Request Material flow state ---
   const [materials, setMaterials] = useState(() => initialBomMaterials(initialData?.wo));
@@ -960,10 +961,36 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
     setRequestErrors({});
   };
 
+  // Maps a requestDraft row field name to the key it's validated/errored under
+  // in validateRequestDraft (they don't all match 1:1, e.g. materialName -> material).
+  const DRAFT_FIELD_ERROR_KEY = {
+    materialName: "material",
+    qty: "qty",
+    exceedingCategory: "exceedingCategory",
+    exceedingReason: "exceeding",
+    category: "category",
+    reason: "reason",
+  };
+
   const updateDraftRow = (rowId, changes) => {
     setRequestDraft((rows) =>
       rows.map((r) => (r.rowId === rowId ? { ...r, ...changes } : r))
     );
+    // Clear stale inline errors for whichever fields the user just edited.
+    setRequestErrors((prev) => {
+      const next = { ...prev };
+      let changed = false;
+      Object.keys(changes).forEach((key) => {
+        const errorSuffix = DRAFT_FIELD_ERROR_KEY[key];
+        if (!errorSuffix) return;
+        const errorKey = `${rowId}-${errorSuffix}`;
+        if (errorKey in next) {
+          delete next[errorKey];
+          changed = true;
+        }
+      });
+      return changed ? next : prev;
+    });
   };
 
   const addDraftRow = () =>
@@ -1004,8 +1031,11 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
     requestDraft.forEach((row) => {
       const qtyNum = parseFloat(row.qty);
       if (!row.materialName) errors[`${row.rowId}-material`] = "Field cannot be empty";
-      if (row.qty === "" || isNaN(qtyNum) || qtyNum <= 0)
+      if (row.qty === "" || isNaN(qtyNum)) {
         errors[`${row.rowId}-qty`] = "Field cannot be empty";
+      } else if (qtyNum <= 0) {
+        errors[`${row.rowId}-qty`] = "Qty must be greater than 0";
+      }
       if (row.type === "BOM") {
         const remaining = remainingForMaterial(row.materialName);
         if (remaining != null && qtyNum > remaining) {
@@ -1376,8 +1406,8 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                 ? "In Progress"
                 : woStatus === "completed"
                   ? "Completed"
-                  : woStatus === "canceled"
-                    ? "Canceled"
+                  : woStatus === "cancelled"
+                    ? "Cancelled"
                     : MOCK_WO_TABLE_DATA[woIndex].status,
         sBadge:
           woStatus === "not_started"
@@ -1388,7 +1418,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                 ? "yellow"
                 : woStatus === "completed"
                   ? "green"
-                  : woStatus === "canceled"
+                  : woStatus === "cancelled"
                     ? "red"
                     : MOCK_WO_TABLE_DATA[woIndex].sBadge,
         start: displayStartDate,
@@ -1399,32 +1429,38 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
     }
   }, [vendors, routingStages, outsourceSteps, woStatus, displayStartDate, displayEndDate, actualCogsBomId, actualCogs]);
 
-  useEffect(() => {
-    const currentTotalVendorReceived = vendors
-      .filter((v) => v.name !== "Internal")
-      .reduce((acc, v) => acc + (parseInt(v.receivedOutput, 10) || 0), 0);
+  const hasStages = routingStages.length > 0;
+  const allStagesCompleted =
+    hasStages &&
+    routingStages.every((stage) => {
+      const vendorCompleted = vendors
+        .filter((v) => v.name !== "Internal" && v.assignedSteps && v.assignedSteps.includes(stage.step))
+        .reduce((acc, v) => acc + (parseInt(v.receivedOutput, 10) || 0), 0);
+      return (stage.comp || 0) + vendorCompleted >= TOTAL_QTY;
+    });
 
-    const hasStages = routingStages.length > 0;
-    const allStagesCompleted =
-      hasStages &&
-      routingStages.every((stage) => {
-        const vendorCompleted = vendors
-          .filter((v) => v.name !== "Internal" && v.assignedSteps && v.assignedSteps.includes(stage.step))
-          .reduce((acc, v) => acc + (parseInt(v.receivedOutput, 10) || 0), 0);
-        return (stage.comp || 0) + vendorCompleted >= TOTAL_QTY;
-      });
+  // A work order can only complete once no material request is still ongoing —
+  // i.e. every request is Completed/Cancelled (or there is no request history).
+  const hasOngoingMaterialRequest = requestHistory.some(
+    (r) => r.status !== "Completed" && r.status !== "Cancelled"
+  );
 
-    // A work order can only complete once no material request is still ongoing —
-    // i.e. every request is Completed/Canceled (or there is no request history).
-    const hasOngoingMaterialRequest = requestHistory.some(
-      (r) => r.status !== "Completed" && r.status !== "Canceled"
+  const canCompleteWorkOrder =
+    allStagesCompleted && !hasOngoingMaterialRequest && woStatus !== "completed";
+
+  const handleCompleteWorkOrder = () => {
+    setIsCompleteModalOpen(false);
+    // Finalize any material request that hadn't reached a terminal status yet.
+    setRequestHistory((prev) =>
+      prev.map((r) =>
+        r.status !== "Completed" && r.status !== "Cancelled" ? { ...r, status: "Completed" } : r
+      )
     );
-
-    if (allStagesCompleted && !hasOngoingMaterialRequest && woStatus !== "completed") {
-      setWoStatus("completed");
-      addActivityLog("Completed");
-    }
-  }, [routingStages, outsourceSteps, vendors, TOTAL_QTY, woStatus, requestHistory]);
+    setWoStatus("completed");
+    addActivityLog("Completed");
+    setToastMessage("Work order completed");
+    setShowSuccessToast(true);
+  };
 
   const internalVendor = vendors.find((v) => v.name === "Internal");
   const internalOut = parseInt(internalVendor?.output || 0, 10) || 0;
@@ -1718,8 +1754,11 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
               const matchedStage = (routingStages || []).find(
                 (stage) => Number(stage.step) === step
               );
+              const routingName = matchedStage?.route;
               const operationName = matchedStage?.op || matchedStage?.operation;
-              return operationName ? `Step ${step}: ${operationName}` : `Step ${step}`;
+              if (routingName && operationName) return `Step ${step}: ${routingName} - ${operationName}`;
+              if (routingName || operationName) return `Step ${step}: ${routingName || operationName}`;
+              return `Step ${step}`;
             });
             const stackedLabels = stageLabels.map((label) => `- ${label}`).join("\n");
             generatedDescription = `${generatedDescription} It covers these routing stages:\n${stackedLabels}`;
@@ -2576,8 +2615,11 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
             const matchedStage = (routingStages || []).find(
               (stage) => Number(stage.step) === step
             );
+            const routingName = matchedStage?.route;
             const operationName = matchedStage?.op || matchedStage?.operation;
-            return operationName ? `Step ${step}: ${operationName}` : `Step ${step}`;
+            if (routingName && operationName) return `Step ${step}: ${routingName} - ${operationName}`;
+            if (routingName || operationName) return `Step ${step}: ${routingName || operationName}`;
+            return `Step ${step}`;
           });
           const stackedLabels = stageLabels.map((label) => `- ${label}`).join("\n");
           generatedDescription = `${generatedDescription} It covers these routing stages:\n${stackedLabels}`;
@@ -3463,14 +3505,15 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                     <div style={{ flex: "1" }}>
                       <InputField
                         type="number"
-                        placeholder="0"
+                        placeholder="Enter qty"
                         value={row.qty}
                         onChange={(e) =>
                           updateDraftRow(row.rowId, { qty: e.target.value })
                         }
                         suffix={unit || undefined}
-                        error={err("qty") || undefined}
+                        errorState={!!err("qty")}
                       />
+                      {err("qty") && <span style={errStyle}>{err("qty")}</span>}
                       {row.type === "BOM" && remaining != null && row.materialName ? (
                         <span
                           style={{
@@ -3934,7 +3977,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
               </span>
             </div>
           </div>
-          {!isCanceled && <Button variant="outlined">Edit Work Order</Button>}
+          {!isCancelled && <Button variant="outlined">Edit Work Order</Button>}
         </div>
 
         <Card>
@@ -3965,8 +4008,8 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
             {woStatus === "completed" ? (
               <StatusBadge variant="green">Completed</StatusBadge>
             ) : null}
-            {woStatus === "canceled" ? (
-              <StatusBadge variant="red">Canceled</StatusBadge>
+            {woStatus === "cancelled" ? (
+              <StatusBadge variant="red">Cancelled</StatusBadge>
             ) : null}
           </div>
           <div
@@ -4162,7 +4205,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                 </span>
               </span>
             </div>
-            {woStatus !== "not_started" && !isCanceled ? (
+            {woStatus !== "not_started" && !isCancelled ? (
               <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                 {hasSubmittedRequest ? (
                   <Button
@@ -4178,7 +4221,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                     leftIcon={AddIcon}
                     onClick={() => openRequestModal(false)}
                   >
-                    Request Material
+                    Material Request
                   </Button>
                 ) : null}
               </div>
@@ -4662,7 +4705,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                             row.plannedDate?.start && row.plannedDate?.end ? (
                               <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "var(--text-title-3)" }}>
                                 <span>{row.plannedDate.start} - {row.plannedDate.end}</span>
-                                {woStatus !== "canceled" && (
+                                {woStatus !== "cancelled" && (
                                   <IconButton
                                     icon={EditIcon}
                                     size="small"
@@ -4675,7 +4718,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                               <Button
                                 variant="tertiary"
                                 size="small"
-                                disabled={woStatus === "canceled"}
+                                disabled={woStatus === "cancelled"}
                                 onClick={() => openPlannedDateModal(row.step)}
                                 style={{ padding: "0 8px", height: "24px", minHeight: "unset" }}
                               >
@@ -4742,7 +4785,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                           >
                             Waiting Prev Process
                           </span>
-                        ) : canManage && !isCanceled && woStatus !== "completed" ? (
+                        ) : canManage && !isCancelled && woStatus !== "completed" ? (
                           <Button
                             variant="outlined"
                             size="small"
@@ -4786,8 +4829,8 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                               lineHeight: "1.2",
                             }}
                           >
-                            {isCanceled
-                              ? "Canceled"
+                            {isCancelled
+                              ? "Cancelled"
                               : woStatus === "completed" || (row.totalComp || 0) >= TOTAL_QTY
                               ? "Completed"
                               : "Waiting Prev Process"}
@@ -4823,7 +4866,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                   Outsource Detail
                 </span>
               </div>
-              {!isCanceled && (
+              {!isCancelled && (
                 <Button
                   variant="outlined"
                   size="small"
@@ -4917,7 +4960,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                       { value: "In Progress", label: "In Progress" },
                       { value: "Partially Received", label: "Partially Received" },
                       { value: "Completed", label: "Completed" },
-                      { value: "Canceled", label: "Canceled" },
+                      { value: "Cancelled", label: "Cancelled" },
                     ]}
                     values={vendorStatusFilters}
                     onChangeMultiple={setVendorStatusFilters}
@@ -5005,8 +5048,8 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                 (() => {
                   const filteredVendors = vendors.filter((vendor) => {
                     const isInternal = vendor.name === "Internal";
-                    const resolvedVendorStatus = isCanceled
-                      ? "Canceled"
+                    const resolvedVendorStatus = isCancelled
+                      ? "Cancelled"
                       : isInternal
                       ? internalStatusInfo.text
                       : resolveVendorProgressStatus(vendor);
@@ -5045,8 +5088,8 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
 
                   return filteredVendors.map((vendor, i) => {
                     const isInternal = vendor.name === "Internal";
-                    const resolvedVendorStatus = isCanceled
-                      ? "Canceled"
+                    const resolvedVendorStatus = isCancelled
+                      ? "Cancelled"
                       : isInternal
                       ? internalStatusInfo.text
                       : resolveVendorProgressStatus(vendor);
@@ -5056,9 +5099,9 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                   const isVendorInProgress =
                     resolvedVendorStatus === "In Progress";
                   const showEditVendorAction =
-                    !isCanceled && (isInternal || (!isVendorInProgress && !isPoApproved));
+                    !isCancelled && (isInternal || (!isVendorInProgress && !isPoApproved));
                   const showRemoveVendorAction =
-                    !isCanceled &&
+                    !isCancelled &&
                     !isVendorInProgress &&
                     !(
                       isInternal &&
@@ -5214,7 +5257,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                             </>
                           ) : (
                             <>
-                              {!isCanceled && (
+                              {!isCancelled && (
                                 <Button
                                   variant="tertiary"
                                   size="small"
@@ -5237,7 +5280,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                                   Add Purchase Order
                                 </Button>
                               )}
-                              {isCanceled && "-"}
+                              {isCancelled && "-"}
                               {openPoPopoverVendorId === vendor.id &&
                                 selectedVendorForPoAction?.id === vendor.id ? (
                                 <>
@@ -6138,6 +6181,60 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
           </Button>
         </div>
       ) : null}
+
+      {canCompleteWorkOrder ? (
+        <div
+          style={{
+            position: "fixed",
+            bottom: 0,
+            left: isSidebarCollapsed ? "82px" : "286px",
+            transition: "left 0.2s ease",
+            right: 0,
+            background: "var(--neutral-surface-primary)",
+            borderTop: "1px solid var(--neutral-line-separator-1)",
+            padding: "12px 24px",
+            display: "flex",
+            justifyContent: "flex-end",
+            alignItems: "center",
+            zIndex: 100,
+          }}
+        >
+          <Button
+            variant="filled"
+            size="medium"
+            onClick={() => setIsCompleteModalOpen(true)}
+          >
+            Complete
+          </Button>
+        </div>
+      ) : null}
+
+      <GeneralModal
+        isOpen={isCompleteModalOpen}
+        onClose={() => setIsCompleteModalOpen(false)}
+        title="Complete Work Order?"
+        description="This action can't be undone. Actual COGS will be calculated from received materials."
+        footer={
+          <>
+            <Button
+              variant="filled"
+              size="large"
+              style={{ width: "100%" }}
+              onClick={handleCompleteWorkOrder}
+            >
+              Complete
+            </Button>
+            <Button
+              variant="outlined"
+              size="large"
+              style={{ width: "100%" }}
+              onClick={() => setIsCompleteModalOpen(false)}
+            >
+              Cancel
+            </Button>
+          </>
+        }
+      />
 
       <GeneralModal
         isOpen={isConfirmRemoveModalOpen && !!vendorToRemove}

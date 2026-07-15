@@ -467,7 +467,7 @@ const CloudUploadIcon = ({
 );
 
 const CheckCircleIcon = CheckCircle;
-const CanceledCircleIcon = XCircle;
+const CancelledCircleIcon = XCircle;
 
 export {
   Bell,
@@ -543,7 +543,7 @@ export {
   NotificationCenterIcon,
   CloudUploadIcon,
   CheckCircleIcon,
-  CanceledCircleIcon,
+  CancelledCircleIcon,
   CopyIcon,
   ShoppingCart,
   TrendingUp,

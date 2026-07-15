@@ -49,7 +49,7 @@ const MOCK_INVOICES_DATA = [
   { id: 2, invNo: "INV-2026-002", type: "Remaining Payment", issueDate: "Mar 10, 2026", dueDate: "Mar 24, 2026", totalDue: 12500000, status: "Issued", sBadge: "blue" },
   { id: 3, invNo: "INV-2026-003", type: "Down Payment", issueDate: "Mar 15, 2026", dueDate: "Mar 29, 2026", totalDue: 3000000, status: "Need Revision", sBadge: "orange" },
   { id: 4, invNo: "INV-2026-004", type: "Down Payment", issueDate: "Mar 18, 2026", dueDate: "Apr 01, 2026", totalDue: 4500000, status: "Void", sBadge: "grey" },
-  { id: 5, invNo: "INV-2026-005", type: "Remaining Payment", issueDate: "Mar 20, 2026", dueDate: "Apr 03, 2026", totalDue: 8000000, status: "Canceled", sBadge: "red" },
+  { id: 5, invNo: "INV-2026-005", type: "Remaining Payment", issueDate: "Mar 20, 2026", dueDate: "Apr 03, 2026", totalDue: 8000000, status: "Cancelled", sBadge: "red" },
   { id: 6, invNo: "INV-2026-006", type: "Down Payment", issueDate: "Mar 22, 2026", dueDate: "Apr 05, 2026", totalDue: 2000000, status: "Paid", sBadge: "green" },
 ];
 
@@ -448,7 +448,7 @@ const InvoicesTab = ({ onNavigate }) => {
 
   const totalPages = Math.ceil(filteredData.length / rowsPerPage);
   const visibleData = filteredData.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
-  const statusOptions = ["Paid", "Issued", "Void", "Canceled", "Need Revision"];
+  const statusOptions = ["Paid", "Issued", "Void", "Cancelled", "Need Revision"];
 
   const gridTemplate = "2fr 1.5fr 1.2fr 1.2fr 1.5fr 1.2fr";
   const rowHeight = 64;
@@ -2538,7 +2538,7 @@ export const OrderDetailPage = ({ onNavigate, initialData, showSnackbar, isSideb
       case "Ready to Ship":
       case "On Shipping":
         return "blue";
-      case "Canceled":
+      case "Cancelled":
         return "red";
       case "Waiting for Approval":
         return "orange";
@@ -2568,11 +2568,11 @@ export const OrderDetailPage = ({ onNavigate, initialData, showSnackbar, isSideb
           entityId: orderNo,
           submitterUser: orderNotifUser,
         });
-      } else if (nextStatus === "Canceled" && prevStatus === "Waiting for Approval") {
+      } else if (nextStatus === "Cancelled" && prevStatus === "Waiting for Approval") {
         notifyOrder("order", "rejected", {
           entityId: orderNo,
           approverName: orderNotifUser.name,
-          reason: additionalFields?.canceledMessage || "",
+          reason: additionalFields?.cancelledMessage || "",
           submitterUser: orderNotifUser,
         });
       } else if (nextStatus === "Need Revision") {
@@ -2627,7 +2627,7 @@ export const OrderDetailPage = ({ onNavigate, initialData, showSnackbar, isSideb
         return { text: "Pending", variant: "grey-light" };
       case "Need Revision":
         return { text: "Needs Revision", variant: "orange" };
-      case "Canceled":
+      case "Cancelled":
         return { text: "Rejected", variant: "red" };
       default:
         return { text: "Approved", variant: "green" };
@@ -2636,7 +2636,7 @@ export const OrderDetailPage = ({ onNavigate, initialData, showSnackbar, isSideb
 
   const getApprovalRowComment = () => {
     if (orderData?.status === "Need Revision") return orderData?.revisionMessage || "Please revise the order.";
-    if (orderData?.status === "Canceled") return orderData?.canceledMessage || "Order has been canceled.";
+    if (orderData?.status === "Cancelled") return orderData?.cancelledMessage || "Order has been cancelled.";
     return "-";
   };
 
@@ -2698,14 +2698,14 @@ export const OrderDetailPage = ({ onNavigate, initialData, showSnackbar, isSideb
       logs.push(revLog);
     }
 
-    if (orderData?.status === "Canceled") {
+    if (orderData?.status === "Cancelled") {
       const cancelLog = {
         name: approverList[0]?.name || "Approver",
         email: approverList[0]?.email || "-",
-        title: "Canceled",
+        title: "Cancelled",
         timestamp: `${orderData?.createdAt || "2026-04-01"} at 09:30`
       };
-      if (orderData?.canceledMessage) cancelLog.desc = orderData.canceledMessage;
+      if (orderData?.cancelledMessage) cancelLog.desc = orderData.cancelledMessage;
       logs.push(cancelLog);
     }
 
@@ -2811,7 +2811,7 @@ export const OrderDetailPage = ({ onNavigate, initialData, showSnackbar, isSideb
             <span style={{ color: "var(--neutral-on-surface-tertiary)" }}>Order Detail</span>
           </div>
         </div>
-        {orderData.status !== "Completed" && orderData.status !== "Canceled" && (
+        {orderData.status !== "Completed" && orderData.status !== "Cancelled" && (
           <Button variant="outlined" leftIcon={EditIcon} onClick={() => setIsEditModalOpen(true)}>
             Edit Order
           </Button>
@@ -2819,7 +2819,7 @@ export const OrderDetailPage = ({ onNavigate, initialData, showSnackbar, isSideb
       </div>
 
       {/* Revision or Cancellation Comment Section */}
-      {(orderData.status === "Need Revision" || orderData.status === "Canceled") && (
+      {(orderData.status === "Need Revision" || orderData.status === "Cancelled") && (
         <div
           style={{
             border: `1px solid ${
@@ -2855,7 +2855,7 @@ export const OrderDetailPage = ({ onNavigate, initialData, showSnackbar, isSideb
             >
               {orderData.status === "Need Revision"
                 ? "Revision Requested"
-                : "Order Canceled"}
+                : "Order Cancelled"}
             </span>
             <span
               style={{
@@ -2866,7 +2866,7 @@ export const OrderDetailPage = ({ onNavigate, initialData, showSnackbar, isSideb
             >
               {orderData.status === "Need Revision"
                 ? orderData.revisionMessage || "Please revise the order information."
-                : orderData.canceledMessage || "This order has been canceled."}
+                : orderData.cancelledMessage || "This order has been cancelled."}
             </span>
           </div>
         </div>
@@ -3199,7 +3199,7 @@ export const OrderDetailPage = ({ onNavigate, initialData, showSnackbar, isSideb
         isOpen={isCancelModalOpen}
         onClose={() => setIsCancelModalOpen(false)}
         onSubmit={(reason) => {
-          handleUpdateStatus("Canceled", { canceledMessage: reason });
+          handleUpdateStatus("Cancelled", { cancelledMessage: reason });
           setIsCancelModalOpen(false);
         }}
       />
@@ -3247,7 +3247,7 @@ export const OrderDetailPage = ({ onNavigate, initialData, showSnackbar, isSideb
       />
 
       {/* Sticky Bottom Action Footer */}
-      {orderData.status !== "Completed" && orderData.status !== "Canceled" && (
+      {orderData.status !== "Completed" && orderData.status !== "Cancelled" && (
         <div
           style={{
             position: "fixed",

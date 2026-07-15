@@ -1263,8 +1263,11 @@ export const PurchaseOrderCreatePage = ({
         const matchedStage = (stageRows || []).find(
           (stage) => Number(stage.step) === step
         );
+        const routingName = matchedStage?.route;
         const operationName = matchedStage?.op || matchedStage?.operation;
-        return operationName ? `Step ${step}: ${operationName}` : `Step ${step}`;
+        if (routingName && operationName) return `Step ${step}: ${routingName} - ${operationName}`;
+        if (routingName || operationName) return `Step ${step}: ${routingName || operationName}`;
+        return `Step ${step}`;
       });
       const stackedLabels = stageLabels.map((label) => `- ${label}`).join("\n");
       return `${baseDescription}\n${stackedLabels}`;
@@ -1338,8 +1341,8 @@ export const PurchaseOrderCreatePage = ({
   const [notes, setNotes] = useState(editFormData?.notes || "");
   const [terms, setTerms] = useState(editFormData?.terms || "");
   const [tax, setTax] = useState(String(editFormData?.tax ?? 11));
-  const [showCanceledWOBlocker, setShowCanceledWOBlocker] = useState(false);
-  const [canceledWOsFound, setCanceledWOsFound] = useState([]);
+  const [showCancelledWOBlocker, setShowCancelledWOBlocker] = useState(false);
+  const [cancelledWOsFound, setCancelledWOsFound] = useState([]);
   const [feeLines, setFeeLines] = useState(
     editFormData?.feeLines?.length
       ? editFormData.feeLines
@@ -2160,19 +2163,19 @@ export const PurchaseOrderCreatePage = ({
   const handleSubmitClick = () => {
     if (!validateMandatoryFields()) return;
 
-    // Check for canceled work orders
-    const canceledWOLines = lines.filter((line) => {
+    // Check for cancelled work orders
+    const cancelledWOLines = lines.filter((line) => {
       if (line.type !== "wo") return false;
       const woData = MOCK_WO_TABLE_DATA.find((w) => w.wo === line.woRef);
-      return woData && woData.status === "Canceled";
+      return woData && woData.status === "Cancelled";
     });
 
-    if (canceledWOLines.length > 0) {
-      const canceledWoNumbers = Array.from(
-        new Set(canceledWOLines.map((l) => l.woRef))
+    if (cancelledWOLines.length > 0) {
+      const cancelledWoNumbers = Array.from(
+        new Set(cancelledWOLines.map((l) => l.woRef))
       );
-      setCanceledWOsFound(canceledWoNumbers);
-      setShowCanceledWOBlocker(true);
+      setCancelledWOsFound(cancelledWoNumbers);
+      setShowCancelledWOBlocker(true);
       return;
     }
 
@@ -4343,6 +4346,9 @@ export const PurchaseOrderCreatePage = ({
                             const targetLine = availableWorkOrderLines.find(
                               (line) => getWorkOrderSourceId(line) === selectedId
                             );
+                            const targetWoData = MOCK_WO_TABLE_DATA.find(
+                              (w) => w.wo === targetLine?.woRef
+                            );
                             setProductModalForm({
                               ...productModalForm,
                               selectedWorkOrderLineId: selectedId,
@@ -4352,7 +4358,7 @@ export const PurchaseOrderCreatePage = ({
                                 ? buildLinkedWorkOrderDescription(
                                   targetLine.woRef,
                                   targetLine.outsourceSteps,
-                                  linkedRoutingStages,
+                                  targetWoData?.routingStages || linkedRoutingStages,
                                   targetLine.assignmentId
                                 )
                                 : targetLine?.desc || "",
@@ -4924,20 +4930,20 @@ export const PurchaseOrderCreatePage = ({
           }
         />
       )}
-      <CanceledWorkOrderBlockerModal
-        isOpen={showCanceledWOBlocker}
-        onClose={() => setShowCanceledWOBlocker(false)}
-        canceledWOs={canceledWOsFound}
+      <CancelledWorkOrderBlockerModal
+        isOpen={showCancelledWOBlocker}
+        onClose={() => setShowCancelledWOBlocker(false)}
+        cancelledWOs={cancelledWOsFound}
         mode="edit"
       />
     </div>
   );
 };
 
-const CanceledWorkOrderBlockerModal = ({
+const CancelledWorkOrderBlockerModal = ({
   isOpen,
   onClose,
-  canceledWOs,
+  cancelledWOs,
   mode = "edit",
   onEditPO,
 }) => (
@@ -4945,8 +4951,8 @@ const CanceledWorkOrderBlockerModal = ({
     isOpen={isOpen}
     onClose={onClose}
     width="520px"
-    title="Canceled Work Orders Found"
-    description="Some work orders in this purchase order have already been canceled."
+    title="Cancelled Work Orders Found"
+    description="Some work orders in this purchase order have already been cancelled."
   >
     <div
       style={{
@@ -4979,7 +4985,7 @@ const CanceledWorkOrderBlockerModal = ({
             gap: "8px",
           }}
         >
-          {canceledWOs.map((wo) => (
+          {cancelledWOs.map((wo) => (
             <div
               key={wo}
               style={{

@@ -34,6 +34,7 @@ const LegacyDropdownSelect = ({
   footer = null,
   maxOptionsVisible = null,
   renderValue = null,
+  wrapValue = false,
 }) => {
   const triggerRef = useRef(null);
   const menuRef = useRef(null);
@@ -205,7 +206,9 @@ const LegacyDropdownSelect = ({
             ? "auto"
             : variant === "filter"
               ? "40px"
-              : fieldHeight,
+              : wrapValue
+                ? "auto"
+                : fieldHeight,
           height: "auto",
           border: borderless
             ? "none"
@@ -227,7 +230,7 @@ const LegacyDropdownSelect = ({
               ? "var(--neutral-surface-grey-lighter)"
               : "var(--neutral-surface-primary)",
           boxShadow: "none",
-          padding: borderless ? "4px 8px" : "0 16px",
+          padding: borderless ? "4px 8px" : wrapValue ? "10px 16px" : "0 16px",
           display: "flex",
           alignItems: "center",
           justifyContent: variant === "filter" ? "flex-start" : "space-between",
@@ -288,9 +291,9 @@ const LegacyDropdownSelect = ({
               flex: variant === "filter" ? "0 1 auto" : 1,
               minWidth: 0,
               textAlign: "left",
-              whiteSpace: "nowrap",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
+              whiteSpace: wrapValue ? "normal" : "nowrap",
+              overflow: wrapValue ? "visible" : "hidden",
+              textOverflow: wrapValue ? "clip" : "ellipsis",
               fontSize,
               lineHeight: "22px",
               letterSpacing: "0.11px",

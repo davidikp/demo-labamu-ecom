@@ -46,7 +46,7 @@ const LOG_ACTIVITY_NAME = {
   re_preparing: "Re-Preparing",
   transferring: "Start Transfer",
   completed: "Confirm Receipt",
-  canceled: "Canceled",
+  cancelled: "Cancelled",
 };
 
 const POV_OPTIONS = [
@@ -60,7 +60,7 @@ const QTY_TOOLTIPS = {
   shortage: "Unfulfilled quantity due to insufficient stock",
 };
 
-const COLS = "48px 1fr 2.2fr 1.2fr 1.4fr 1.2fr 1.3fr";
+const COLS = "48px 104px 200px 144px 1fr 144px 140px";
 
 const headerCell = (overrides = {}) => ({
   fontSize: "var(--text-title-3)",
@@ -259,13 +259,13 @@ export const MaterialRequestDetailPage = ({ onNavigate, initialData, requestId, 
       setCancelSubmitted(true);
       return;
     }
-    const updated = setRequestStatus(request.id, "canceled", "Request Canceled", {
+    const updated = setRequestStatus(request.id, "cancelled", "Request Cancelled", {
       cancelReason: cancelReason.trim(),
       cancelProofs: cancelFiles.map((e) => ({ name: e.file.name, description: e.description.trim() })),
     });
     setRequest({ ...updated });
     setIsCancelModalOpen(false);
-    showSnackbar("Request successfully canceled", "success");
+    showSnackbar("Request successfully cancelled", "success");
 
     if (isRejectReceipt) {
       // Requester acted — clear their "Confirm receipt" Todo.
@@ -433,14 +433,14 @@ export const MaterialRequestDetailPage = ({ onNavigate, initialData, requestId, 
                     <span style={{ color: "var(--neutral-on-surface-tertiary)" }}>-</span>
                   ) : (
                     <>
-                      <span style={{ color: "var(--status-green-primary)" }}>
+                      <span style={{ fontSize: "14px", color: "var(--status-green-primary)" }}>
                         {alloc.fulfillableQty} {item.unit}
                       </span>
                       {alloc.batches?.map((b) => (
                         <span
                           key={b.batch}
                           style={{
-                            fontSize: "var(--text-body)",
+                            fontSize: "14px",
                             color: "var(--neutral-on-surface-secondary)",
                           }}
                         >
@@ -456,14 +456,17 @@ export const MaterialRequestDetailPage = ({ onNavigate, initialData, requestId, 
                     <div
                       style={{
                         marginTop: "8px",
-                        fontSize: "var(--text-body)",
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "2px",
+                        fontSize: "12px",
                         color: "var(--neutral-on-surface-secondary)",
                       }}
                     >
                       <span style={{ fontWeight: "var(--font-weight-bold)", color: "var(--neutral-on-surface-primary)" }}>
-                        Shortage Reason:{" "}
+                        Shortage Reason:
                       </span>
-                      {alloc.reason}
+                      <span>{alloc.reason}</span>
                     </div>
                   )}
                 </div>
@@ -498,12 +501,12 @@ export const MaterialRequestDetailPage = ({ onNavigate, initialData, requestId, 
                     borderBottom: isLast ? "none" : separator,
                   }}
                 >
-                  <div style={{ gridColumn: "2 / 4", padding: "12px 12px", fontSize: "var(--text-title-3)", lineHeight: 1.6 }}>
+                  <div style={{ gridColumn: "2 / 4", padding: "12px 12px", fontSize: "14px", lineHeight: 1.6 }}>
                     <span style={{ fontWeight: "var(--font-weight-bold)" }}>{reasonLabel} </span>
                     {reasonValue}
                   </div>
                   {notesValue && (
-                    <div style={{ gridColumn: "4 / 8", padding: "12px 12px", fontSize: "var(--text-title-3)", lineHeight: 1.6 }}>
+                    <div style={{ gridColumn: "4 / 8", padding: "12px 12px", fontSize: "14px", lineHeight: 1.6 }}>
                       <span style={{ fontWeight: "var(--font-weight-bold)" }}>Notes: </span>
                       {notesValue}
                     </div>
@@ -654,7 +657,7 @@ export const MaterialRequestDetailPage = ({ onNavigate, initialData, requestId, 
                   <span style={{ fontWeight: "var(--font-weight-bold)", color: "var(--neutral-on-surface-primary)" }}>
                     {LOG_ACTIVITY_NAME[log.statusKey] || log.title}
                   </span>
-                  {log.statusKey === "canceled" && (request.cancelReason || (request.cancelProofs || []).length > 0) && (
+                  {log.statusKey === "cancelled" && (request.cancelReason || (request.cancelProofs || []).length > 0) && (
                     <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                       {request.cancelReason && (
                         <span style={{ fontSize: "var(--text-title-3)", color: "var(--neutral-on-surface-secondary)", lineHeight: 1.6 }}>
@@ -775,8 +778,8 @@ export const MaterialRequestDetailPage = ({ onNavigate, initialData, requestId, 
           </div>
         </div>
 
-        {/* Canceled banner */}
-        {request.status === "canceled" && (
+        {/* Cancelled banner */}
+        {request.status === "cancelled" && (
           <div
             style={{
               flexShrink: 0,
@@ -792,10 +795,10 @@ export const MaterialRequestDetailPage = ({ onNavigate, initialData, requestId, 
             <Info size={20} color="var(--status-red-primary)" style={{ flexShrink: 0, marginTop: "2px" }} />
             <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
               <span style={{ fontSize: "var(--text-title-2)", fontWeight: "var(--font-weight-bold)", color: "var(--neutral-on-surface-primary)" }}>
-                Request Canceled
+                Request Cancelled
               </span>
               <span style={{ fontSize: "var(--text-title-3)", color: "var(--neutral-on-surface-primary)", lineHeight: 1.6 }}>
-                {request.cancelReason || "This material request has been canceled and will not proceed further."}
+                {request.cancelReason || "This material request has been cancelled and will not proceed further."}
               </span>
             </div>
           </div>

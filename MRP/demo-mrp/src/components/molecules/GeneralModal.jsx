@@ -12,6 +12,7 @@ const GeneralModal = ({
   centeredHeader = true,
   zIndex = 5000,
   noPadding = false,
+  hideFooterDivider = false,
 }) => {
   const hasChildren = React.Children.count(children) > 0;
 
@@ -36,8 +37,8 @@ const GeneralModal = ({
           display: "flex",
           justifyContent: "flex-end",
           gap: "12px",
-          paddingTop: "16px",
-          borderTop: "1px solid var(--neutral-line-separator-1)",
+          paddingTop: hideFooterDivider ? "24px" : "16px",
+          borderTop: hideFooterDivider ? "none" : "1px solid var(--neutral-line-separator-1)",
           marginTop: hasChildren ? "0" : "-8px",
         }}>
           {footer}

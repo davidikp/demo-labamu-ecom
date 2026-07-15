@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { AddIcon } from "../../../components/icons/Icons.jsx";
+import { AddIcon, ChevronDownIcon } from "../../../components/icons/Icons.jsx";
 import { Button } from "../../../components/common/Button.jsx";
 import { FilterMenu } from "../../../components/molecules/FilterMenu.jsx";
 import { StatusBadge } from "../../../components/common/StatusBadge.jsx";
@@ -19,22 +19,42 @@ export const BomListPage = ({ onNavigate, t }) => {
   const [filterStatuses, setFilterStatuses] = useState(["Active"]);
   const [rowsPerPage, setRowsPerPage] = useState(25);
   const [currentPage, setCurrentPage] = useState(1);
+  const [sortBy, setSortBy] = useState(null);
+  const [sortDirection, setSortDirection] = useState("asc");
 
   const tableColumns = [
-    { label: "BOM Name", flex: "2" },
+    { label: "BOM Name", key: "name", flex: "2", sortable: true },
     { label: "Version", flex: "0.8" },
-    { label: "Created at", flex: "1" },
-    { label: "Updated at", flex: "1" },
+    { label: "Created at", key: "createdAt", flex: "1", sortable: true },
+    { label: "Updated at", key: "updatedAt", flex: "1", sortable: true },
     { label: "Status", flex: "1" },
   ];
 
+  const toggleSort = (key) => {
+    if (sortBy === key) {
+      setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setSortBy(key);
+      setSortDirection("asc");
+    }
+  };
+
   const allRows = getBoms();
 
-  const filteredRows = allRows.filter((row) => {
-    const matchesStatus = filterStatuses.length === 0 || filterStatuses.includes(row.status);
-    const matchesSearch = !searchQuery || row.name.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesStatus && matchesSearch;
-  });
+  const filteredRows = allRows
+    .filter((row) => {
+      const matchesStatus = filterStatuses.length === 0 || filterStatuses.includes(row.status);
+      const matchesSearch = !searchQuery || row.name.toLowerCase().includes(searchQuery.toLowerCase());
+      return matchesStatus && matchesSearch;
+    })
+    .sort((a, b) => {
+      if (!sortBy) return 0;
+      const direction = sortDirection === "asc" ? 1 : -1;
+      if (sortBy === "createdAt" || sortBy === "updatedAt") {
+        return (new Date(a[sortBy]) - new Date(b[sortBy])) * direction;
+      }
+      return String(a[sortBy]).localeCompare(String(b[sortBy])) * direction;
+    });
 
   const totalPages = Math.max(1, Math.ceil(filteredRows.length / rowsPerPage));
   const visibleRows = filteredRows.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
@@ -140,6 +160,7 @@ export const BomListPage = ({ onNavigate, t }) => {
               {tableColumns.map((col, idx) => (
                 <div
                   key={idx}
+                  onClick={() => (col.sortable ? toggleSort(col.key) : undefined)}
                   style={{
                     flex: col.flex,
                     minWidth: 0,
@@ -147,12 +168,32 @@ export const BomListPage = ({ onNavigate, t }) => {
                     padding: "0 12px",
                     display: "flex",
                     alignItems: "center",
+                    gap: "6px",
                     fontSize: "var(--text-title-3)",
                     fontWeight: "var(--font-weight-bold)",
                     color: "var(--neutral-on-surface-primary)",
+                    cursor: col.sortable ? "pointer" : "default",
                   }}
                 >
-                  {col.label}
+                  <span
+                    style={{
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }}
+                  >
+                    {col.label}
+                  </span>
+                  {col.sortable ? (
+                    <ChevronDownIcon
+                      size={14}
+                      color={sortBy === col.key ? "var(--feature-brand-primary)" : "var(--neutral-on-surface-tertiary)"}
+                      style={{
+                        transform: sortBy === col.key && sortDirection === "asc" ? "rotate(180deg)" : "rotate(0deg)",
+                        transition: "transform 0.2s",
+                      }}
+                    />
+                  ) : null}
                 </div>
               ))}
             </div>

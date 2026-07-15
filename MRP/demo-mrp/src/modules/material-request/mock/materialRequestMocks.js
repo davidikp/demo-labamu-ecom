@@ -10,7 +10,7 @@ export const REQUEST_STATUS_META = {
   preparing: { label: "Preparing", badge: "yellow", badgeVariant: "yellow-light" },
   transferring: { label: "Transferring", badge: "orange", badgeVariant: "orange-light" },
   completed: { label: "Completed", badge: "green", badgeVariant: "green-light" },
-  canceled: { label: "Canceled", badge: "red", badgeVariant: "red-light" },
+  cancelled: { label: "Cancelled", badge: "red", badgeVariant: "red-light" },
 };
 
 export const ROW_STATUS_META = {
@@ -635,7 +635,7 @@ const INITIAL_REQUESTS = [
     requestedBy: "Zoe Adams",
     workOrderNo: "WO-248824-20251108-00004",
     workOrderShort: "WO092309091",
-    status: "canceled",
+    status: "cancelled",
     cancelReason: "Work order was put on hold, so these materials are no longer needed at this time.",
     cancelProofs: [
       { name: "cancellation-notice.pdf", description: "Cancellation notice from production" },
@@ -643,7 +643,7 @@ const INITIAL_REQUESTS = [
     items: sampleItems(),
     logs: [
       { statusKey: "new_request", title: "Request Created", by: "Zoe Adams", timestamp: "2025-08-02; 15:00" },
-      { statusKey: "canceled", title: "Request Canceled", by: "Natasha Smith", timestamp: "2025-08-02; 17:30" },
+      { statusKey: "cancelled", title: "Request Cancelled", by: "Natasha Smith", timestamp: "2025-08-02; 17:30" },
     ],
   },
 ];

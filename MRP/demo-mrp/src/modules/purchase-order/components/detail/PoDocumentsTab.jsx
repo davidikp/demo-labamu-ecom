@@ -416,7 +416,7 @@ const PoDocumentsTab = ({
             <Button
               variant="filled"
               leftIcon={UploadIcon}
-              disabled={currentStatus === "Canceled"}
+              disabled={currentStatus === "Cancelled"}
               onClick={() => {
                 resetDocumentUploadState();
                 setShowUploadDocumentModal(true);

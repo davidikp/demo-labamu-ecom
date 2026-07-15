@@ -693,7 +693,7 @@ export const PurchaseOrderDetailPage = ({
     currentStatus === "Completed" ||
     currentStatus === "Waiting for Approval" ||
     currentStatus === "Issued" ||
-    currentStatus === "Canceled";
+    currentStatus === "Cancelled";
   const showFooterSubmit =
     currentStatus === "Draft" || currentStatus === "Need Revision";
   const showFooterApprovalActions = currentStatus === "Waiting for Approval";
@@ -707,7 +707,7 @@ export const PurchaseOrderDetailPage = ({
     if (status === "Issued") return "issued";
     if (status === "Completed") return "completed";
     if (status === "Need Revision") return "need_revision";
-    if (status === "Canceled") return "rejected";
+    if (status === "Cancelled") return "rejected";
     return "draft";
   };
   const {
@@ -719,9 +719,9 @@ export const PurchaseOrderDetailPage = ({
     setShowDetailSubmitConfirmModal,
     showFutureDateBlocker,
     setShowFutureDateBlocker,
-    showCanceledWOBlocker,
-    setShowCanceledWOBlocker,
-    canceledWOsFound,
+    showCancelledWOBlocker,
+    setShowCancelledWOBlocker,
+    cancelledWOsFound,
     handleDetailSubmitClick,
     closeAllModals,
     validateDetailRequiredInfo,
@@ -745,8 +745,8 @@ export const PurchaseOrderDetailPage = ({
     setDecisionError,
     revisionMessage,
     setRevisionMessage,
-    canceledMessage,
-    setCanceledMessage,
+    cancelledMessage,
+    setCancelledMessage,
     approvalComment,
     setApprovalComment,
     approvalCommentRequired,
@@ -1235,7 +1235,7 @@ export const PurchaseOrderDetailPage = ({
               sBadge: statusInfo.sBadge,
               receiptLogs: statusInfo.receiptLogs,
               revisionMessage: statusInfo.revisionMessage,
-              canceledMessage: statusInfo.canceledMessage,
+              cancelledMessage: statusInfo.cancelledMessage,
             }),
           };
         }
@@ -1256,43 +1256,43 @@ export const PurchaseOrderDetailPage = ({
     }
 
     if (decisionType === "cancel") {
-      setCurrentStatus("Canceled");
+      setCurrentStatus("Cancelled");
       setCurrentBadge("red");
-      setCanceledMessage(trimmedComment);
+      setCancelledMessage(trimmedComment);
       setRevisionMessage("");
       setApprovalComment("");
 
       const log = {
         name: "Natasha Smith",
         email: "natasha.smith@company.com",
-        title: "Canceled",
+        title: "Cancelled",
         desc: trimmedComment || "",
         timestamp: formatActivityTimestamp(new Date()),
       };
       const nextReceiptLogs = [log, ...receiptLogs];
       setReceiptLogs(nextReceiptLogs);
 
-      const nextStatusKey = resolvePoStatusKey("Canceled");
+      const nextStatusKey = resolvePoStatusKey("Cancelled");
       const poIndex = MOCK_PO_TABLE_DATA.findIndex(p => p.poNumber === poNumber);
       if (poIndex !== -1) {
         MOCK_PO_TABLE_DATA[poIndex] = {
           ...MOCK_PO_TABLE_DATA[poIndex],
           ...displayData,
-          status: "Canceled",
+          status: "Cancelled",
           statusKey: nextStatusKey,
           sBadge: "red",
           receiptLogs: nextReceiptLogs,
-          canceledMessage: trimmedComment,
+          cancelledMessage: trimmedComment,
         };
         setLocalPoData(MOCK_PO_TABLE_DATA[poIndex]);
       }
 
       updateMockWoDataWithPoStatus({
-        status: "Canceled",
+        status: "Cancelled",
         statusKey: nextStatusKey,
         sBadge: "red",
         receiptLogs: nextReceiptLogs,
-        canceledMessage: trimmedComment,
+        cancelledMessage: trimmedComment,
       });
 
       if (
@@ -1315,12 +1315,12 @@ export const PurchaseOrderDetailPage = ({
         submitterUser: notifUser,
       });
 
-      handlePoAction("Purchase order successfully canceled");
+      handlePoAction("Purchase order successfully cancelled");
     } else if (decisionType === "revision") {
       setCurrentStatus("Need Revision");
       setCurrentBadge("yellow");
       setRevisionMessage(trimmedComment);
-      setCanceledMessage("");
+      setCancelledMessage("");
       setApprovalComment("");
 
       const log = {
@@ -1402,7 +1402,7 @@ export const PurchaseOrderDetailPage = ({
       setCurrentBadge("blue");
       syncPoToStockBatches("issue", { customLines: mockLines });
       setRevisionMessage("");
-      setCanceledMessage("");
+      setCancelledMessage("");
       setApprovalComment(trimmedComment);
 
       const versionNum = latestVersionNum;
@@ -1557,7 +1557,7 @@ export const PurchaseOrderDetailPage = ({
   const getApprovalRowStatus = () => {
     if (currentStatus === "Issued" || currentStatus === "Completed")
       return { text: "Approved", variant: "green-light" };
-    if (currentStatus === "Canceled")
+    if (currentStatus === "Cancelled")
       return { text: "Rejected", variant: "red-light" };
     if (currentStatus === "Need Revision")
       return { text: "Ask for Revision", variant: "yellow-light" };
@@ -1566,7 +1566,7 @@ export const PurchaseOrderDetailPage = ({
 
   const getApprovalRowComment = () => {
     if (currentStatus === "Need Revision") return revisionMessage || "-";
-    if (currentStatus === "Canceled") return canceledMessage || "-";
+    if (currentStatus === "Cancelled") return cancelledMessage || "-";
     if (currentStatus === "Issued" || currentStatus === "Completed")
       return approvalComment || "-";
     return "-";
@@ -1638,13 +1638,13 @@ export const PurchaseOrderDetailPage = ({
       return logs;
     }
 
-    if (currentStatus === "Canceled") {
+    if (currentStatus === "Cancelled") {
       return [
         {
           name: approverList[0]?.name || "Approver",
           email: approverList[0]?.email || "-",
-          title: "Canceled",
-          desc: canceledMessage || "-",
+          title: "Cancelled",
+          desc: cancelledMessage || "-",
           timestamp: `${createdDate} at 16:30`,
         },
         {
@@ -2096,7 +2096,7 @@ export const PurchaseOrderDetailPage = ({
         currencyLabel={currencyLabel}
         paymentStatus={computePaymentStatus(invoices, payments)}
         revisionMessage={revisionMessage}
-        canceledMessage={canceledMessage}
+        cancelledMessage={cancelledMessage}
         showHeaderEdit={showHeaderEdit}
         showHeaderExportPdf={showHeaderExportPdf}
         handleBackNavigation={handleBackNavigation}
@@ -2885,7 +2885,7 @@ export const PurchaseOrderDetailPage = ({
                     const showApproved =
                       currentStatus === "Issued" ||
                       currentStatus === "Completed";
-                    const showRejected = currentStatus === "Canceled";
+                    const showRejected = currentStatus === "Cancelled";
                     const showPending = !showApproved && !showRejected;
                     const thisStatus =
                       idx === 0
@@ -3179,9 +3179,9 @@ export const PurchaseOrderDetailPage = ({
         setDecisionError={setDecisionError}
         getDecisionMeta={getDecisionMeta}
         handleSubmitDecision={handleSubmitDecision}
-        showCanceledWOBlocker={showCanceledWOBlocker}
-        setShowCanceledWOBlocker={setShowCanceledWOBlocker}
-        canceledWOsFound={canceledWOsFound}
+        showCancelledWOBlocker={showCancelledWOBlocker}
+        setShowCancelledWOBlocker={setShowCancelledWOBlocker}
+        cancelledWOsFound={cancelledWOsFound}
         closeDecisionModal={closeDecisionModal}
       />
 

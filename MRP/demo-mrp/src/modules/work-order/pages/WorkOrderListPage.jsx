@@ -56,8 +56,8 @@ export const WorkOrderListPage = ({ onNavigate, t }) => {
       badgeVariant: "green-light",
     },
     {
-      key: "canceled",
-      label: t("work_order.summary.canceled"),
+      key: "cancelled",
+      label: t("work_order.summary.cancelled"),
       badgeVariant: "red-light",
     },
   ];

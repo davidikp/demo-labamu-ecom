@@ -193,7 +193,7 @@ const ProcurementAPReportPage = ({ onNavigate }) => {
 
     MOCK_REPORT_POS.forEach(po => {
       totalPoValue += po.amount;
-      if (po.status !== "Completed" && po.status !== "Canceled") {
+      if (po.status !== "Completed" && po.status !== "Cancelled") {
         openPoCount++;
       }
 

@@ -15,8 +15,8 @@ export const usePoSubmissionFlow = ({
   const [showZeroPriceWarningModal, setShowZeroPriceWarningModal] = useState(false);
   const [showDetailSubmitConfirmModal, setShowDetailSubmitConfirmModal] = useState(false);
   const [showFutureDateBlocker, setShowFutureDateBlocker] = useState(false);
-  const [showCanceledWOBlocker, setShowCanceledWOBlocker] = useState(false);
-  const [canceledWOsFound, setCanceledWOsFound] = useState([]);
+  const [showCancelledWOBlocker, setShowCancelledWOBlocker] = useState(false);
+  const [cancelledWOsFound, setCancelledWOsFound] = useState([]);
 
   // --- Validation Helpers ---
   const validateDetailRequiredInfo = useCallback(() => {
@@ -47,19 +47,19 @@ export const usePoSubmissionFlow = ({
       return;
     }
 
-    // Check for canceled work orders
-    const canceledWOLines = mockLines.filter((line) => {
+    // Check for cancelled work orders
+    const cancelledWOLines = mockLines.filter((line) => {
       if (line.type !== "wo") return false;
       const woData = MOCK_WO_TABLE_DATA.find((w) => w.wo === line.woRef);
-      return woData && woData.status === "Canceled";
+      return woData && woData.status === "Cancelled";
     });
 
-    if (canceledWOLines.length > 0) {
-      const canceledWoNumbers = Array.from(
-        new Set(canceledWOLines.map((l) => l.woRef))
+    if (cancelledWOLines.length > 0) {
+      const cancelledWoNumbers = Array.from(
+        new Set(cancelledWOLines.map((l) => l.woRef))
       );
-      setCanceledWOsFound(canceledWoNumbers);
-      setShowCanceledWOBlocker(true);
+      setCancelledWOsFound(cancelledWoNumbers);
+      setShowCancelledWOBlocker(true);
       return;
     }
     
@@ -76,7 +76,7 @@ export const usePoSubmissionFlow = ({
     setShowZeroPriceWarningModal(false);
     setShowDetailSubmitConfirmModal(false);
     setShowFutureDateBlocker(false);
-    setShowCanceledWOBlocker(false);
+    setShowCancelledWOBlocker(false);
   }, []);
 
   return {
@@ -89,9 +89,9 @@ export const usePoSubmissionFlow = ({
     setShowDetailSubmitConfirmModal,
     showFutureDateBlocker,
     setShowFutureDateBlocker,
-    showCanceledWOBlocker,
-    setShowCanceledWOBlocker,
-    canceledWOsFound,
+    showCancelledWOBlocker,
+    setShowCancelledWOBlocker,
+    cancelledWOsFound,
 
     // Handlers
     handleDetailSubmitClick,

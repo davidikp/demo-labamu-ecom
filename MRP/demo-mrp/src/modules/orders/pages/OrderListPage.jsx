@@ -43,7 +43,7 @@ export const OrderListPage = ({ onNavigate, t }) => {
     { key: "Ready to Ship", label: "Ready to Ship", activeColor: "blue-light" },
     { key: "On Shipping", label: "On Shipping", activeColor: "blue-light" },
     { key: "Completed", label: "Completed", activeColor: "green-light" },
-    { key: "Canceled", label: "Canceled", activeColor: "red-light" },
+    { key: "Cancelled", label: "Cancelled", activeColor: "red-light" },
   ];
 
   const statusCounts = statusCards.reduce((acc, card) => {

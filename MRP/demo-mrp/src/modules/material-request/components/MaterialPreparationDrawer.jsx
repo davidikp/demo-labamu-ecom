@@ -112,7 +112,7 @@ const IssueColumn = ({ label, groups, renderBatch }) => {
                 <div style={{ display: "flex", flexDirection: "column", gap: "2px", paddingLeft: "18px" }}>
                   {g.batches.map((b, bi) => (
                     <div key={bi} style={{ display: "flex", gap: "6px" }}>
-                      <span>&bull;</span>
+                      <span>&#9702;</span>
                       <span>{renderBatch(b)}</span>
                     </div>
                   ))}
@@ -193,7 +193,7 @@ export const MaterialPreparationDrawer = ({
   const addLine = (rowIdx, firstUnusedBatch) =>
     setRows((prev) =>
       prev.map((r, i) =>
-        i === rowIdx ? { ...r, lines: [...r.lines, { batch: firstUnusedBatch, qty: 0 }] } : r
+        i === rowIdx ? { ...r, lines: [...r.lines, { batch: firstUnusedBatch, qty: "" }] } : r
       )
     );
 
@@ -216,6 +216,8 @@ export const MaterialPreparationDrawer = ({
     );
     const lineOverBatch = row.lines.map((l, i) => (Number(l.qty) || 0) > lineBatchMax[i]);
     const hasBatchError = lineOverBatch.some(Boolean);
+    const lineZeroQty = row.lines.map((l) => l.qty !== "" && Number(l.qty) === 0);
+    const hasZeroQty = lineZeroQty.some(Boolean);
     return {
       ...row,
       total,
@@ -226,11 +228,13 @@ export const MaterialPreparationDrawer = ({
       lineBatchMax,
       lineOverBatch,
       hasBatchError,
+      lineZeroQty,
+      hasZeroQty,
     };
   });
 
   const hasInvalid = computed.some(
-    (c) => (c.needsReason && !c.reason.trim()) || c.exceeds || c.hasBatchError
+    (c) => (c.needsReason && !c.reason.trim()) || c.exceeds || c.hasBatchError || c.hasZeroQty
   );
 
   const handleReview = () => {
@@ -298,9 +302,9 @@ export const MaterialPreparationDrawer = ({
           top: 0,
           // Animate via `right` (not `transform`) — a transformed ancestor would
           // break the fixed-positioned dropdown menus rendered inside the drawer.
-          right: isOpen ? "0" : "-1220px",
+          right: isOpen ? "0" : "-1300px",
           height: "100vh",
-          width: "1200px",
+          width: "1280px",
           maxWidth: "100vw",
           background: "var(--neutral-surface-primary)",
           zIndex: 6001,
@@ -374,12 +378,12 @@ export const MaterialPreparationDrawer = ({
             <thead>
               <tr>
                 <th style={thStyle({ width: "44px" })}>No</th>
-                <th style={thStyle({ width: "84px" })}>Type</th>
-                <th style={thStyle({ width: "240px" })}>Material</th>
+                <th style={thStyle({ width: "104px" })}>Type</th>
+                <th style={thStyle({ width: "200px" })}>Material</th>
                 <th style={thStyle({ width: "120px" })}>Requested Qty</th>
-                <th style={thStyle({ width: "396px" })}>Fulfillable Qty</th>
-                <th style={thStyle({ width: "96px" })}>Shortage Qty</th>
-                <th style={thStyle({ width: "120px" })}>Status</th>
+                <th style={thStyle()}>Fulfillable Qty</th>
+                <th style={thStyle({ width: "120px" })}>Shortage Qty</th>
+                <th style={thStyle({ width: "156px" })}>Status</th>
               </tr>
             </thead>
             <tbody>
@@ -421,7 +425,7 @@ export const MaterialPreparationDrawer = ({
                           <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                             {c.total > 0 ? (
                               <>
-                                <span style={{ color: "var(--status-green-primary)" }}>
+                                <span style={{ fontSize: "14px", color: "var(--status-green-primary)" }}>
                                   {c.total} {it.unit}
                                 </span>
                                 {c.lines
@@ -429,7 +433,7 @@ export const MaterialPreparationDrawer = ({
                                   .map((l, i) => (
                                     <span
                                       key={i}
-                                      style={{ fontSize: "var(--text-body)", color: "var(--neutral-on-surface-secondary)" }}
+                                      style={{ fontSize: "14px", color: "var(--neutral-on-surface-secondary)" }}
                                     >
                                       {l.batch}:{" "}
                                       <b style={{ color: "var(--neutral-on-surface-primary)" }}>
@@ -445,14 +449,17 @@ export const MaterialPreparationDrawer = ({
                               <div
                                 style={{
                                   marginTop: "8px",
-                                  fontSize: "var(--text-body)",
+                                  display: "flex",
+                                  flexDirection: "column",
+                                  gap: "2px",
+                                  fontSize: "12px",
                                   color: "var(--neutral-on-surface-secondary)",
                                 }}
                               >
                                 <span style={{ fontWeight: "var(--font-weight-bold)", color: "var(--neutral-on-surface-primary)" }}>
-                                  Shortage Reason:{" "}
+                                  Shortage Reason:
                                 </span>
-                                {c.reason}
+                                <span>{c.reason}</span>
                               </div>
                             )}
                           </div>
@@ -479,21 +486,30 @@ export const MaterialPreparationDrawer = ({
                                       placeholder="Select batch"
                                       fieldHeight="48px"
                                       fontSize="var(--text-title-3)"
+                                      wrapValue
+                                      renderOption={(option) => (
+                                        <span style={{ textAlign: "left" }}>{option.label}</span>
+                                      )}
                                     />
                                   </div>
                                   <div style={{ width: "112px", flexShrink: 0 }}>
                                     <InputField
                                       type="number"
-                                      value={String(line.qty ?? "")}
+                                      value={line.qty === "" ? "" : String(line.qty ?? "")}
                                       onChange={(e) => {
-                                        const next = Math.max(0, Number(e.target.value) || 0);
+                                        const raw = e.target.value;
+                                        const next = raw === "" ? "" : Math.max(0, Number(raw) || 0);
                                         updateLine(idx, lineIdx, { qty: next });
                                       }}
-                                      placeholder="Qty"
+                                      placeholder="Enter qty"
                                       suffix={it.unit}
-                                      errorState={!!c.lineOverBatch?.[lineIdx] || (submitted && c.exceeds)}
+                                      errorState={
+                                        !!c.lineOverBatch?.[lineIdx] ||
+                                        !!c.lineZeroQty?.[lineIdx] ||
+                                        (submitted && c.exceeds)
+                                      }
                                     />
-                                    {c.lineOverBatch?.[lineIdx] && (
+                                    {c.lineZeroQty?.[lineIdx] ? (
                                       <span
                                         style={{
                                           display: "block",
@@ -503,8 +519,36 @@ export const MaterialPreparationDrawer = ({
                                           fontSize: "var(--text-body)",
                                         }}
                                       >
-                                        Exceeds batch qty ({lineMax})
+                                        Qty must be greater than 0
                                       </span>
+                                    ) : c.lineOverBatch?.[lineIdx] ? (
+                                      <span
+                                        style={{
+                                          display: "block",
+                                          marginTop: "4px",
+                                          whiteSpace: "nowrap",
+                                          color: "var(--status-red-primary)",
+                                          fontSize: "var(--text-body)",
+                                        }}
+                                      >
+                                        Exceeds batch qty ({lineMax} {it.unit})
+                                      </span>
+                                    ) : (
+                                      lineIdx === c.lines.length - 1 &&
+                                      submitted &&
+                                      c.exceeds && (
+                                        <span
+                                          style={{
+                                            display: "block",
+                                            marginTop: "4px",
+                                            whiteSpace: "nowrap",
+                                            color: "var(--status-red-primary)",
+                                            fontSize: "var(--text-body)",
+                                          }}
+                                        >
+                                          Exceeds requested qty
+                                        </span>
+                                      )
                                     )}
                                   </div>
                                   <IconButton
@@ -541,7 +585,7 @@ export const MaterialPreparationDrawer = ({
                                   )}
                                 </div>
                                 <div style={{ width: "112px", flexShrink: 0 }}>
-                                  {submitted && c.exceeds && (
+                                  {c.lines.length === 0 && submitted && c.exceeds && (
                                     <span
                                       style={{
                                         whiteSpace: "nowrap",
@@ -566,7 +610,7 @@ export const MaterialPreparationDrawer = ({
                                   required
                                   multiline
                                   maxLength={400}
-                                  headerRight={`${c.reason.length}/400`}
+                                  showCounter
                                   value={c.reason}
                                   onChange={(e) => updateRow(idx, { reason: e.target.value })}
                                   placeholder="Explain why the request cannot be fully fulfilled"
@@ -595,11 +639,11 @@ export const MaterialPreparationDrawer = ({
                     {reasonLabel && (
                       <tr style={{ borderBottom: "1px solid var(--neutral-line-separator-1)", background: "var(--status-orange-container)" }}>
                         <td style={{ borderLeft: "3px solid var(--status-orange-primary)" }} />
-                        <td colSpan={2} style={{ padding: "12px 12px", fontSize: "var(--text-title-3)", lineHeight: 1.6, verticalAlign: "top" }}>
+                        <td colSpan={2} style={{ padding: "12px 12px", fontSize: "14px", lineHeight: 1.6, verticalAlign: "top" }}>
                           <span style={{ fontWeight: "var(--font-weight-bold)" }}>{reasonLabel} </span>
                           {reasonValue}
                         </td>
-                        <td colSpan={4} style={{ padding: "12px 12px", fontSize: "var(--text-title-3)", lineHeight: 1.6, verticalAlign: "top" }}>
+                        <td colSpan={4} style={{ padding: "12px 12px", fontSize: "14px", lineHeight: 1.6, verticalAlign: "top" }}>
                           {notesValue && (
                             <>
                               <span style={{ fontWeight: "var(--font-weight-bold)" }}>Notes: </span>

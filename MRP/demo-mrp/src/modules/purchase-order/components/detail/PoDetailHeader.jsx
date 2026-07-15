@@ -33,7 +33,7 @@ const PoDetailHeader = ({
   currencyLabel,
   paymentStatus,
   revisionMessage,
-  canceledMessage,
+  cancelledMessage,
   showHeaderEdit,
   showHeaderExportPdf,
   // Handlers
@@ -131,7 +131,7 @@ const PoDetailHeader = ({
         </div>
       </div>
 
-      {currentStatus === "Need Revision" || currentStatus === "Canceled" ? (
+      {currentStatus === "Need Revision" || currentStatus === "Cancelled" ? (
         <div
           style={{
             border: `1px solid ${
@@ -166,7 +166,7 @@ const PoDetailHeader = ({
             >
               {currentStatus === "Need Revision"
                 ? "Revision Requested"
-                : "Purchase Order Canceled"}
+                : "Purchase Order Cancelled"}
             </span>
             <span
               style={{
@@ -177,7 +177,7 @@ const PoDetailHeader = ({
             >
               {currentStatus === "Need Revision"
                 ? revisionMessage
-                : canceledMessage}
+                : cancelledMessage}
             </span>
           </div>
         </div>

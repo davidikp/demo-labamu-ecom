@@ -389,12 +389,12 @@ export const MaterialCreateDrawer = ({ isOpen, onClose, onSave, initialData }) =
               error={uomErrors.name}
             />
           </FormField>
-          <FormField label="UOM Alias" headerRight={`${uomForm.alias.length}/100`}>
-            <InputField 
+          <FormField label="UOM Alias" headerRight={`${uomForm.alias.length}/3`}>
+            <InputField
               value={uomForm.alias}
               onChange={(e) => setUomForm({ ...uomForm, alias: e.target.value })}
               placeholder="e.g. kg, pcs, m"
-              maxLength={100}
+              maxLength={3}
             />
           </FormField>
         </div>

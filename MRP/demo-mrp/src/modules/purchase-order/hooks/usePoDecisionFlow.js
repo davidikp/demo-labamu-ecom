@@ -16,9 +16,9 @@ export const usePoDecisionFlow = ({
       ? "Please update the delivery timeline and review the requested changes before resubmitting this purchase order."
       : ""
   );
-  const [canceledMessage, setCanceledMessage] = useState(
-    currentStatus === "Canceled"
-      ? "The purchase order has been canceled and will not proceed further."
+  const [cancelledMessage, setCancelledMessage] = useState(
+    currentStatus === "Cancelled"
+      ? "The purchase order has been cancelled and will not proceed further."
       : ""
   );
   const [approvalComment, setApprovalComment] = useState("");
@@ -78,8 +78,8 @@ export const usePoDecisionFlow = ({
     setDecisionError,
     revisionMessage,
     setRevisionMessage,
-    canceledMessage,
-    setCanceledMessage,
+    cancelledMessage,
+    setCancelledMessage,
     approvalComment,
     setApprovalComment,
     approvalCommentRequired,

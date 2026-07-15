@@ -115,7 +115,7 @@ const TRANSLATIONS = {
         ready_to_process: "Ready to Process",
         in_progress: "In Progress",
         completed: "Completed",
-        canceled: "Canceled",
+        cancelled: "Cancelled",
       },
     },
     purchase_order: {
@@ -183,7 +183,7 @@ const TRANSLATIONS = {
         ready_to_process: "Siap Diproses",
         in_progress: "Sedang Berjalan",
         completed: "Selesai",
-        canceled: "Dibatalkan",
+        cancelled: "Dibatalkan",
       },
     },
     purchase_order: {
@@ -1360,7 +1360,7 @@ const resolvePurchaseOrderStatus = (po) => {
   if (!po) return "Draft";
 
   // Keep terminal states
-  if (po.status === "Canceled") return "Canceled";
+  if (po.status === "Cancelled") return "Cancelled";
   if (po.status === "Completed") return "Completed";
 
   // Core rule: no remaining qty → Completed
