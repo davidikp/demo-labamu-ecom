@@ -519,6 +519,9 @@ const adminManagementTableHeaderRowStyle = (gridTemplateColumns) => ({
   fontWeight: "var(--font-weight-bold)",
   color: "var(--neutral-on-surface-primary)",
   boxSizing: "border-box",
+  position: "sticky",
+  top: 0,
+  zIndex: 2,
 });
 
 const adminManagementTableRowStyle = (
@@ -645,11 +648,6 @@ const [pendingUserEdits, setPendingUserEdits] = useState({});
     top: 0,
     left: 0,
   });
-
-  useEffect(() => {
-    setOpenToolbarFilterKey(null);
-    setToolbarFilterTriggerRect(null);
-  }, [activeTab]);
 
   const showAdminSnackbar = (message) => {
     setAdminSnackbar({ open: true, message });
@@ -2153,7 +2151,7 @@ const [pendingUserEdits, setPendingUserEdits] = useState({});
               </div>
             </div>
 
-            <div style={poReferenceTableCellStyle()}>
+            <div style={poReferenceTableCellStyle({ width: "100%", minWidth: 0 })}>
               <DropdownSelect
                 value={currentPermission.level}
                 onChange={(nextValue) =>
@@ -2165,6 +2163,7 @@ const [pendingUserEdits, setPendingUserEdits] = useState({});
                 fontSize="var(--text-title-3)"
                 optionFontSize="var(--text-title-3)"
                 menuWidth={260}
+                style={{ width: "100%" }}
               />
             </div>
 

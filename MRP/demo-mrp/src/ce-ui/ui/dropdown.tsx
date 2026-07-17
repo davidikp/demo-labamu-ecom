@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { createPortal } from "react-dom"
 import { Check, ChevronDown, Search, X } from "lucide-react"
 import { cn, toTestId } from "../lib/utils"
 import Popup from "./popup"
@@ -97,6 +98,7 @@ export const Dropdown: React.FC<{
   const listRef = React.useRef<HTMLDivElement>(null)
   const sentinelRef = React.useRef<HTMLDivElement>(null)
   const [autoPosition, setAutoPosition] = React.useState<"top" | "bottom" | null>(null)
+  const [menuRect, setMenuRect] = React.useState<{ top: number; left: number; width: number } | null>(null)
 
   React.useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -107,21 +109,42 @@ export const Dropdown: React.FC<{
   }, [])
 
   // Flip the menu above the trigger when there isn't enough room below —
-  // the caller's `menuPosition` prop still wins when explicitly set.
+  // the caller's `menuPosition` prop still wins when explicitly set. The menu
+  // is portaled to <body> (see render below) so it escapes any clipping
+  // ancestor (overflow:hidden/auto tables, scroll panes, etc.) — its position
+  // is tracked here in viewport coordinates instead of via CSS `absolute`.
   React.useLayoutEffect(() => {
     if (!open) {
       setAutoPosition(null)
+      setMenuRect(null)
       return
     }
     const trigger = ref.current
     if (!trigger || typeof window === "undefined") return
-    const estimatedMenuHeight = Math.min(300, 16 + Math.max(filtered.length, 1) * 40) + (isSearchable ? 48 : 0)
-    const rect = trigger.getBoundingClientRect()
-    const spaceBelow = window.innerHeight - rect.bottom
-    const spaceAbove = rect.top
-    setAutoPosition(spaceBelow < estimatedMenuHeight + 8 && spaceAbove > spaceBelow ? "top" : "bottom")
+
+    const updatePosition = () => {
+      const estimatedMenuHeight = Math.min(300, 16 + Math.max(filtered.length, 1) * 40) + (isSearchable ? 48 : 0)
+      const rect = trigger.getBoundingClientRect()
+      const spaceBelow = window.innerHeight - rect.bottom
+      const spaceAbove = rect.top
+      const position = menuPosition !== "bottom" ? menuPosition : (spaceBelow < estimatedMenuHeight + 8 && spaceAbove > spaceBelow ? "top" : "bottom")
+      setAutoPosition(position)
+      setMenuRect({
+        top: position === "top" ? rect.top - 4 : rect.bottom + 4,
+        left: rect.left,
+        width: rect.width,
+      })
+    }
+
+    updatePosition()
+    window.addEventListener("scroll", updatePosition, true)
+    window.addEventListener("resize", updatePosition)
+    return () => {
+      window.removeEventListener("scroll", updatePosition, true)
+      window.removeEventListener("resize", updatePosition)
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open])
+  }, [open, menuPosition])
 
   const resolvedMenuPosition = menuPosition !== "bottom" ? menuPosition : autoPosition ?? menuPosition
 
@@ -322,12 +345,16 @@ export const Dropdown: React.FC<{
             </span>
           </div>
 
-          {open && (
+          {open && menuRect && typeof document !== "undefined" && createPortal(
             <div
-              className={cn(
-                "absolute left-0 right-0 z-[1000] bg-lb-surface border border-lb-line-2 rounded-lb-sm shadow-lb-filter flex flex-col",
-                resolvedMenuPosition === "top" ? "bottom-[calc(100%+4px)]" : "top-[calc(100%+4px)]"
-              )}
+              className="fixed z-[1000] bg-lb-surface border border-lb-line-2 rounded-lb-sm shadow-lb-filter flex flex-col"
+              style={{
+                left: menuRect.left,
+                width: menuRect.width,
+                ...(resolvedMenuPosition === "top"
+                  ? { bottom: window.innerHeight - menuRect.top }
+                  : { top: menuRect.top }),
+              }}
             >
               {isSearchable && (
                 <div className="p-1 pb-0 flex-shrink-0">
@@ -414,7 +441,8 @@ export const Dropdown: React.FC<{
                 </div>
               )}
               </div>
-            </div>
+            </div>,
+            document.body
           )}
         </div>
         {errorText && <span className="font-lb text-[12px] text-lb-red">{errorText}</span>}
