@@ -506,7 +506,7 @@ export const MaterialRequestDetailPage = ({ onNavigate, initialData, requestId, 
                     {reasonValue}
                   </div>
                   {notesValue && (
-                    <div style={{ gridColumn: "4 / 8", padding: "12px 12px", fontSize: "14px", lineHeight: 1.6 }}>
+                    <div style={{ gridColumn: "4 / 6", padding: "12px 12px", fontSize: "14px", lineHeight: 1.6 }}>
                       <span style={{ fontWeight: "var(--font-weight-bold)" }}>Notes: </span>
                       {notesValue}
                     </div>

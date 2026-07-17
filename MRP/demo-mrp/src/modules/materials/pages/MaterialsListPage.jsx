@@ -5,11 +5,12 @@ import {
   Download, 
   Settings, 
   Upload,
-  SearchIcon,
+  SearchNotFoundIllustration,
   Info,
   Box,
   CheckIcon
 } from "../../../components/icons/Icons.jsx";
+import { EmptyState } from "../../../ce-ui";
 import { Button } from "../../../components/common/Button.jsx";
 import { FilterMenu } from "../../../components/molecules/FilterMenu.jsx";
 import { StatusBadge } from "../../../components/common/StatusBadge.jsx";
@@ -600,19 +601,12 @@ export const MaterialsListPage = ({ onNavigate, showSnackbar, t }) => {
               ))}
 
               {filteredRows.length === 0 && (
-                <div
-                  style={{
-                    padding: "64px",
-                    textAlign: "center",
-                    color: "var(--neutral-on-surface-tertiary)",
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    gap: "12px",
-                  }}
-                >
-                  <SearchIcon size={48} />
-                  <span style={{ fontSize: "var(--text-title-2)" }}>No materials found.</span>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <EmptyState
+                    illustration={<SearchNotFoundIllustration />}
+                    title="No materials found"
+                    description="Try adjusting your filters or search keywords."
+                  />
                 </div>
               )}
             </div>

@@ -874,6 +874,7 @@ export const PurchaseOrderDetailPage = ({
       approvalEnabled,
       currentStatus,
       company: MOCK_COMPANY,
+      versionNum: latestVersionNum,
     });
 
     setIsExportingPdf(true);
@@ -2484,7 +2485,7 @@ export const PurchaseOrderDetailPage = ({
                                             {line.outsourceSteps.map(step => {
                                               const woData = MOCK_WO_TABLE_DATA.find(w => w.wo === line.woRef);
                                               const stage = woData?.routingStages?.find(s => s.step === step);
-                                              return <div key={step}>Step {step}: {stage ? `${stage.route} - ${stage.op}` : "Unknown Stage"}</div>;
+                                              return <div key={step}>• Step {step}: {stage ? `${stage.route} - ${stage.op}` : "Unknown Stage"}</div>;
                                             })}
                                           </div>
                                         } 

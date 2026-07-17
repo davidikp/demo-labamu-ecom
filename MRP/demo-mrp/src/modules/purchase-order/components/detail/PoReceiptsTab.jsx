@@ -424,7 +424,7 @@ const PoReceiptsTab = ({
                                     {line.outsourceSteps.map(step => {
                                       const woData = MOCK_WO_TABLE_DATA.find(w => w.wo === line.woRef);
                                       const stage = woData?.routingStages?.find(s => s.step === step);
-                                      return <div key={step}>Step {step}: {stage ? `${stage.route} - ${stage.op}` : "Unknown Stage"}</div>;
+                                      return <div key={step}>• Step {step}: {stage ? `${stage.route} - ${stage.op}` : "Unknown Stage"}</div>;
                                     })}
                                   </div>
                                 } 
@@ -843,7 +843,7 @@ const PoReceiptsTab = ({
                                             {outsourceSteps.map(step => {
                                               const woData = MOCK_WO_TABLE_DATA.find(w => w.wo === woRef);
                                               const stage = woData?.routingStages?.find(s => s.step === step);
-                                              return <div key={step}>Step {step}: {stage ? `${stage.route} - ${stage.op}` : "Unknown Stage"}</div>;
+                                              return <div key={step}>• Step {step}: {stage ? `${stage.route} - ${stage.op}` : "Unknown Stage"}</div>;
                                             })}
                                           </div>
                                         } 
@@ -1024,7 +1024,7 @@ const PoReceiptsTab = ({
                                       {log.outsourceSteps.map(step => {
                                         const woData = MOCK_WO_TABLE_DATA.find(w => w.wo === log.woRef);
                                         const stage = woData?.routingStages?.find(s => s.step === step);
-                                        return <div key={step}>Step {step}: {stage ? `${stage.route} - ${stage.op}` : "Unknown Stage"}</div>;
+                                        return <div key={step}>• Step {step}: {stage ? `${stage.route} - ${stage.op}` : "Unknown Stage"}</div>;
                                       })}
                                     </div>
                                   } 

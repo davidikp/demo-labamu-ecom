@@ -95,6 +95,7 @@ export const buildPurchaseOrderPdfExportData = ({
   approvalEnabled = false,
   currentStatus = "",
   company = null,
+  versionNum = 1,
 }) => {
   const normalizedTaxRate = Number(parseNumberFromCommas(taxRate)) || 0;
   const normalizedSubtotal = Number(parseNumberFromCommas(subtotal)) || 0;
@@ -107,6 +108,7 @@ export const buildPurchaseOrderPdfExportData = ({
 
   return {
     poNumber: poNumber || "-",
+    versionNum: Number(versionNum) || 1,
     createdDate: createdDate || "-",
     currency: currency || "IDR",
     currencyLabel: currencyLabel || currency || "IDR",

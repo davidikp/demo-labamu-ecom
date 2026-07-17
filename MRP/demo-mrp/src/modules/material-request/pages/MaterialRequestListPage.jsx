@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { ChevronDownIcon } from "../../../components/icons/Icons.jsx";
+import { ChevronDownIcon, SearchNotFoundIllustration } from "../../../components/icons/Icons.jsx";
+import { EmptyState } from "../../../ce-ui";
 import { FilterMenu } from "../../../components/molecules/FilterMenu.jsx";
 import { ListStatusCounterCard } from "../../../components/common/ListStatusCounterCard.jsx";
 import { StatusBadge } from "../../../components/common/StatusBadge.jsx";
@@ -357,19 +358,12 @@ export const MaterialRequestListPage = ({ onNavigate }) => {
               })}
 
               {filteredRows.length === 0 ? (
-                <div
-                  style={{
-                    flex: 1,
-                    padding: "32px",
-                    textAlign: "center",
-                    color: "var(--neutral-on-surface-tertiary)",
-                    fontSize: "var(--text-title-3)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  No material requests found.
+                <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <EmptyState
+                    illustration={<SearchNotFoundIllustration />}
+                    title="No material requests found"
+                    description="Try adjusting your filters or search keywords."
+                  />
                 </div>
               ) : null}
             </div>

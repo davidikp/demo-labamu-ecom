@@ -643,7 +643,7 @@ export const MaterialPreparationDrawer = ({
                           <span style={{ fontWeight: "var(--font-weight-bold)" }}>{reasonLabel} </span>
                           {reasonValue}
                         </td>
-                        <td colSpan={4} style={{ padding: "12px 12px", fontSize: "14px", lineHeight: 1.6, verticalAlign: "top" }}>
+                        <td colSpan={2} style={{ padding: "12px 12px", fontSize: "14px", lineHeight: 1.6, verticalAlign: "top" }}>
                           {notesValue && (
                             <>
                               <span style={{ fontWeight: "var(--font-weight-bold)" }}>Notes: </span>
@@ -651,6 +651,8 @@ export const MaterialPreparationDrawer = ({
                             </>
                           )}
                         </td>
+                        <td />
+                        <td />
                       </tr>
                     )}
                   </React.Fragment>

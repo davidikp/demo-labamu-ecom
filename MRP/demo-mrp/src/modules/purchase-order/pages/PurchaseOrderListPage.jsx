@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { AddIcon, ChevronDownIcon, Info, Settings } from "../../../components/icons/Icons.jsx";
+import { AddIcon, ChevronDownIcon, Info, Settings, SearchNotFoundIllustration } from "../../../components/icons/Icons.jsx";
+import { EmptyState } from "../../../ce-ui";
 import { Button } from "../../../components/common/Button.jsx";
 import { FilterMenu } from "../../../components/molecules/FilterMenu.jsx";
 import { ListStatusCounterCard } from "../../../components/common/ListStatusCounterCard.jsx";
@@ -532,19 +533,12 @@ export const PurchaseOrderListPage = ({ onNavigate, t }) => {
               ))}
 
               {filteredRows.length === 0 ? (
-                <div
-                  style={{
-                    flex: 1,
-                    padding: "32px",
-                    textAlign: "center",
-                    color: "var(--neutral-on-surface-tertiary)",
-                    fontSize: "var(--text-title-3)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  No purchase orders found.
+                <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <EmptyState
+                    illustration={<SearchNotFoundIllustration />}
+                    title="No purchase orders found"
+                    description="Try adjusting your filters or search keywords."
+                  />
                 </div>
               ) : null}
             </div>

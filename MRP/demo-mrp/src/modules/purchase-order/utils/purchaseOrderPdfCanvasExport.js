@@ -391,7 +391,10 @@ const buildDescriptionBlocks = (line) => {
 };
 
 const getHeaderMetaRows = (data) => [
-  ["PO Number", `: ${data.poNumber || "-"}`],
+  [
+    "PO Number",
+    `: ${data.poNumber || "-"}${Number(data.versionNum) > 1 ? ` (Version ${Number(data.versionNum)})` : ""}`,
+  ],
   ["PO Date", `: ${data.createdDate || "-"}`],
   ["Currency", `: ${data.currency || "-"}`],
 ];
@@ -740,6 +743,8 @@ const drawHeader = async (ctx, pageType, data, assets) => {
 const drawInfoColumns = (ctx, data, y) => {
   const contentWidth = PAGE_WIDTH - DIMENSIONS.marginX * 2;
   const colWidth = contentWidth / 2;
+  const colGap = px(24);
+  const maxTextWidth = colWidth - colGap;
   const xLeft = DIMENSIONS.marginX;
   const xRight = DIMENSIONS.marginX + colWidth;
   const blockTop = y;
@@ -751,37 +756,44 @@ const drawInfoColumns = (ctx, data, y) => {
     cursorY += px(22);
     drawText(ctx, name, x, cursorY, FONTS.section, COLORS.text, { weight: 700 });
     cursorY += px(18);
-    
+
     const details = [phone, email, address].filter(Boolean);
     details.forEach(line => {
-      drawText(ctx, line, x, cursorY, FONTS.body, COLORS.text);
-      cursorY += lineSpacing;
+      // Wrap/stack any detail (address is the usual culprit) instead of
+      // letting it overflow into the neighboring column.
+      const wrappedLines = measureLines(ctx, line, maxTextWidth, FONTS.body);
+      wrappedLines.forEach((wrappedLine) => {
+        drawText(ctx, wrappedLine, x, cursorY, FONTS.body, COLORS.text);
+        cursorY += lineSpacing;
+      });
     });
+
+    return cursorY;
   };
 
-  drawStackedInfo(
-    ctx, 
-    "Vendor Information", 
-    data.vendorInfo?.name || "-", 
+  const leftBottom = drawStackedInfo(
+    ctx,
+    "Vendor Information",
+    data.vendorInfo?.name || "-",
     data.vendorInfo?.phone,
     data.vendorInfo?.email,
     data.vendorInfo?.address,
     xLeft
   );
 
-  drawStackedInfo(
-    ctx, 
-    "Recipient Information", 
-    data.shipToInfo?.name || "-", 
+  const rightBottom = drawStackedInfo(
+    ctx,
+    "Recipient Information",
+    data.shipToInfo?.name || "-",
     data.shipToInfo?.phone,
     data.shipToInfo?.email,
     data.shipToInfo?.address,
     xRight
   );
 
-  const approxHeight = px(112);
-  const infoBottom = blockTop + approxHeight;
-  
+  const minApproxHeight = px(112);
+  const infoBottom = Math.max(leftBottom, rightBottom, blockTop + minApproxHeight);
+
   return infoBottom;
 };
 

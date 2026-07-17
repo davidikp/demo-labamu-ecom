@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { AddIcon, ChevronDownIcon } from "../../../components/icons/Icons.jsx";
+import { AddIcon, ChevronDownIcon, SearchNotFoundIllustration } from "../../../components/icons/Icons.jsx";
+import { EmptyState } from "../../../ce-ui";
 import { Button } from "../../../components/common/Button.jsx";
 import { FilterMenu } from "../../../components/molecules/FilterMenu.jsx";
 import { StatusBadge } from "../../../components/common/StatusBadge.jsx";
@@ -226,19 +227,12 @@ export const BomListPage = ({ onNavigate, t }) => {
               ))}
 
               {filteredRows.length === 0 ? (
-                <div
-                  style={{
-                    flex: 1,
-                    padding: "32px",
-                    textAlign: "center",
-                    color: "var(--neutral-on-surface-tertiary)",
-                    fontSize: "var(--text-title-3)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  No bill of materials found.
+                <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <EmptyState
+                    illustration={<SearchNotFoundIllustration />}
+                    title="No bill of materials found"
+                    description="Try adjusting your filters or search keywords."
+                  />
                 </div>
               ) : null}
             </div>

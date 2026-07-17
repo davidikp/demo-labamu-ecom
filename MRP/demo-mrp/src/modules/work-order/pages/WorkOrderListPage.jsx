@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { Settings, ChevronDownIcon } from "../../../components/icons/Icons.jsx";
+import { Settings, ChevronDownIcon, SearchNotFoundIllustration } from "../../../components/icons/Icons.jsx";
+import { EmptyState } from "../../../ce-ui";
 import { Button } from "../../../components/common/Button.jsx";
 import { FilterMenu } from "../../../components/molecules/FilterMenu.jsx";
 import { ListStatusCounterCard } from "../../../components/common/ListStatusCounterCard.jsx";
@@ -523,19 +524,12 @@ export const WorkOrderListPage = ({ onNavigate, t }) => {
               ))}
 
               {filteredRows.length === 0 ? (
-                <div
-                  style={{
-                    flex: 1,
-                    padding: "32px",
-                    textAlign: "center",
-                    color: "var(--neutral-on-surface-tertiary)",
-                    fontSize: "var(--text-title-3)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  No work orders found.
+                <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <EmptyState
+                    illustration={<SearchNotFoundIllustration />}
+                    title="No work orders found"
+                    description="Try adjusting your filters or search keywords."
+                  />
                 </div>
               ) : null}
             </div>

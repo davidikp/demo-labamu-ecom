@@ -1269,7 +1269,7 @@ export const PurchaseOrderCreatePage = ({
         if (routingName || operationName) return `Step ${step}: ${routingName || operationName}`;
         return `Step ${step}`;
       });
-      const stackedLabels = stageLabels.map((label) => `- ${label}`).join("\n");
+      const stackedLabels = stageLabels.map((label) => `• ${label}`).join("\n");
       return `${baseDescription}\n${stackedLabels}`;
     };
   const generatedWorkOrderDescription = buildLinkedWorkOrderDescription(

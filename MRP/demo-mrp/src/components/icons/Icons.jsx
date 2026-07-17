@@ -317,6 +317,58 @@ const AnalyticsIcon = ({
   </SvgIconBase>
 );
 
+// Empty-state illustration: a dashed document with text lines, overlapped by
+// a magnifying glass — used for "no results found" states across list pages.
+const SearchNotFoundIllustration = ({
+  size = 120,
+  color = "#C7C7C7",
+  fillColor = "#E8E8E8",
+  style = {},
+  ...props
+}) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 96 96"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    style={{ display: "block", flexShrink: 0, ...style }}
+    {...props}
+  >
+    <rect
+      x="24.5"
+      y="4.5"
+      width="59"
+      height="79"
+      rx="6"
+      stroke={color}
+      strokeWidth="2"
+      strokeDasharray="4 4"
+    />
+    <rect x="32" y="26" width="36" height="6" rx="3" fill={fillColor} />
+    <rect x="32" y="38" width="44" height="6" rx="3" fill={fillColor} />
+    <rect x="32" y="50" width="44" height="6" rx="3" fill={fillColor} />
+    <rect x="32" y="62" width="30" height="6" rx="3" fill={fillColor} />
+    <line
+      x1="12"
+      y1="84"
+      x2="30"
+      y2="66"
+      stroke={color}
+      strokeWidth="6"
+      strokeLinecap="round"
+    />
+    <circle
+      cx="40"
+      cy="52"
+      r="24"
+      fill="none"
+      stroke={color}
+      strokeWidth="4"
+    />
+  </svg>
+);
+
 const ManufacturingIcon = Wrench;
 const FinancingIcon = CreditCard;
 const ProcurementIcon = ShoppingCart;
@@ -517,6 +569,7 @@ export {
   BillOfMaterialsIcon,
   RoutingIcon,
   SearchIcon,
+  SearchNotFoundIllustration,
   MoreVerticalIcon,
   NotificationIcon,
   ChevronDownIcon,

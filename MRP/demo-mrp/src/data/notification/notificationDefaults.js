@@ -108,7 +108,7 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
           "Push urgent stock shortage alerts and approved material request escalations.",
         module: "Material Request",
         enabled: true,
-        delivery: "Only Critical",
+        delivery: "Only High Priority",
       },
       {
         id: "quote_response_received",
@@ -214,7 +214,7 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
           "Reduce interruptions by limiting live popups to critical approvals and blocked operations.",
         module: "Real-Time",
         enabled: false,
-        delivery: "Only Critical",
+        delivery: "Only High Priority",
       },
     ],
   },

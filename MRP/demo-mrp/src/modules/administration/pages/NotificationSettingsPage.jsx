@@ -16,7 +16,10 @@ import {
   cloneNotificationSettings,
 } from "../../../data/notification/notificationDefaults.js";
 import { NOTIFICATION_DELIVERY_OPTIONS } from "../../../data/notification/notificationOptions.js";
-import { getEnabledNotificationRuleIds } from "../../../utils/notification/notificationUtils.js";
+import {
+  getEnabledNotificationRuleIds,
+  resolveDelivery,
+} from "../../../utils/notification/notificationUtils.js";
 
 const notificationChannelTabStyle = (isActive) => ({
   height: "40px",
@@ -148,12 +151,13 @@ const NotificationSettingsPage = ({
   const allItems = settings.flatMap((section) =>
     section.items.map((item) => ({ ...item, channelId: section.id }))
   );
+  const effectiveDelivery = (item) => resolveDelivery(item.delivery, item.id);
   const enabledRuleCount = allItems.filter((item) => item.enabled).length;
-  const criticalAlertCount = allItems.filter((item) =>
-    ["Only Critical", "Only High Priority"].includes(item.delivery)
+  const criticalAlertCount = allItems.filter(
+    (item) => effectiveDelivery(item) === "Only High Priority"
   ).length;
   const digestRuleCount = allItems.filter((item) =>
-    item.delivery.includes("Digest")
+    effectiveDelivery(item).includes("Digest")
   ).length;
   const liveAlertCount =
     settings.find((section) => section.id === "realtime")?.items.filter(
@@ -338,7 +342,7 @@ const NotificationSettingsPage = ({
           background: "var(--neutral-surface-primary)",
           borderRadius: "16px",
           border: "1px solid var(--neutral-line-separator-1)",
-          overflow: "hidden",
+          overflow: "visible",
           display: "flex",
           flexDirection: "column",
         }}
@@ -492,7 +496,7 @@ const NotificationSettingsPage = ({
                     flexDirection: "column",
                     border: "1px solid var(--neutral-line-separator-1)",
                     borderRadius: "16px",
-                    overflow: "hidden",
+                    overflow: "visible",
                   }}
                 >
                   {section.items.map((item, index) => (
@@ -560,19 +564,38 @@ const NotificationSettingsPage = ({
                           {item.description}
                         </span>
                       </div>
-                      <DropdownSelect
-                        value={item.delivery}
-                        onChange={(nextValue) =>
-                          updateNotificationItem(section.id, item.id, {
-                            delivery: nextValue,
-                          })
-                        }
-                        options={NOTIFICATION_DELIVERY_OPTIONS}
-                        fieldHeight="42px"
-                        borderRadius="12px"
-                        fontSize="var(--text-title-3)"
-                        optionFontSize="var(--text-title-3)"
-                      />
+                      <div
+                        style={{
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: "4px",
+                        }}
+                      >
+                        <DropdownSelect
+                          value={item.delivery}
+                          onChange={(nextValue) =>
+                            updateNotificationItem(section.id, item.id, {
+                              delivery: nextValue,
+                            })
+                          }
+                          options={NOTIFICATION_DELIVERY_OPTIONS}
+                          fieldHeight="42px"
+                          borderRadius="12px"
+                          fontSize="var(--text-title-3)"
+                          optionFontSize="var(--text-title-3)"
+                        />
+                        {item.delivery === "Suggested" ? (
+                          <span
+                            style={{
+                              fontSize: "12px",
+                              lineHeight: "16px",
+                              color: "var(--neutral-on-surface-secondary)",
+                            }}
+                          >
+                            Suggested: {resolveDelivery(item.delivery, item.id)}
+                          </span>
+                        ) : null}
+                      </div>
                     </div>
                   ))}
                 </div>
