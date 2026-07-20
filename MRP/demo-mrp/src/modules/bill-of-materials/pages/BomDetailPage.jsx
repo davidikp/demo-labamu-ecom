@@ -35,7 +35,7 @@ const DETAIL_TABS = [
 const COGS_FIELDS = [
   { key: "labour", title: "Labour Cost", icon: Users, description: "Cost of human labour to produce one unit" },
   { key: "packing", title: "Packing Cost", icon: FileText, description: "Cost of packaging this product for delivery" },
-  { key: "shipping", title: "Shipping Cost", icon: Upload, description: "Cost of moving goods from supplier to customer" },
+  { key: "shipping", title: "Shipping Cost", icon: Upload, description: "Cost of moving goods" },
   { key: "overhead", title: "Overhead Cost", icon: Building2, description: "Indirect factory costs not tied to a task" },
   { key: "other", title: "Other Cost", icon: CircleDollarSign, description: "Additional production cost not covered above" },
 ];
@@ -125,7 +125,6 @@ export const BomDetailPage = ({ onNavigate, initialData }) => {
             >
               {bom.name}
             </span>
-            <StatusBadge variant="grey-light">Version {bom.version}.0</StatusBadge>
           </div>
           <StatusBadge variant={bomStatusBadgeVariant(bom.status)}>{bom.status}</StatusBadge>
         </div>
@@ -324,6 +323,25 @@ export const BomDetailPage = ({ onNavigate, initialData }) => {
 
           {showMaterialBreakdown ? (
             <div style={{ paddingLeft: "32px" }}>
+              {!bom.materials?.length ? (
+                <div
+                  style={{
+                    padding: "24px",
+                    textAlign: "center",
+                    color: "var(--neutral-on-surface-tertiary)",
+                    fontSize: "var(--text-title-3)",
+                    background: "var(--neutral-surface-primary)",
+                    border: "1.5px dashed var(--neutral-line-separator-1)",
+                    borderRadius: "16px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    minHeight: "80px",
+                  }}
+                >
+                  No cost items added yet.
+                </div>
+              ) : (
               <div style={{ overflowX: "auto", width: "100%" }}>
                 <div style={{ minWidth: "100%", width: "100%", display: "flex", flexDirection: "column" }}>
                   <div style={detailTableHeaderRowStyle(MATERIAL_COST_BREAKDOWN_GRID_COLUMNS)}>
@@ -355,6 +373,7 @@ export const BomDetailPage = ({ onNavigate, initialData }) => {
                   })}
                 </div>
               </div>
+              )}
             </div>
           ) : null}
         </div>

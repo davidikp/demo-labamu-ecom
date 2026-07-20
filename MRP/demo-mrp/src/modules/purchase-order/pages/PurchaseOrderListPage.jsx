@@ -94,7 +94,7 @@ export const PurchaseOrderListPage = ({ onNavigate, t }) => {
   );
 
   const tableColumns = [
-    { label: "PO Number", key: "poNumber", flex: "1.4", sortable: true },
+    { label: "PO No", key: "poNumber", flex: "1.4", sortable: true },
     { label: "Vendor Name", key: "vendorName", flex: "1.6", sortable: true },
     { label: "Total Amount", key: "amount", flex: "1.3", sortable: false },
     { label: "PO Date", key: "poDate", flex: "1", sortable: true },
@@ -342,7 +342,7 @@ export const PurchaseOrderListPage = ({ onNavigate, t }) => {
           <TableSearchField
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search PO number, vendor"
+            placeholder="Search by PO No or Vendor Name"
             width="360px"
           />
         </div>

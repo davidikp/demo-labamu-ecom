@@ -236,12 +236,22 @@ export const MaterialRequestListPage = ({ onNavigate }) => {
                 setCustomDateTo(to);
               }}
             />
+
+            <FilterMenu
+              label="Requested By"
+              searchable
+              options={requesterOptions.map((name) => ({ value: name, label: name }))}
+              values={requesterFilters}
+              onChangeMultiple={setRequesterFilters}
+              multiple
+              allValue="all"
+            />
           </div>
 
           <TableSearchField
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search request ID"
+            placeholder="Search by Request ID or Work Order No"
             width="360px"
           />
         </div>

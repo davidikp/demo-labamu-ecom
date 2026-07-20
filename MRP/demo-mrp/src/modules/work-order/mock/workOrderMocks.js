@@ -109,7 +109,7 @@ export const MOCK_MATERIAL_LINES = [
     qty: 24,
     price: 210000,
     image: "foam_padding_reference.png",
-    uom: "pcs",
+    uom: "unit",
   },
 ];
 

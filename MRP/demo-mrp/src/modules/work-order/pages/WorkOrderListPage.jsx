@@ -330,7 +330,7 @@ export const WorkOrderListPage = ({ onNavigate, t }) => {
           <TableSearchField
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search work order number"
+            placeholder="Search by Work Order No"
             width="360px"
           />
         </div>

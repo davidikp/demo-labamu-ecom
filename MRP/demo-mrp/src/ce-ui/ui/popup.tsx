@@ -16,6 +16,14 @@ export const Popup: React.FC<{
   align?: "center" | "left"
   primaryAction?: { label: string; onClick: () => void; disabled?: boolean; loading?: boolean; destructive?: boolean }
   secondaryAction?: { label: string; onClick: () => void; loading?: boolean }
+  /** Arbitrary footer content pinned below the scrollable body (flex-shrink-0) —
+   *  use when the footer needs more than the primaryAction/secondaryAction single
+   *  button pair (e.g. custom layout, more than two buttons). Takes precedence
+   *  over primaryAction/secondaryAction when provided. */
+  footer?: React.ReactNode
+  /** Hide the divider line above the footer (both the built-in action-button
+   *  footer and the custom `footer` node). */
+  hideFooterDivider?: boolean
   children?: React.ReactNode
   className?: string
   testId?: string
@@ -29,6 +37,8 @@ export const Popup: React.FC<{
   align = "center",
   primaryAction,
   secondaryAction,
+  footer,
+  hideFooterDivider = false,
   children,
   className,
   testId,
@@ -89,8 +99,11 @@ export const Popup: React.FC<{
 
         {children && <div className="flex-1 overflow-y-auto px-6 py-4 min-h-0">{children}</div>}
 
-        {(primaryAction || secondaryAction) && (
-          <div className="px-6 py-4 border-t border-lb-line-1 bg-lb-surface flex gap-3 flex-shrink-0">
+        {footer ? (
+          <div className={cn("px-6 py-4 bg-lb-surface flex-shrink-0", !hideFooterDivider && "border-t border-lb-line-1")}>{footer}</div>
+        ) : (primaryAction || secondaryAction) && (
+          <div className={cn("px-6 py-4 bg-lb-surface flex gap-3 flex-shrink-0", !hideFooterDivider && "border-t border-lb-line-1")}>
+
             {secondaryAction && (
               <MainBtn
                 className="flex-1"

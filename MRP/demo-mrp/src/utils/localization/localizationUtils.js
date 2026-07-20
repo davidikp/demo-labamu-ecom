@@ -965,7 +965,7 @@ const INDONESIAN_EXACT_TEXT = {
   "Total Cost This WO": "Total Biaya Perintah Kerja Ini",
   "Cost of human labour to produce one unit": "Biaya tenaga kerja untuk memproduksi satu unit produk.",
   "Cost of packaging this product for delivery": "Biaya pengemasan produk untuk proses pengiriman.",
-  "Cost of moving goods from supplier to customer": "Biaya pengiriman barang dari pemasok ke pelanggan.",
+  "Cost of moving goods": "Biaya pengiriman barang",
   "Indirect factory costs not tied to a task": "Biaya operasional pabrik yang tidak terkait dengan proses produksi tertentu.",
   "Additional production cost not covered above": "Biaya produksi tambahan yang tidak termasuk dalam kategori di atas.",
   "e.g. Overtime labour": "Mis. Lembur Tenaga Kerja",
@@ -1091,8 +1091,8 @@ const INDONESIAN_DYNAMIC_TEXT = [
     replacer: (_, name, date) => `Diunggah oleh ${name} pada ${date}`,
   },
   {
-    pattern: /^Remaining to receive: (\d+) pcs$/i,
-    replacer: (_, qty) => `Sisa untuk diterima: ${qty} pcs`,
+    pattern: /^Remaining to receive: (\d+) unit$/i,
+    replacer: (_, qty) => `Sisa untuk diterima: ${qty} unit`,
   },
   {
     pattern: /^Step (\d+) to (\d+)$/i,
@@ -1107,8 +1107,8 @@ const INDONESIAN_DYNAMIC_TEXT = [
     replacer: (_, vendor) => `+ Tambah "${vendor}" sebagai vendor baru`,
   },
   {
-    pattern: /^([^:]+): Received (\d+) pcs$/i,
-    replacer: (_, label, received) => `${label}: Diterima ${received} pcs`,
+    pattern: /^([^:]+): Received (\d+) unit$/i,
+    replacer: (_, label, received) => `${label}: Diterima ${received} unit`,
   },
   {
     pattern: /^from (\d+) rows$/i,
@@ -1197,20 +1197,20 @@ const INDONESIAN_DYNAMIC_TEXT = [
     replacer: (_, op) => `Operasi: ${op}`,
   },
   {
-    pattern: /^Available: (\d+) pcs$/i,
-    replacer: (_, n) => `Tersedia: ${n} pcs`,
+    pattern: /^Available: (\d+) unit$/i,
+    replacer: (_, n) => `Tersedia: ${n} unit`,
   },
   {
-    pattern: /^Exceeds available quantity \((\d+) pcs\)\.$/i,
-    replacer: (_, n) => `Melebihi jumlah yang tersedia (${n} pcs).`,
+    pattern: /^Exceeds available quantity \((\d+) unit\)\.$/i,
+    replacer: (_, n) => `Melebihi jumlah yang tersedia (${n} unit).`,
   },
   {
     pattern: /^([▲▼]) (\d+(?:\.\d+)?)% (over|under) forecast$/,
     replacer: (_, arrow, pct, dir) => `${arrow} ${pct}% ${dir === "over" ? "di atas" : "di bawah"} estimasi`,
   },
   {
-    pattern: /^\((.+) for (\d+) pcs\)$/i,
-    replacer: (_, amount, qty) => `(${amount} untuk ${qty} pcs)`,
+    pattern: /^\((.+) for (\d+) unit\)$/i,
+    replacer: (_, amount, qty) => `(${amount} untuk ${qty} unit)`,
   },
   {
     // WO Actual COGS — cost item added/edited/deleted activity log description

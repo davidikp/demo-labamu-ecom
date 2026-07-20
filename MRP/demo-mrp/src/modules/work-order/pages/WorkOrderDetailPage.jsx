@@ -11,6 +11,7 @@ import { IconButton } from "../../../components/common/IconButton.jsx";
 import { StatusBadge } from "../../../components/common/StatusBadge.jsx";
 import { TableSearchField } from "../../../components/table/TableSearchField.jsx";
 import { Card, DateInputControl, DateRangeInputControl, DocumentTypeBadge, FormField, ImageUploadField, InputField, InputGroup, LabelValue, PhoneInputField, ProgressRing, ProofDocumentList, SectionCard, UploadDescriptionCard, UploadDropzone, UnifiedInputShell, focusInputFrame, blurInputFrame } from "../components/WorkOrderDetailWidgets.jsx";
+import { TextField } from "../../../ce-ui";
 import { Tooltip } from "../../../components/atoms/Tooltip.jsx";
 import { MOCK_COMPANY } from "../../../data/company.js";
 import { MOCK_VENDORS } from "../../../data/vendors.js";
@@ -70,15 +71,16 @@ const ONGOING_REQUEST_WO = "WO-202604-002";
 
 // Fresh BOM materials — nothing requested or received yet.
 const EMPTY_BOM_MATERIALS = [
-  { id: 1, type: "BOM", name: "Wooden Plank", sku: "WOD-023UDISJJDS", requiredQty: 50, requestedQty: 0, receivedQty: 0, unit: "pcs" },
+  { id: 1, type: "BOM", name: "Wooden Plank", sku: "WOD-023UDISJJDS", requiredQty: 50, requestedQty: 0, receivedQty: 0, unit: "unit" },
   { id: 2, type: "BOM", name: "Paint", sku: "PAI-WIQIFQJFJSA", requiredQty: 5, requestedQty: 0, receivedQty: 0, unit: "liter" },
   { id: 3, type: "BOM", name: "Nail", sku: "NAI-9AIF0U092F", requiredQty: 10, requestedQty: 0, receivedQty: 0, unit: "box" },
+  { id: 4, type: "BOM", name: "Wooden Plank with With Black Striped Leopard Pattern Finish", sku: "WOD-887GHFKKS02", requiredQty: 20, requestedQty: 0, receivedQty: 0, unit: "unit" },
 ];
 
 // Ongoing work order: materials already have requested and/or received quantities
 // from the existing material requests (see request history).
 const ONGOING_BOM_MATERIALS = [
-  { id: 1, type: "BOM", name: "Wooden Plank", sku: "WOD-023UDISJJDS", requiredQty: 50, requestedQty: 20, receivedQty: 25, unit: "pcs" },
+  { id: 1, type: "BOM", name: "Wooden Plank", sku: "WOD-023UDISJJDS", requiredQty: 50, requestedQty: 20, receivedQty: 25, unit: "unit" },
   { id: 2, type: "BOM", name: "Paint", sku: "PAI-WIQIFQJFJSA", requiredQty: 5, requestedQty: 3, receivedQty: 2, unit: "liter" },
   { id: 3, type: "BOM", name: "Nail", sku: "NAI-9AIF0U092F", requiredQty: 10, requestedQty: 5, receivedQty: 0, unit: "box" },
 ];
@@ -120,7 +122,7 @@ const EXCEEDING_REASON_OPTIONS = [
 const ACTUAL_COGS_FIELDS = [
   { key: "labour", title: "Labour Cost", icon: Users, description: "Cost of human labour to produce one unit" },
   { key: "packing", title: "Packing Cost", icon: FileText, description: "Cost of packaging this product for delivery" },
-  { key: "shipping", title: "Shipping Cost", icon: Upload, description: "Cost of moving goods from supplier to customer" },
+  { key: "shipping", title: "Shipping Cost", icon: Upload, description: "Cost of moving goods" },
   { key: "overhead", title: "Overhead Cost", icon: Building2, description: "Indirect factory costs not tied to a task" },
   { key: "other", title: "Other Cost", icon: CircleDollarSign, description: "Additional production cost not covered above" },
 ];
@@ -1300,7 +1302,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
     setExpandedActualCostMaterials((prev) => ({ ...prev, [materialId]: !prev[materialId] }));
   const [showActualCostFieldBreakdown, setShowActualCostFieldBreakdown] = useState({});
   const toggleActualCostFieldBreakdown = (key) =>
-    setShowActualCostFieldBreakdown((prev) => ({ ...prev, [key]: prev[key] === false ? true : false }));
+    setShowActualCostFieldBreakdown((prev) => ({ ...prev, [key]: !prev[key] }));
 
   // Cost-item rows are view-only by default; adding/editing a row goes
   // through a modal (costItemModal), while delete acts directly on the row.
@@ -1347,20 +1349,46 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
       const lines = field.mode === "breakdown" ? field.lines : [];
       const nextLines =
         idx == null
-          ? [...lines, { id: `wo-cost-line-${nextActualCostLineId++}`, ...nextLine }]
+          ? [...lines, { id: `wo-cost-line-${nextActualCostLineId++}`, noForecast: true, ...nextLine }]
           : lines.map((l, i) => (i === idx ? { ...l, ...nextLine } : l));
       return { ...prev, [key]: { ...field, mode: "breakdown", lines: nextLines } };
     });
     logCostItemChange(idx == null ? "Item Added" : "Item Edited", key, nextLine.label, nextLine.amount);
     closeCostItemModal();
   };
-  const removeActualCostRow = (key, idx) => {
+  const [deleteCostItemModal, setDeleteCostItemModal] = useState(null);
+  const [deleteCostItemReason, setDeleteCostItemReason] = useState("");
+  const [deleteCostItemError, setDeleteCostItemError] = useState("");
+  const openDeleteCostItemModal = (key, idx) => {
+    setDeleteCostItemModal({ key, idx });
+    setDeleteCostItemReason("");
+    setDeleteCostItemError("");
+  };
+  const closeDeleteCostItemModal = () => {
+    setDeleteCostItemModal(null);
+    setDeleteCostItemReason("");
+    setDeleteCostItemError("");
+  };
+  const confirmDeleteCostItem = () => {
+    if (!deleteCostItemReason.trim()) {
+      setDeleteCostItemError("Reason is required");
+      return;
+    }
+    const { key, idx } = deleteCostItemModal;
     const line = actualCogs[key]?.lines?.[idx];
     setActualCogs((prev) => ({
       ...prev,
       [key]: { ...prev[key], lines: prev[key].lines.filter((_, i) => i !== idx) },
     }));
-    if (line) logCostItemChange("Item Deleted", key, line.label, line.amount);
+    if (line) {
+      const costTypeTitle = ACTUAL_COGS_FIELDS.find((f) => f.key === key)?.title || key;
+      const perUnit = TOTAL_QTY > 0 ? Math.round((Number(line.amount) || 0) / TOTAL_QTY) : 0;
+      addActivityLog(
+        `${costTypeTitle} Item Deleted`,
+        `${line.label} with Total Cost per Unit: ${formatIDR(perUnit)} and Total Cost This WO: ${formatIDR(line.amount)}. Reason: ${deleteCostItemReason.trim()}`
+      );
+    }
+    closeDeleteCostItemModal();
   };
 
   const handlePlannedDateChange = (step, value) => {
@@ -1688,7 +1716,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
 
       if (proposedTotal > TOTAL_QTY) {
         setAssignedOutputError(
-          `Cannot exceed total work order quantity (${TOTAL_QTY} pcs). You have ${TOTAL_QTY - currentOtherTotal} pcs available.`
+          `Cannot exceed total work order quantity (${TOTAL_QTY} unit). You have ${TOTAL_QTY - currentOtherTotal} unit available.`
         );
         hasError = true;
       }
@@ -2361,7 +2389,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
               const quantityLabel =
                 line.type === "material" && line.uom
                   ? `${Number(line.qty) || 0} ${line.uom}`
-                  : `${Number(line.qty) || 0} pcs`;
+                  : `${Number(line.qty) || 0} unit`;
 
               return (
                 <div
@@ -3123,7 +3151,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
             }}
           >
             {isExceeded && <span style={{ fontWeight: "normal", marginRight: "4px" }}>Exceeds req. qty</span>}
-            {currentTotalOutput} / {TOTAL_QTY} pcs
+            {currentTotalOutput} / {TOTAL_QTY} unit
           </span>
         </div>
       );
@@ -3164,7 +3192,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
     editingInternalReceivedOutput,
     editingInternalProcessedOutput
   );
-  const internalAssignedOutputErrorMessage = `Minimum is ${editingInternalMinimumOutput} pcs due to existing progress.`;
+  const internalAssignedOutputErrorMessage = `Minimum is ${editingInternalMinimumOutput} unit due to existing progress.`;
   const selectedStageData = selectedStage
     ? stagesWithTotals.find(
       (stage) => Number(stage.step) === Number(selectedStage.step)
@@ -3478,6 +3506,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                         searchable
                         searchPlaceholder="Search material name or SKU"
                         hasError={!!err("material")}
+                        wrapValue
                         onChange={(val) =>
                           updateDraftRow(row.rowId, { materialName: val })
                         }
@@ -4144,7 +4173,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                 whiteSpace: "nowrap",
               }}
             >
-              {TOTAL_QTY} pcs
+              {TOTAL_QTY} unit
             </span>
           </div>
         </Card>
@@ -4388,7 +4417,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                         lineHeight: "20px",
                       }}
                     >
-                      Work order was automatically updated on {routingUpdates[0].timestamp} to match receipt {routingUpdates[0].poNumber} from {routingUpdates[0].vendorName} for {routingUpdates[0].qty} pcs.
+                      Work order was automatically updated on {routingUpdates[0].timestamp} to match receipt {routingUpdates[0].poNumber} from {routingUpdates[0].vendorName} for {routingUpdates[0].qty} unit.
                     </span>
                   </div>
                 ) : (
@@ -4424,7 +4453,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                       {(isRoutingUpdatesExpanded ? routingUpdates : routingUpdates.slice(0, 3)).map((update, idx) => (
                         <div key={idx} style={{ display: "flex", alignItems: "baseline", gap: "4px" }}>
                           <span style={{ fontSize: "var(--text-title-3)", color: "var(--neutral-on-surface-primary)" }}>
-                            Auto Adjusted to {update.qty} pcs
+                            Auto Adjusted to {update.qty} unit
                           </span>
                           <span style={{ fontSize: "var(--text-title-3)", color: "var(--neutral-on-surface-secondary)" }}>
                             · {update.timestamp}
@@ -5418,15 +5447,15 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                         >
                           <div style={{ display: "flex", flexDirection: "column", gap: "2px", flex: 1 }}>
                             <span style={{ fontSize: "10px" }}>Received</span>
-                            <span style={{ color: (() => { const pct = Math.min(100, ((vendor.receivedOutput || 0) / (vendor.output || 1)) * 100); if (pct >= 100) return "var(--status-green-primary)"; if (pct >= 75) return "var(--feature-brand-primary)"; if (pct >= 50) return "var(--status-yellow-primary)"; if (pct >= 25) return "var(--status-orange-primary)"; return "var(--status-red-primary)"; })(), fontWeight: "var(--font-weight-bold)", fontSize: "11px" }}>{vendor.receivedOutput || 0} pcs</span>
+                            <span style={{ color: (() => { const pct = Math.min(100, ((vendor.receivedOutput || 0) / (vendor.output || 1)) * 100); if (pct >= 100) return "var(--status-green-primary)"; if (pct >= 75) return "var(--feature-brand-primary)"; if (pct >= 50) return "var(--status-yellow-primary)"; if (pct >= 25) return "var(--status-orange-primary)"; return "var(--status-red-primary)"; })(), fontWeight: "var(--font-weight-bold)", fontSize: "11px" }}>{vendor.receivedOutput || 0} unit</span>
                           </div>
                           <div style={{ display: "flex", flexDirection: "column", gap: "2px", alignItems: "center", flex: 1 }}>
                             <span style={{ fontSize: "10px" }}>Remaining</span>
-                            <span style={{ color: "var(--neutral-on-surface-primary)", fontWeight: "var(--font-weight-bold)", fontSize: "11px" }}>{Math.max(0, (vendor.output || 0) - (vendor.receivedOutput || 0))} pcs</span>
+                            <span style={{ color: "var(--neutral-on-surface-primary)", fontWeight: "var(--font-weight-bold)", fontSize: "11px" }}>{Math.max(0, (vendor.output || 0) - (vendor.receivedOutput || 0))} unit</span>
                           </div>
                           <div style={{ display: "flex", flexDirection: "column", gap: "2px", alignItems: "flex-end", flex: 1 }}>
                             <span style={{ fontSize: "10px" }}>Assigned</span>
-                            <span style={{ color: "var(--neutral-on-surface-primary)", fontWeight: "var(--font-weight-bold)", fontSize: "11px" }}>{vendor.output || 0} pcs</span>
+                            <span style={{ color: "var(--neutral-on-surface-primary)", fontWeight: "var(--font-weight-bold)", fontSize: "11px" }}>{vendor.output || 0} unit</span>
                           </div>
                         </div>
                       </div>
@@ -5595,7 +5624,8 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
             const forecastTotal = fieldTotal(linkedBom?.cogs?.[key]);
             const perUnit = TOTAL_QTY > 0 ? total / TOTAL_QTY : 0;
             const forecastPerUnit = TOTAL_QTY > 0 ? forecastTotal / TOTAL_QTY : 0;
-            const isBreakdownVisible = showActualCostFieldBreakdown[key] !== false;
+            const isBreakdownVisible = !!showActualCostFieldBreakdown[key];
+            const atMaxCostItems = lines.length >= 10;
             return (
               <React.Fragment key={key}>
                 <div style={{ borderTop: "1px solid var(--neutral-line-separator-2)" }} />
@@ -5649,7 +5679,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                               <div key={line.id || idx} style={detailTableRowStyle(ACTUAL_COST_TABLE_GRID_COLUMNS, idx === lines.length - 1)}>
                                 <span style={{ fontSize: "var(--text-title-3)" }}>{line.label || "-"}</span>
                                 <span style={{ fontSize: "var(--text-title-3)", color: "var(--neutral-on-surface-primary)" }}>
-                                  {formatIDR(Math.round(forecastPerUnit))}
+                                  {line.noForecast ? "-" : formatIDR(Math.round(forecastPerUnit))}
                                 </span>
                                 <span style={{ fontSize: "var(--text-title-3)" }}>
                                   {formatIDR(TOTAL_QTY > 0 ? Math.round((Number(line.amount) || 0) / TOTAL_QTY) : 0)}
@@ -5670,27 +5700,47 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                                       size="small"
                                       color="var(--status-red-primary)"
                                       hoverBackground="#FAE6E8"
-                                      onClick={() => removeActualCostRow(key, idx)}
+                                      onClick={() => openDeleteCostItemModal(key, idx)}
                                     />
                                   </Tooltip>
                                 </div>
                               </div>
                             ))
                           ) : (
-                            <div style={{ padding: "16px", textAlign: "center", fontSize: "var(--text-title-3)", color: "var(--neutral-on-surface-secondary)" }}>
+                            <div
+                              style={{
+                                padding: "24px",
+                                textAlign: "center",
+                                color: "var(--neutral-on-surface-tertiary)",
+                                fontSize: "var(--text-title-3)",
+                                background: "var(--neutral-surface-primary)",
+                                border: "1.5px dashed var(--neutral-line-separator-1)",
+                                borderRadius: "16px",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                minHeight: "80px",
+                              }}
+                            >
                               No cost items added yet.
                             </div>
                           )}
                         </div>
-                        <Button
-                          variant="outlined"
-                          size="small"
-                          leftIcon={AddIcon}
-                          onClick={() => openAddCostItemModal(key)}
-                          style={{ alignSelf: "flex-start" }}
-                        >
-                          Add Cost Item
-                        </Button>
+                        <div style={{ display: "flex", flexDirection: "column", gap: "4px", alignItems: "flex-start" }}>
+                          <Button
+                            variant="outlined"
+                            size="small"
+                            leftIcon={AddIcon}
+                            onClick={() => openAddCostItemModal(key)}
+                            disabled={atMaxCostItems}
+                            style={{ alignSelf: "flex-start" }}
+                          >
+                            Add Cost Item
+                          </Button>
+                          {atMaxCostItems ? (
+                            <span style={{ fontSize: "12px", color: "var(--neutral-on-surface-tertiary)" }}>Maximum 10 items</span>
+                          ) : null}
+                        </div>
                       </>
                     ) : null}
                   </div>
@@ -5784,7 +5834,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                   <span style={{ fontSize: "16px", fontWeight: "bold", color: "var(--neutral-on-surface-primary)" }}>
                     {formatIDR(forecastedPerUnit)} / unit{" "}
                     <span style={{ fontSize: "12px", fontWeight: "normal", color: "var(--neutral-on-surface-secondary)" }}>
-                      ({formatIDR(totalForecastedCogs)} for {TOTAL_QTY} pcs)
+                      ({formatIDR(totalForecastedCogs)} for {TOTAL_QTY} unit)
                     </span>
                   </span>
                 </div>
@@ -5793,7 +5843,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                   <span style={{ fontSize: "16px", fontWeight: "bold", color: "var(--neutral-on-surface-primary)" }}>
                     {formatIDR(actualPerUnit)} / unit{" "}
                     <span style={{ fontSize: "12px", fontWeight: "normal", color: "var(--neutral-on-surface-secondary)" }}>
-                      ({formatIDR(totalActualCogs)} for {TOTAL_QTY} pcs)
+                      ({formatIDR(totalActualCogs)} for {TOTAL_QTY} unit)
                     </span>
                   </span>
                 </div>
@@ -5843,7 +5893,27 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                       {showActualMaterialBreakdown ? "Hide Cost Breakdown" : "See Cost Breakdown"}
                     </Button>
                   </div>
-                ) : null}
+                ) : (
+                  <div style={{ paddingLeft: "32px" }}>
+                    <div
+                      style={{
+                        padding: "24px",
+                        textAlign: "center",
+                        color: "var(--neutral-on-surface-tertiary)",
+                        fontSize: "var(--text-title-3)",
+                        background: "var(--neutral-surface-primary)",
+                        border: "1.5px dashed var(--neutral-line-separator-1)",
+                        borderRadius: "16px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        minHeight: "80px",
+                      }}
+                    >
+                      No cost items added yet.
+                    </div>
+                  </div>
+                )}
 
                 {showActualMaterialBreakdown && linkedBom?.materials?.length ? (
                   <div style={{ paddingLeft: "32px" }}>
@@ -7039,10 +7109,10 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                                     </span>
                                   </div>
                                   <div style={poReferenceTableCellStyle()}>
-                                    {vendor.output || 0} pcs
+                                    {vendor.output || 0} unit
                                   </div>
                                   <div style={poReferenceTableCellStyle()}>
-                                    {vendor.receivedOutput || 0} pcs
+                                    {vendor.receivedOutput || 0} unit
                                   </div>
                                   <div style={poReferenceTableCellStyle()}>
                                     <StatusBadge variant={vendorStatusMeta.variant}>
@@ -7591,7 +7661,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                           </div>
                           <StatusBadge variant="blue-light">
                             {singleVendorForm.assignedSteps && singleVendorForm.assignedSteps.length > 0 
-                              ? `Available: ${availableQty} pcs`
+                              ? `Available: ${availableQty} unit`
                               : `Available: -`}
                           </StatusBadge>
                         </div>
@@ -7640,7 +7710,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                             }
                           }}
                           placeholder="0"
-                          suffix="pcs"
+                          suffix="unit"
                           hasError={!!assignedOutputError || isExceedingTotal}
                         />
                         {(assignedOutputError || isExceedingTotal) && (
@@ -7651,7 +7721,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                             }}
                           >
                             {isExceedingTotal
-                              ? `Exceeds available quantity (${availableQty} pcs).`
+                              ? `Exceeds available quantity (${availableQty} unit).`
                               : assignedOutputError}
                           </span>
                         )}
@@ -8261,7 +8331,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                         color: "var(--feature-brand-primary)",
                       }}
                     >
-                      {singleVendorForm.output} pcs
+                      {singleVendorForm.output} unit
                     </span>
                   </div>
                 </div>
@@ -8355,7 +8425,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                     (selectedVendorObj?.output || 0) -
                     (selectedVendorObj?.receivedOutput || 0)
                   }
-                  suffix="pcs"
+                  suffix="unit"
                 />
                 <span
                   style={{
@@ -8366,7 +8436,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                   Remaining to receive:{" "}
                   {(selectedVendorObj?.output || 0) -
                     (selectedVendorObj?.receivedOutput || 0)}{" "}
-                  pcs
+                  unit
                 </span>
               </div>
 
@@ -8591,7 +8661,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                     />
                     <LabelValue 
                       label="Released Qty" 
-                      value={`${selectedSendVendor.sentOutput || 0} / ${selectedSendVendor.output || 0} pcs`} 
+                      value={`${selectedSendVendor.sentOutput || 0} / ${selectedSendVendor.output || 0} unit`} 
                     />
                   </div>
                 </Card>
@@ -8618,10 +8688,10 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                 }}
                 placeholder="Enter amount"
                 error={sendErrors.sendAmount}
-                suffix="pcs"
+                suffix="unit"
                 headerRight={
                   <StatusBadge variant="blue-light">
-                    Available: {selectedSendVendor ? computeReadyToSend(selectedSendVendor) : 0} pcs
+                    Available: {selectedSendVendor ? computeReadyToSend(selectedSendVendor) : 0} unit
                   </StatusBadge>
                 }
               />
@@ -8731,7 +8801,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                   />
                   <LabelValue 
                     label="Receipt Progress" 
-                    value={`${receiptHistoryVendor.receivedOutput || 0} / ${receiptHistoryVendor.output || 0} pcs`} 
+                    value={`${receiptHistoryVendor.receivedOutput || 0} / ${receiptHistoryVendor.output || 0} unit`} 
                   />
                 </div>
               </Card>
@@ -8813,7 +8883,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                           fontWeight: "var(--font-weight-bold)",
                         })}
                       >
-                        {r.amount} pcs
+                        {r.amount} unit
                       </div>
                       <div style={poReferenceTableCellStyle()}>
                         {r.note || r.notes || "-"}
@@ -8976,7 +9046,11 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                   <Info size={14} color="var(--neutral-on-surface-secondary)" />
                 </Tooltip>
               </label>
-              <InputField type="number" prefix="IDR" value={Math.round(modalForecastPerUnit)} disabled />
+              {costItemModal.idx == null ? (
+                <InputField type="text" value="-" disabled />
+              ) : (
+                <InputField type="number" prefix="IDR" value={Math.round(modalForecastPerUnit)} disabled />
+              )}
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
               <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "var(--text-body)", fontWeight: "var(--font-weight-medium)", color: "var(--neutral-on-surface-primary)" }}>
@@ -9020,6 +9094,40 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
         </GeneralModal>
         );
       })() : null}
+
+      <GeneralModal
+        isOpen={!!deleteCostItemModal}
+        onClose={closeDeleteCostItemModal}
+        title="Delete Cost Item"
+        width="440px"
+        footer={
+          <div style={{ display: "flex", gap: "12px", width: "100%" }}>
+            <Button variant="outlined" size="large" style={{ flex: 1 }} onClick={closeDeleteCostItemModal}>
+              Back
+            </Button>
+            <Button variant="filled" size="large" style={{ flex: 1 }} onClick={confirmDeleteCostItem}>
+              Submit
+            </Button>
+          </div>
+        }
+      >
+        <TextField
+          label="Reason"
+          required
+          multiline
+          rows={4}
+          maxLength={400}
+          showCount
+          value={deleteCostItemReason}
+          onChange={(e) => {
+            setDeleteCostItemReason(e.target.value);
+            if (deleteCostItemError) setDeleteCostItemError("");
+          }}
+          placeholder="Add a reason for deleting this cost item."
+          errorText={deleteCostItemError}
+          state={deleteCostItemError ? "error" : undefined}
+        />
+      </GeneralModal>
     </div>
   );
 };

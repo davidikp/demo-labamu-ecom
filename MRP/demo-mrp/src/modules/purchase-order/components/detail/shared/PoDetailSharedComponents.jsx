@@ -23,6 +23,7 @@ import {
   inputFrameStyle,
 } from "../../../styles/purchaseOrderInputStyles.js";
 import { DocumentTypeBadge } from "../../DocumentTypeBadge.jsx";
+import { getFileTypeIcon } from "../../../../../ce-ui";
 import {
   formatNumberWithCommas,
   parseNumberFromCommas,
@@ -865,11 +866,11 @@ export const UploadDescriptionCard = ({
     id={file?.id}
     style={{
       border: "1px solid var(--neutral-line-separator-1)",
-      borderRadius: "24px",
-      padding: "20px 24px",
+      borderRadius: "16px",
+      padding: "16px 20px",
       display: "flex",
       flexDirection: "column",
-      gap: "18px",
+      gap: "16px",
       background: "var(--neutral-surface-primary)",
     }}
   >
@@ -877,37 +878,36 @@ export const UploadDescriptionCard = ({
       style={{
         display: "flex",
         alignItems: "center",
-        justifyContent: "space-between",
         gap: "12px",
       }}
     >
-      <div
+      {(() => {
+        const FileIcon = getFileTypeIcon(file?.name || "");
+        return FileIcon ? (
+          <div style={{ width: "40px", height: "48px", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <FileIcon width={40} height={48} />
+          </div>
+        ) : (
+          <DocumentTypeBadge fileName={file?.name} type={file?.type} />
+        );
+      })()}
+      <span
         style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "16px",
+          flex: 1,
           minWidth: 0,
+          fontSize: "var(--text-title-3)",
+          lineHeight: "20px",
+          letterSpacing: "0.09625px",
+          fontWeight: "var(--font-weight-regular)",
+          color: "var(--neutral-on-surface-primary)",
+          whiteSpace: "normal",
+          wordBreak: "break-word",
         }}
       >
-        <DocumentTypeBadge fileName={file?.name} type={file?.type} />
-        <span
-          style={{
-            fontSize: "var(--text-title-3)",
-            lineHeight: "20px",
-            letterSpacing: "0.09625px",
-            fontWeight: "var(--font-weight-regular)",
-            color: "var(--neutral-on-surface-primary)",
-            minWidth: 0,
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap",
-          }}
-        >
-          {file?.name || "-"}
-        </span>
-      </div>
+        {file?.name || "-"}
+      </span>
       {onRemove ? (
-        <Button variant="danger" size="small" onClick={onRemove}>
+        <Button variant="danger" size="small" onClick={onRemove} style={{ flexShrink: 0 }}>
           Remove
         </Button>
       ) : null}
@@ -921,7 +921,7 @@ export const UploadDescriptionCard = ({
         onChange={(e) => onDescriptionChange?.(e.target.value)}
         placeholder="Enter File Description"
         maxLength={FILE_DESCRIPTION_MAX_LENGTH}
-        headerRight={`${(description !== undefined ? description : (file?.description || "")).length}/${FILE_DESCRIPTION_MAX_LENGTH}`}
+        showCounter
         error={descriptionError}
       />
     ) : null}

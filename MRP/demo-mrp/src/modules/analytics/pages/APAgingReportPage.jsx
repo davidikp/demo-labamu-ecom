@@ -420,7 +420,7 @@ const APAgingReportPage = ({ onNavigate, t }) => {
             <TableSearchField 
               value={searchQuery}
               onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
-              placeholder="Search PO or invoice number"
+              placeholder="Search by PO No or Invoice No"
               style={{ width: "280px" }}
             />
           </div>

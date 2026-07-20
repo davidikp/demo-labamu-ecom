@@ -10,8 +10,10 @@ import {
   Upload,
   Building2,
   CircleDollarSign,
+  Box,
 } from "../../../components/icons/Icons.jsx";
 import { Button } from "../../../components/common/Button.jsx";
+import { StatusBadge } from "../../../components/common/StatusBadge.jsx";
 import { InputField } from "../../../components/molecules/InputField.jsx";
 import { RadioButton } from "../../../ce-ui";
 import { createBom, updateBom, getBom, resolveMaterialOption, DEFAULT_COGS } from "../mock/bomMocks.js";
@@ -23,7 +25,7 @@ import { RoutingLineModal } from "../components/RoutingLineModal.jsx";
 const COGS_FIELDS = [
   { key: "labour", title: "Labour Cost", icon: Users, description: "Cost of human labour to produce one unit" },
   { key: "packing", title: "Packing Cost", icon: FileText, description: "Cost of packaging this product for delivery" },
-  { key: "shipping", title: "Shipping Cost", icon: Upload, description: "Cost of moving goods from supplier to customer" },
+  { key: "shipping", title: "Shipping Cost", icon: Upload, description: "Cost of moving goods" },
   { key: "overhead", title: "Overhead Cost", icon: Building2, description: "Indirect factory costs not tied to a task" },
   { key: "other", title: "Other Cost", icon: CircleDollarSign, description: "Additional production cost not covered above" },
 ];
@@ -593,9 +595,22 @@ export const BomCreatePage = ({ onNavigate, initialData, isSidebarCollapsed }) =
           )}
           {!cogsCollapsed ? (
             <div style={{ padding: "18px 20px 20px 20px", display: "flex", flexDirection: "column", gap: "16px" }}>
-              <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <span style={summaryMetricLabelStyle}>Material Cost (auto-calculated from selected materials)</span>
-                <span style={summaryMetricValueStyle}>{formatIDR(materialCost)}</span>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "14px", alignItems: "flex-start" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <Box size={16} color="var(--neutral-on-surface-secondary)" style={{ marginTop: "2px" }} />
+                  <div style={{ display: "flex", flexDirection: "column" }}>
+                    <span style={{ display: "flex", alignItems: "center", gap: "6px", color: "var(--neutral-on-surface-primary)", fontWeight: "bold" }}>
+                      Material Cost
+                      <StatusBadge variant="grey-light">Auto-calculated</StatusBadge>
+                    </span>
+                    <span style={{ fontSize: "12px", color: "var(--neutral-on-surface-secondary)" }}>
+                      Sum of BOM qty × avg stock cost per material
+                    </span>
+                  </div>
+                </div>
+                <span style={{ fontWeight: "bold", fontSize: "16px", color: "var(--neutral-on-surface-primary)" }}>
+                  {formatIDR(materialCost)}
+                </span>
               </div>
               {COGS_FIELDS.map(({ key, title, icon, isNew, description: fieldDescription }) => (
                 <React.Fragment key={key}>
@@ -614,7 +629,7 @@ export const BomCreatePage = ({ onNavigate, initialData, isSidebarCollapsed }) =
               <div style={{ borderTop: "1px solid var(--neutral-line-separator-1)" }} />
               <div style={{ display: "flex", justifyContent: "space-between" }}>
                 <span style={summaryTotalLabelStyle}>Total Forecasted COGS</span>
-                <span style={summaryTotalValueStyle}>{formatIDR(totalCogs)}</span>
+                <span style={summaryTotalValueStyle}>{formatIDR(totalCogs)} / Unit</span>
               </div>
             </div>
           ) : null}

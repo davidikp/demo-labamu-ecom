@@ -18,16 +18,36 @@ const newLine = () => ({ id: `new-line-${nextLineId++}`, label: "", amount: 0 })
 // chevron — the header is always shown, and only the breakdown line list
 // (when the field actually has a breakdown) gets its own "See/Hide Cost
 // Breakdown" toggle, defaulting to expanded.
+const MAX_BREAKDOWN_ITEMS = 10;
+
+const breakdownEmptyStateStyle = {
+  padding: "24px",
+  textAlign: "center",
+  color: "var(--neutral-on-surface-tertiary)",
+  fontSize: "var(--text-title-3)",
+  background: "var(--neutral-surface-primary)",
+  border: "1.5px dashed var(--neutral-line-separator-1)",
+  borderRadius: "16px",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  minHeight: "80px",
+};
+
 export const CostFieldAccordion = ({ icon: Icon, title, description, isNew, field, onChange, readOnly = false, onAddItem, invalidLineIds }) => {
   const [expanded, setExpanded] = useState(true);
-  const [breakdownVisible, setBreakdownVisible] = useState(true);
+  const [breakdownVisible, setBreakdownVisible] = useState(false);
   const total = fieldTotal(field);
   const isBreakdown = field.mode === "breakdown";
+  const atMax = (field.lines?.length || 0) >= MAX_BREAKDOWN_ITEMS;
 
   const setAmount = (amount) => onChange({ ...field, amount: Number(amount) || 0 });
   const updateLine = (idx, patch) =>
     onChange({ ...field, lines: field.lines.map((l, i) => (i === idx ? { ...l, ...patch } : l)) });
-  const addLine = () => onChange({ ...field, lines: [...field.lines, newLine()] });
+  const addLine = () => {
+    if (atMax) return;
+    onChange({ ...field, lines: [...field.lines, newLine()] });
+  };
   const removeLine = (idx) => onChange({ ...field, lines: field.lines.filter((_, i) => i !== idx) });
 
   const header = (
@@ -92,11 +112,19 @@ export const CostFieldAccordion = ({ icon: Icon, title, description, isNew, fiel
             >
               {breakdownVisible ? "Hide Cost Breakdown" : "See Cost Breakdown"}
             </Button>
-            {breakdownVisible
-              ? field.lines.map((l, idx) => (
+            {breakdownVisible ? (
+              field.lines.length ? (
+                field.lines.map((l, idx) => (
                   <div
                     key={l.id || idx}
-                    style={{ display: "flex", justifyContent: "space-between", fontSize: "14px", alignItems: "center" }}
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      fontSize: "14px",
+                      alignItems: "center",
+                      paddingBottom: "8px",
+                      borderBottom: idx === field.lines.length - 1 ? "none" : "1px solid var(--neutral-line-separator-1)",
+                    }}
                   >
                     <span style={{ color: "var(--neutral-on-surface-primary)" }}>{l.label || "-"}</span>
                     <span style={{ fontWeight: "bold", color: "var(--neutral-on-surface-secondary)" }}>
@@ -104,11 +132,19 @@ export const CostFieldAccordion = ({ icon: Icon, title, description, isNew, fiel
                     </span>
                   </div>
                 ))
-              : null}
+              ) : (
+                <div style={breakdownEmptyStateStyle}>No cost items added yet.</div>
+              )
+            ) : null}
             {breakdownVisible && onAddItem ? (
-              <Button variant="outlined" size="small" leftIcon={AddIcon} onClick={onAddItem} style={{ alignSelf: "flex-start" }}>
-                Add Cost Item
-              </Button>
+              <div style={{ display: "flex", flexDirection: "column", gap: "4px", alignItems: "flex-start" }}>
+                <Button variant="outlined" size="small" leftIcon={AddIcon} onClick={onAddItem} disabled={atMax} style={{ alignSelf: "flex-start" }}>
+                  Add Cost Item
+                </Button>
+                {atMax ? (
+                  <span style={{ fontSize: "12px", color: "var(--neutral-on-surface-tertiary)" }}>Maximum 10 items</span>
+                ) : null}
+              </div>
             ) : null}
           </div>
         ) : null}
@@ -124,15 +160,24 @@ export const CostFieldAccordion = ({ icon: Icon, title, description, isNew, fiel
         <div style={{ display: "flex", flexDirection: "column", gap: "8px", paddingLeft: "32px" }}>
           {isBreakdown ? (
             <>
+              {!field.lines.length ? <div style={breakdownEmptyStateStyle}>No cost items added yet.</div> : null}
               {field.lines.map((l, idx) => {
                 // Frozen at the last Save click (invalidLineIds), not recomputed on
                 // every keystroke — so a freshly added row never shows an error until
                 // Save is pressed again, while fixing a flagged row still clears it live.
                 const lineError = invalidLineIds?.has(l.id) && !l.label?.trim() ? "Field cannot be empty" : null;
+                const isLast = idx === field.lines.length - 1;
                 return (
                   <div
                     key={l.id || idx}
-                    style={{ display: "flex", gap: "12px", alignItems: "center", marginBottom: lineError ? "20px" : 0 }}
+                    style={{
+                      display: "flex",
+                      gap: "12px",
+                      alignItems: "center",
+                      paddingBottom: "12px",
+                      marginBottom: lineError ? "20px" : 0,
+                      borderBottom: isLast ? "none" : "1px solid var(--neutral-line-separator-1)",
+                    }}
                   >
                     <div style={{ flex: 2, position: "relative" }}>
                       <InputField
@@ -178,9 +223,14 @@ export const CostFieldAccordion = ({ icon: Icon, title, description, isNew, fiel
                   </div>
                 );
               })}
-              <Button variant="outlined" size="small" leftIcon={AddIcon} onClick={addLine} style={{ alignSelf: "flex-start" }}>
-                Add Cost Item
-              </Button>
+              <div style={{ display: "flex", flexDirection: "column", gap: "4px", alignItems: "flex-start" }}>
+                <Button variant="outlined" size="small" leftIcon={AddIcon} onClick={addLine} disabled={atMax} style={{ alignSelf: "flex-start" }}>
+                  Add Cost Item
+                </Button>
+                {atMax ? (
+                  <span style={{ fontSize: "12px", color: "var(--neutral-on-surface-tertiary)" }}>Maximum 10 items</span>
+                ) : null}
+              </div>
             </>
           ) : null}
         </div>

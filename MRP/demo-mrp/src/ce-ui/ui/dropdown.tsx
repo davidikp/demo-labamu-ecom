@@ -94,6 +94,7 @@ export const Dropdown: React.FC<{
   const [openAddNewPopup, setOpenAddNewPopup] = React.useState(false)
   const [newOptionValue, setNewOptionValue] = React.useState("")
   const ref = React.useRef<HTMLDivElement>(null)
+  const menuRef = React.useRef<HTMLDivElement>(null)
   const searchInputRef = React.useRef<HTMLInputElement>(null)
   const listRef = React.useRef<HTMLDivElement>(null)
   const sentinelRef = React.useRef<HTMLDivElement>(null)
@@ -102,7 +103,13 @@ export const Dropdown: React.FC<{
 
   React.useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+      const target = e.target as Node
+      // The menu is portaled to <body> (see render below), so it's not a DOM
+      // descendant of `ref` — check menuRef too, or a portaled option click
+      // would be treated as "outside" and close the menu before its onClick fires.
+      if (ref.current && !ref.current.contains(target) && !(menuRef.current && menuRef.current.contains(target))) {
+        setOpen(false)
+      }
     }
     document.addEventListener("mousedown", handler)
     return () => document.removeEventListener("mousedown", handler)
@@ -347,6 +354,7 @@ export const Dropdown: React.FC<{
 
           {open && menuRect && typeof document !== "undefined" && createPortal(
             <div
+              ref={menuRef}
               className="fixed z-[1000] bg-lb-surface border border-lb-line-2 rounded-lb-sm shadow-lb-filter flex flex-col"
               style={{
                 left: menuRect.left,

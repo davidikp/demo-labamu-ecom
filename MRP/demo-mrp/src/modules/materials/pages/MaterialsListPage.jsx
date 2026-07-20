@@ -446,7 +446,7 @@ export const MaterialsListPage = ({ onNavigate, showSnackbar, t }) => {
           <TableSearchField
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search materials by name or SKU..."
+            placeholder="Search by Name or SKU"
             width="360px"
           />
         </div>

@@ -10,6 +10,7 @@ import { InputField } from "../../../components/molecules/InputField.jsx";
 import { UploadDropzone } from "../../../components/molecules/UploadDropzone.jsx";
 import { ChipTabBar } from "../../../components/molecules/ChipTabBar.jsx";
 import { UploadDescriptionCard } from "../../purchase-order/components/detail/shared/PoDetailSharedComponents.jsx";
+import { DocumentTypeBadge } from "../../purchase-order/components/DocumentTypeBadge.jsx";
 import { MaterialPreparationDrawer } from "../components/MaterialPreparationDrawer.jsx";
 import {
   getRequest,
@@ -101,6 +102,39 @@ const InfoField = ({ label, value }) => (
     <span style={{ fontSize: "var(--text-title-2)", color: "var(--neutral-on-surface-primary)" }}>
       {value}
     </span>
+  </div>
+);
+
+const ProofLinkList = ({ proofs }) => (
+  <div style={{ display: "flex", flexDirection: "column", gap: "8px", maxWidth: "100%" }}>
+    {(proofs || []).map((proof, i) => (
+      <a
+        key={i}
+        href={proof.url || "#"}
+        onClick={(e) => !proof.url && e.preventDefault()}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "6px",
+          padding: "6px 8px",
+          border: "1px solid var(--neutral-line-separator-1)",
+          borderRadius: "8px",
+          fontSize: "var(--text-body)",
+          color: "var(--feature-brand-primary)",
+          textDecoration: "none",
+          cursor: "pointer",
+          maxWidth: "100%",
+          boxSizing: "border-box",
+        }}
+      >
+        <span style={{ flexShrink: 0 }}>
+          <DocumentTypeBadge fileName={proof.name} size="compact" />
+        </span>
+        <span style={{ minWidth: 0, whiteSpace: "normal", wordBreak: "break-word" }}>
+          {proof.description || proof.name}
+        </span>
+      </a>
+    ))}
   </div>
 );
 
@@ -657,30 +691,10 @@ export const MaterialRequestDetailPage = ({ onNavigate, initialData, requestId, 
                   <span style={{ fontWeight: "var(--font-weight-bold)", color: "var(--neutral-on-surface-primary)" }}>
                     {LOG_ACTIVITY_NAME[log.statusKey] || log.title}
                   </span>
-                  {log.statusKey === "cancelled" && (request.cancelReason || (request.cancelProofs || []).length > 0) && (
-                    <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                      {request.cancelReason && (
-                        <span style={{ fontSize: "var(--text-title-3)", color: "var(--neutral-on-surface-secondary)", lineHeight: 1.6 }}>
-                          {request.cancelReason}
-                        </span>
-                      )}
-                      {(request.cancelProofs || []).map((proof, i) => (
-                        <a
-                          key={i}
-                          href={proof.url || "#"}
-                          onClick={(e) => !proof.url && e.preventDefault()}
-                          style={{
-                            fontSize: "var(--text-title-3)",
-                            color: "var(--feature-brand-primary)",
-                            textDecoration: "underline",
-                            cursor: "pointer",
-                            width: "fit-content",
-                          }}
-                        >
-                          {proof.description || proof.name}
-                        </a>
-                      ))}
-                    </div>
+                  {log.statusKey === "cancelled" && request.cancelReason && (
+                    <span style={{ fontSize: "var(--text-title-3)", color: "var(--neutral-on-surface-secondary)", lineHeight: 1.6 }}>
+                      {request.cancelReason}
+                    </span>
                   )}
                   {log.statusKey === "completed" && (request.receiptProofs || []).length > 0 && (
                     <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
@@ -824,10 +838,16 @@ export const MaterialRequestDetailPage = ({ onNavigate, initialData, requestId, 
             <StatusBadge variant={statusMeta.badge}>{statusMeta.label}</StatusBadge>
           </div>
           <div style={{ height: "1px", background: "var(--neutral-line-separator-1)" }} />
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "24px" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "24px" }}>
             <InfoField label="Work Order" value={request.workOrderNo} />
             <InfoField label="Requested By" value={request.requestedBy} />
             <InfoField label="Requested Date" value={request.requestedDate} />
+            {(request.cancelProofs || []).length > 0 && (
+              <InfoField label="Cancellation Proof" value={<ProofLinkList proofs={request.cancelProofs} />} />
+            )}
+            {(request.receiptProofs || []).length > 0 && (
+              <InfoField label="Approval Proof" value={<ProofLinkList proofs={request.receiptProofs} />} />
+            )}
           </div>
         </div>
 

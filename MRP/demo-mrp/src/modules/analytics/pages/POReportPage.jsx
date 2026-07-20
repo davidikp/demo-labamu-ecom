@@ -685,7 +685,7 @@ const POReportPage = ({ onNavigate, t }) => {
             <TableSearchField 
               value={searchQuery}
               onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
-              placeholder="Search PO number"
+              placeholder="Search by PO No"
               style={{ width: "320px" }}
             />
           </div>
