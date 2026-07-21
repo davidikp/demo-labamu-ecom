@@ -1,0 +1,35 @@
+import { memo } from 'react';
+import { resolveColor } from '../../ui/fields/colorValue';
+
+function FooterRenderer({ data, theme }) {
+  const bg = resolveColor(data.background_color, theme.colors);
+  const text = resolveColor(data.text_color, theme.colors);
+  const currentYear = new Date().getFullYear();
+  const columns = (data.link_columns ?? []).filter((c) => (c.links ?? []).length > 0);
+
+  return (
+    <footer style={{ backgroundColor: bg, color: text }} className="px-6 py-8">
+      {data.tagline && <p className="mb-4 max-w-sm text-sm opacity-80">{data.tagline}</p>}
+      {columns.length > 0 && (
+        <div className="mb-6 flex flex-wrap gap-8">
+          {columns.map((col) => (
+            <div key={col.id}>
+              <p className="mb-2 text-sm font-semibold">{col.heading || 'Links'}</p>
+              <ul className="space-y-1 text-sm opacity-80">
+                {(col.links ?? []).map((link) => (
+                  <li key={link.id ?? link.label}>{link.label || 'Link'}</li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      )}
+      <div className="flex items-center justify-between text-xs opacity-70">
+        <span>{data.copyright_text || `© ${currentYear} My Store. All rights reserved.`}</span>
+        {data.show_social_icons !== false && <span className="flex gap-2">IG FB TikTok</span>}
+      </div>
+    </footer>
+  );
+}
+
+export default memo(FooterRenderer);

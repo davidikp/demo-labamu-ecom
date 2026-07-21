@@ -1,0 +1,115 @@
+{
+  "title": "Pengaturan Pengiriman",
+  "tabs": {
+    "deliveryInfo": "Info Pengiriman",
+    "courierService": "Layanan Kurir"
+  },
+  "saveChanges": "Simpan Perubahan",
+  "saveSuccess": "Pengaturan pengiriman berhasil disimpan",
+  "purchasability": {
+    "title": "Metode Pembelian",
+    "subtitle": "Atur bagaimana pelanggan Anda dapat berbelanja dan memesan di website Anda.",
+    "pickup": {
+      "label": "Ambil Sendiri",
+      "description": "Pelanggan mengambil pesanan langsung dari lokasi Anda"
+    },
+    "delivery": {
+      "label": "Pengiriman",
+      "description": "Anda menawarkan pengiriman ke lokasi pelanggan"
+    }
+  },
+  "pickupInfo": {
+    "title": "Info Pengambilan",
+    "subtitle": "Atur kontak dan alamat untuk pengambilan pesanan",
+    "contactName": "Nama Kontak",
+    "contactNamePlaceholder": "Masukkan Nama",
+    "contactNumber": "Nomor Kontak",
+    "country": "Negara",
+    "countryPlaceholder": "Pilih Negara",
+    "province": "Provinsi",
+    "provincePlaceholder": "Pilih Provinsi",
+    "city": "Kota",
+    "cityPlaceholder": "Pilih Kota",
+    "district": "Kecamatan",
+    "districtPlaceholder": "Pilih Kecamatan",
+    "region": "Kelurahan",
+    "regionPlaceholder": "Pilih Kelurahan",
+    "zip": "Kode Pos",
+    "zipPlaceholder": "Pilih Kode Pos",
+    "address": "Alamat",
+    "addressPlaceholder": "cth. Jalan Mawar No.1",
+    "pinpointAddress": "Titik Lokasi Alamat",
+    "pinpointAddressPlaceholder": "Nama jalan, gedung, nomor rumah",
+    "pinTitle": "Tandai titik yang tepat",
+    "pinSubtitle": "Kami akan mengirim ke alamat pada peta. Mohon periksa titik lokasi dan sesuaikan jika perlu."
+  },
+  "courier": {
+    "instantDelivery": {
+      "label": "Pengiriman Instan",
+      "description": "Kurir akan segera dikirim secepatnya."
+    },
+    "scheduledDelivery": {
+      "label": "Pengiriman Terjadwal",
+      "description": "Jadwalkan pengambilan untuk tanggal dan waktu tertentu."
+    },
+    "status": {
+      "idle": "Belum Terhubung",
+      "connecting": "Menghubungkan",
+      "connected": "Terhubung",
+      "failed": "Gagal"
+    },
+    "saveAndConnect": "Simpan & Hubungkan",
+    "cancel": "Batal",
+    "edit": "Ubah",
+    "disconnect": "Putuskan",
+    "disconnectTitle": "Putuskan Integrasi Pengiriman?",
+    "disconnectDescription": "Website Anda tidak akan lagi menawarkan layanan pengiriman ini saat checkout. Anda dapat menyambungkannya kembali kapan saja.",
+    "disconnectCancel": "Batal",
+    "disconnectConfirm": "Ya, Putuskan",
+    "disconnectBlockedTitle": "Tidak Dapat Memutuskan Integrasi Pengiriman",
+    "disconnectBlockedDescription": "Layanan pengiriman ini sedang digunakan oleh satu atau lebih pesanan yang berlangsung. Selesaikan atau batalkan pesanan tersebut sebelum memutuskan integrasi ini.",
+    "disconnectBlockedButton": "Ya, Mengerti",
+    "savedSuccess": "Layanan Lalamove berhasil disimpan",
+    "connectSuccess": "Layanan Lalamove berhasil terhubung",
+    "connectFailed": "Gagal menghubungkan layanan Lalamove",
+    "disconnectSuccess": "Layanan Lalamove berhasil diputuskan",
+    "disconnectFailed": "Gagal memutuskan layanan Lalamove",
+    "connectMissingFields": "Mohon isi API Key dan API Secret Anda",
+    "productionNotice": "Integrasi ini hanya berfungsi dengan kredensial API dari lingkungan Production. Kredensial Sandbox tidak didukung.",
+    "apiKey": "API Key",
+    "apiKeyPlaceholder": "Masukkan API Key...",
+    "apiSecret": "API Secret",
+    "apiSecretPlaceholder": "Masukkan API Secret...",
+    "howToConnect": "Cara Menghubungkan API",
+    "prerequisites": {
+      "title": "Prasyarat",
+      "intro": "Sebelum memulai, pastikan Anda memenuhi persyaratan operasional berikut:",
+      "item1Before": "Anda harus memiliki ",
+      "item1LinkText": "Akun Bisnis Lalamove",
+      "item1After": " yang terdaftar (akun individu tidak dapat membuat API key).",
+      "item2": "Selesaikan proses verifikasi bisnis yang diperlukan sesuai wilayah Anda."
+    },
+    "stepByStep": {
+      "title": "Panduan Langkah demi Langkah",
+      "step1": {
+        "title": "Masuk ke Partner Portal",
+        "item1Before": "Buka ",
+        "item1LinkText": "Lalamove Partner Portal",
+        "item1After": ".",
+        "item2": "Pilih target pasar/wilayah Anda dari menu dropdown.",
+        "item3": "Masuk menggunakan kredensial Akun Bisnis Lalamove Anda."
+      },
+      "step2": {
+        "title": "Akses Tab Developers",
+        "item1": "Temukan menu navigasi pada dashboard Anda.",
+        "item2": "Klik bagian Developers atau API Keys."
+      },
+      "step3": {
+        "title": "Aktifkan Live Keys (Lingkungan Production)",
+        "item1": "Isi saldo e-wallet Lalamove Anda sesuai minimum yang berlaku di wilayah Anda.",
+        "item2": "Ubah toggle lingkungan portal Anda dari Sandbox ke Production.",
+        "item3": "Buat live production keys Anda untuk mulai menjalankan pengiriman sungguhan."
+      }
+    }
+  }
+}
