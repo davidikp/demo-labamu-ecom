@@ -355,7 +355,7 @@ export const Dropdown: React.FC<{
           {open && menuRect && typeof document !== "undefined" && createPortal(
             <div
               ref={menuRef}
-              className="fixed z-[1000] bg-lb-surface border border-lb-line-2 rounded-lb-sm shadow-lb-filter flex flex-col"
+              className="fixed z-[99999] bg-lb-surface border border-lb-line-2 rounded-lb-sm shadow-lb-filter flex flex-col"
               style={{
                 left: menuRect.left,
                 width: menuRect.width,

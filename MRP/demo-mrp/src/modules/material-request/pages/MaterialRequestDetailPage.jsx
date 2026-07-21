@@ -106,7 +106,7 @@ const InfoField = ({ label, value }) => (
 );
 
 const ProofLinkList = ({ proofs }) => (
-  <div style={{ display: "flex", flexDirection: "column", gap: "8px", maxWidth: "100%" }}>
+  <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", maxWidth: "100%" }}>
     {(proofs || []).map((proof, i) => (
       <a
         key={i}
@@ -123,6 +123,7 @@ const ProofLinkList = ({ proofs }) => (
           color: "var(--feature-brand-primary)",
           textDecoration: "none",
           cursor: "pointer",
+          width: "fit-content",
           maxWidth: "100%",
           boxSizing: "border-box",
         }}

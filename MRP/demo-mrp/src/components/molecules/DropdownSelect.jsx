@@ -206,9 +206,7 @@ const LegacyDropdownSelect = ({
             ? "auto"
             : variant === "filter"
               ? "40px"
-              : wrapValue
-                ? "auto"
-                : fieldHeight,
+              : fieldHeight,
           height: "auto",
           border: borderless
             ? "none"

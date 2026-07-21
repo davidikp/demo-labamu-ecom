@@ -3437,8 +3437,8 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                 zIndex: 1,
               }}
             >
-              <div style={{ width: "150px", flexShrink: 0 }}>Type</div>
-              <div style={{ flex: "1.4" }}>Material</div>
+              <div style={{ width: "144px", flexShrink: 0 }}>Type</div>
+              <div style={{ flex: "2" }}>Material</div>
               <div style={{ flex: "1" }}>Quantity</div>
               <div style={{ width: "40px" }} />
             </div>
@@ -3481,7 +3481,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                   }}
                 >
                   <div style={{ display: "flex", gap: "12px", alignItems: "flex-start" }}>
-                    <div style={{ width: "150px", flexShrink: 0 }}>
+                    <div style={{ width: "144px", flexShrink: 0 }}>
                       <DropdownSelect
                         value={row.type}
                         options={["BOM", "Non-BOM"]}
@@ -3498,7 +3498,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                         }
                       />
                     </div>
-                    <div style={{ flex: "1.4" }}>
+                    <div style={{ flex: "2" }}>
                       <DropdownSelect
                         value={row.materialName}
                         options={materialOptions}
@@ -3506,6 +3506,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                         searchable
                         searchPlaceholder="Search material name or SKU"
                         hasError={!!err("material")}
+                        fieldHeight="48px"
                         wrapValue
                         onChange={(val) =>
                           updateDraftRow(row.rowId, { materialName: val })
