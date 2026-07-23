@@ -360,7 +360,7 @@ export default function PlaceOrderModal({ onClose, onSubmit, forceFragile, custo
   const { t } = useTranslation();
 
   const [scheduledAt, setScheduledAt] = useState(null);
-  const [payment, setPayment] = useState('');
+  const [payment, setPayment] = useState('wallet');
   const [notes, setNotes] = useState('');
   const [vehicle, setVehicle] = useState('');
   const [selectedServices, setSelectedServices] = useState([]);

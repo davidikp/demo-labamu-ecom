@@ -228,7 +228,6 @@ export const PICKUP_PROFILE = {
 
 export const PAYMENT_METHODS = [
   { value: 'wallet', label: 'Wallet', description: 'IDR 0' },
-  { value: 'cash', label: 'Cash' },
 ];
 
 export const VEHICLE_TYPES = [
