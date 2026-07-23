@@ -7,7 +7,9 @@ import { ListStatusCounterCard } from "../../../components/common/ListStatusCoun
 import { StatusBadge } from "../../../components/common/StatusBadge.jsx";
 import { TablePaginationFooter } from "../../../components/table/TablePaginationFooter.jsx";
 import { TableSearchField } from "../../../components/table/TableSearchField.jsx";
+import { AddIcon } from "../../../components/icons/Icons.jsx";
 import { MOCK_WO_TABLE_DATA } from "../mock/workOrderMocks.js";
+import { WorkOrderCreateDrawer } from "../components/WorkOrderCreateDrawer.jsx";
 
 const cellStyle = (overrides) => ({
   minWidth: 0,
@@ -20,10 +22,11 @@ const cellStyle = (overrides) => ({
   ...overrides,
 });
 
-export const WorkOrderListPage = ({ onNavigate, t }) => {
+export const WorkOrderListPage = ({ onNavigate, t, showSnackbar }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [priorityFilters, setPriorityFilters] = useState([]);
   const [creatorFilters, setCreatorFilters] = useState([]);
+  const [fulfillmentFilters, setFulfillmentFilters] = useState([]);
   const [startDateFilterType, setStartDateFilterType] = useState("all");
   const [startCustomDateFrom, setStartCustomDateFrom] = useState(null);
   const [startCustomDateTo, setStartCustomDateTo] = useState(null);
@@ -35,6 +38,8 @@ export const WorkOrderListPage = ({ onNavigate, t }) => {
   const [selectedStatuses, setSelectedStatuses] = useState([]);
   const [sortBy, setSortBy] = useState("wo");
   const [sortDirection, setSortDirection] = useState("desc");
+  const [isCreateDrawerOpen, setIsCreateDrawerOpen] = useState(false);
+  const [, forceRefresh] = useState(0);
   const statusCards = [
     {
       key: "not_started",
@@ -65,12 +70,13 @@ export const WorkOrderListPage = ({ onNavigate, t }) => {
   const tableColumns = [
     { label: "Work Order No.", key: "wo", flex: "1.6", sortable: true },
     { label: "Order Number", key: "ord", flex: "1.6", sortable: true },
-    { label: "Product", key: "product", flex: "1.4", sortable: true },
+    { label: "Target", key: "product", flex: "1.4", sortable: true },
     { label: "Qty", key: "qty", flex: "0.6", sortable: false },
     { label: "Priority", key: "priority", flex: "0.8", sortable: false },
     { label: "Planned Start Date", key: "start", flex: "1.2", sortable: false },
     { label: "Planned End Date", key: "end", flex: "1.2", sortable: false },
     { label: "Created By", key: "createdBy", flex: "1", sortable: false },
+    { label: "Fulfillment Type", key: "fulfillmentType", flex: "1.2", sortable: false },
     { label: "Status", key: "status", flex: "1.2", sortable: false },
   ];
   const statusCounts = statusCards.reduce((acc, card) => {
@@ -111,6 +117,10 @@ export const WorkOrderListPage = ({ onNavigate, t }) => {
   const creatorOptions = Array.from(
     new Set(MOCK_WO_TABLE_DATA.map((row) => row.createdBy))
   );
+  const fulfillmentOptions = [
+    { value: "CustomerOrder", label: "Customer Order" },
+    { value: "StockBuild", label: "Stock Build" },
+  ];
   const toggleMultiFilter = (value, setter) => {
     setter((prev) =>
       prev.includes(value) ? prev.filter((item) => item !== value) : [...prev, value]
@@ -138,6 +148,8 @@ export const WorkOrderListPage = ({ onNavigate, t }) => {
       priorityFilters.length === 0 || priorityFilters.includes(row.priority);
     const matchesCreator =
       creatorFilters.length === 0 || creatorFilters.includes(row.createdBy);
+    const matchesFulfillment =
+      fulfillmentFilters.length === 0 || fulfillmentFilters.includes(row.fulfillmentType);
     const matchesStartDate = matchesDateFilter(row.start, startDateFilterType, startCustomDateFrom, startCustomDateTo);
     const matchesEndDate = matchesDateFilter(row.end, endDateFilterType, endCustomDateFrom, endCustomDateTo);
     return (
@@ -145,6 +157,7 @@ export const WorkOrderListPage = ({ onNavigate, t }) => {
       matchesSearch &&
       matchesPriority &&
       matchesCreator &&
+      matchesFulfillment &&
       matchesStartDate &&
       matchesEndDate
     );
@@ -172,6 +185,7 @@ export const WorkOrderListPage = ({ onNavigate, t }) => {
     searchQuery,
     priorityFilters.join("|"),
     creatorFilters.join("|"),
+    fulfillmentFilters.join("|"),
     startDateFilterType,
     startCustomDateFrom,
     startCustomDateTo,
@@ -216,9 +230,14 @@ export const WorkOrderListPage = ({ onNavigate, t }) => {
         >
           {t("work_order.title")}
         </h1>
-        <Button variant="outlined" leftIcon={Settings}>
-          {t("work_order.settings")}
-        </Button>
+        <div style={{ display: "flex", gap: "12px" }}>
+          <Button variant="outlined" leftIcon={Settings}>
+            {t("work_order.settings")}
+          </Button>
+          <Button variant="filled" leftIcon={AddIcon} onClick={() => setIsCreateDrawerOpen(true)}>
+            New WO
+          </Button>
+        </div>
       </div>
 
       <div style={{ display: "flex", gap: "16px", flexWrap: "wrap" }}>
@@ -324,6 +343,14 @@ export const WorkOrderListPage = ({ onNavigate, t }) => {
                 options={creatorOptions.map((c) => ({ value: c, label: c }))}
                 values={creatorFilters}
                 onChangeMultiple={setCreatorFilters}
+              />
+              <FilterMenu
+                label="Fulfillment Type"
+                multiple
+                searchable={false}
+                options={fulfillmentOptions}
+                values={fulfillmentFilters}
+                onChangeMultiple={setFulfillmentFilters}
               />
             </div>
           </div>
@@ -459,18 +486,31 @@ export const WorkOrderListPage = ({ onNavigate, t }) => {
                         textOverflow: "ellipsis",
                       }}
                     >
-                      {row.ord}
+                      {row.fulfillmentType === "StockBuild" ? "-" : row.ord}
                     </span>
                   </div>
-                  <div style={cellStyle({ flex: tableColumns[2].flex })}>
+                  <div style={cellStyle({ flex: tableColumns[2].flex, flexDirection: "column", alignItems: "flex-start", justifyContent: "center", gap: "2px", height: "56px" })}>
                     <span
                       style={{
                         whiteSpace: "nowrap",
                         overflow: "hidden",
                         textOverflow: "ellipsis",
+                        maxWidth: "100%",
                       }}
                     >
                       {row.product}
+                    </span>
+                    <span
+                      style={{
+                        fontSize: "var(--text-body)",
+                        color: "var(--neutral-on-surface-secondary)",
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        maxWidth: "100%",
+                      }}
+                    >
+                      {row.targetType === "Material" ? "Material" : "Product"}
                     </span>
                   </div>
                   <div style={cellStyle({ flex: tableColumns[3].flex })}>
@@ -518,6 +558,9 @@ export const WorkOrderListPage = ({ onNavigate, t }) => {
                     </span>
                   </div>
                   <div style={cellStyle({ flex: tableColumns[8].flex })}>
+                    {row.fulfillmentType === "StockBuild" ? "Stock Build" : "Customer Order"}
+                  </div>
+                  <div style={cellStyle({ flex: tableColumns[9].flex })}>
                     <StatusBadge variant={row.sBadge}>{row.status}</StatusBadge>
                   </div>
                 </div>
@@ -545,6 +588,16 @@ export const WorkOrderListPage = ({ onNavigate, t }) => {
           onPageChange={setCurrentPage}
         />
       </div>
+
+      <WorkOrderCreateDrawer
+        isOpen={isCreateDrawerOpen}
+        onClose={() => setIsCreateDrawerOpen(false)}
+        onCreated={(record) => {
+          forceRefresh((n) => n + 1);
+          onNavigate("detail", record);
+          showSnackbar?.("Work order successfully created", "success");
+        }}
+      />
     </div>
   );
 };

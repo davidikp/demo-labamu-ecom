@@ -17,10 +17,12 @@ import { MOCK_COMPANY } from "../../../data/company.js";
 import { MOCK_VENDORS } from "../../../data/vendors.js";
 import { MOCK_PO_TABLE_DATA } from "../../purchase-order/mock/purchaseOrderMocks.js";
 import { MOCK_WO_TABLE_DATA } from "../mock/workOrderMocks.js";
+import { MOCK_MATERIALS_DATA } from "../../materials/mock/materialsMocks.js";
 import { getBom, DEFAULT_COGS, resolveMaterialOption } from "../../bill-of-materials/mock/bomMocks.js";
 import { computeMaterialCost, computeTotalCogs, fieldTotal, formatIDR } from "../../bill-of-materials/utils/bomUtils.js";
 import { DetailCard, detailTableHeaderRowStyle, detailTableRowStyle } from "../../bill-of-materials/components/BomShared.jsx";
 import { getRequests, addRequest, getStockBatchesForSku } from "../../material-request/mock/materialRequestMocks.js";
+import { addBatch } from "../../materials/mock/batchesStore.js";
 import { formatCurrency, formatNumberWithCommas, parseNumberFromCommas } from "../../../utils/format/formatUtils.js";
 import { normalizeProofDocuments, createUploadDocumentRecord, validateUploadFile } from "../../../utils/upload/uploadUtils.js";
 import { MAX_PROOF_UPLOAD_FILES } from "../../../constants/appConstants.js";
@@ -69,24 +71,37 @@ export const addWoActivityLog = (woNumber, title, desc = undefined) => {
 // order starts empty (no requests yet).
 const ONGOING_REQUEST_WO = "WO-202604-002";
 
-// Fresh BOM materials — nothing requested or received yet.
-const EMPTY_BOM_MATERIALS = [
-  { id: 1, type: "BOM", name: "Wooden Plank", sku: "WOD-023UDISJJDS", requiredQty: 50, requestedQty: 0, receivedQty: 0, unit: "unit" },
-  { id: 2, type: "BOM", name: "Paint", sku: "PAI-WIQIFQJFJSA", requiredQty: 5, requestedQty: 0, receivedQty: 0, unit: "liter" },
-  { id: 3, type: "BOM", name: "Nail", sku: "NAI-9AIF0U092F", requiredQty: 10, requestedQty: 0, receivedQty: 0, unit: "box" },
-  { id: 4, type: "BOM", name: "Wooden Plank with With Black Striped Leopard Pattern Finish", sku: "WOD-887GHFKKS02", requiredQty: 20, requestedQty: 0, receivedQty: 0, unit: "unit" },
-];
+// Materials table is genuinely BOM-driven: it's computed from the work order's
+// linked BOM (getBom(bomId).materials), each material's per-unit quantity scaled
+// by the work order's total quantity. This works the same way for both Product
+// and Material target-type work orders — the BOM is the BOM either way.
+// requestedQty/receivedQty are preserved from any previously-saved WO state (so
+// in-progress requests survive a re-render/navigation) and otherwise start at 0.
+const initialBomMaterials = (woId, initialData) => {
+  const cachedWo = woId ? MOCK_WO_TABLE_DATA.find((w) => w.wo === woId) : null;
+  const bomId = initialData?.bomId || cachedWo?.bomId || null;
+  const totalQty = Number(initialData?.qty ?? cachedWo?.qty ?? 0) || 0;
+  const bom = bomId ? getBom(bomId) : null;
+  if (!bom || !Array.isArray(bom.materials)) return [];
 
-// Ongoing work order: materials already have requested and/or received quantities
-// from the existing material requests (see request history).
-const ONGOING_BOM_MATERIALS = [
-  { id: 1, type: "BOM", name: "Wooden Plank", sku: "WOD-023UDISJJDS", requiredQty: 50, requestedQty: 20, receivedQty: 25, unit: "unit" },
-  { id: 2, type: "BOM", name: "Paint", sku: "PAI-WIQIFQJFJSA", requiredQty: 5, requestedQty: 3, receivedQty: 2, unit: "liter" },
-  { id: 3, type: "BOM", name: "Nail", sku: "NAI-9AIF0U092F", requiredQty: 10, requestedQty: 5, receivedQty: 0, unit: "box" },
-];
+  const savedMaterials = initialData?.materials || cachedWo?.materials;
 
-const initialBomMaterials = (woId) =>
-  woId === ONGOING_REQUEST_WO ? ONGOING_BOM_MATERIALS : EMPTY_BOM_MATERIALS;
+  return bom.materials.map((m, idx) => {
+    const saved = Array.isArray(savedMaterials)
+      ? savedMaterials.find((sm) => sm.sku === m.sku)
+      : null;
+    return {
+      id: idx + 1,
+      type: "BOM",
+      name: m.name,
+      sku: m.sku,
+      requiredQty: (m.quantity || 0) * totalQty,
+      requestedQty: saved?.requestedQty || 0,
+      receivedQty: saved?.receivedQty || 0,
+      unit: m.unit,
+    };
+  });
+};
 
 // Catalog of materials available for Non-BOM requests (outside the work order BOM)
 const NON_BOM_CATALOG = [
@@ -890,9 +905,25 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
   const [readyStartDate, setReadyStartDate] = useState("");
   const [readyEndDate, setReadyEndDate] = useState("");
   const [isCompleteModalOpen, setIsCompleteModalOpen] = useState(false);
+  const [completedDate, setCompletedDate] = useState(() => {
+    const cached = initialData?.wo ? MOCK_WO_TABLE_DATA.find((w) => w.wo === initialData.wo) : null;
+    return initialData?.completedDate || cached?.completedDate || null;
+  });
+  const [postedToStock, setPostedToStock] = useState(() => {
+    const cached = initialData?.wo ? MOCK_WO_TABLE_DATA.find((w) => w.wo === initialData.wo) : null;
+    return initialData?.postedToStock || cached?.postedToStock || false;
+  });
+  const [postOutputForm, setPostOutputForm] = useState({
+    quantity: "",
+    costPerPcs: "",
+    storageLocation: "",
+    expiryDate: "",
+    notes: "",
+  });
+  const [postOutputErrors, setPostOutputErrors] = useState({});
 
   // --- Request Material flow state ---
-  const [materials, setMaterials] = useState(() => initialBomMaterials(initialData?.wo));
+  const [materials, setMaterials] = useState(() => initialBomMaterials(initialData?.wo, initialData));
   const [requestHistory, setRequestHistory] = useState(() => initialRequestHistory(initialData?.wo));
   // Ongoing work order has prior requests, so the history is available up front.
   // Other work orders only show it after a request is submitted in-session.
@@ -1272,6 +1303,9 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
     initialData?.routingUpdates || []
   );
   const [isRoutingUpdatesExpanded, setIsRoutingUpdatesExpanded] = useState(false);
+  const [isOutsourceStagesExpanded, setIsOutsourceStagesExpanded] = useState(false);
+  const outsourceStagesListRef = useRef(null);
+  const [outsourceStagesCollapsedHeight, setOutsourceStagesCollapsedHeight] = useState(null);
 
   // Linked BOM is derived automatically from the work order's own record
   // (seeded bomId) — same BOM whose materials populate the Details tab's
@@ -1280,6 +1314,12 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
     ? MOCK_WO_TABLE_DATA.find((w) => w.wo === initialData.wo)
     : null;
   const actualCogsBomId = initialData?.bomId || cachedWoForCogs?.bomId || null;
+  const targetType = initialData?.targetType || cachedWoForCogs?.targetType || "Product";
+  const fulfillmentType = initialData?.fulfillmentType || cachedWoForCogs?.fulfillmentType || "CustomerOrder";
+  const targetMaterialId = initialData?.materialId || cachedWoForCogs?.materialId || null;
+  const targetMaterialUom = targetMaterialId
+    ? MOCK_MATERIALS_DATA.find((m) => m.id === targetMaterialId)?.unit || "unit"
+    : "unit";
   const [actualCogs, setActualCogs] = useState(() => {
     const savedCogs = initialData?.actualCogs || cachedWoForCogs?.actualCogs;
     if (savedCogs) return savedCogs;
@@ -1453,9 +1493,11 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
         end: displayEndDate,
         bomId: actualCogsBomId,
         actualCogs,
+        completedDate,
+        postedToStock,
       };
     }
-  }, [vendors, routingStages, outsourceSteps, woStatus, displayStartDate, displayEndDate, actualCogsBomId, actualCogs]);
+  }, [vendors, routingStages, outsourceSteps, woStatus, displayStartDate, displayEndDate, actualCogsBomId, actualCogs, completedDate, postedToStock]);
 
   const hasStages = routingStages.length > 0;
   const allStagesCompleted =
@@ -1474,7 +1516,10 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
   );
 
   const canCompleteWorkOrder =
-    allStagesCompleted && !hasOngoingMaterialRequest && woStatus !== "completed";
+    allStagesCompleted &&
+    !hasOngoingMaterialRequest &&
+    woStatus !== "completed" &&
+    (fulfillmentType !== "StockBuild" || woStatus === "in_progress");
 
   const handleCompleteWorkOrder = () => {
     setIsCompleteModalOpen(false);
@@ -1485,8 +1530,81 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
       )
     );
     setWoStatus("completed");
+    setCompletedDate(new Date().toISOString().slice(0, 10));
     addActivityLog("Completed");
     setToastMessage("Work order completed");
+    setShowSuccessToast(true);
+  };
+
+  const openCompleteModal = () => {
+    if (fulfillmentType === "StockBuild") {
+      const linkedBom = actualCogsBomId ? getBom(actualCogsBomId) : null;
+      const defaultCostPerPcs = linkedBom ? computeMaterialCost(linkedBom.materials || []) : 0;
+      setPostOutputForm({
+        quantity: String(TOTAL_QTY || ""),
+        costPerPcs: String(defaultCostPerPcs || ""),
+        storageLocation: "",
+        expiryDate: "",
+        notes: "",
+      });
+      setPostOutputErrors({});
+    }
+    setIsCompleteModalOpen(true);
+  };
+
+  const handleConfirmStockBuild = () => {
+    const errors = {};
+    if (!postOutputForm.quantity || Number(postOutputForm.quantity) <= 0) {
+      errors.quantity = "This field cannot be empty";
+    }
+    if (!postOutputForm.costPerPcs || Number(postOutputForm.costPerPcs) < 0) {
+      errors.costPerPcs = "This field cannot be empty";
+    }
+    if (!postOutputForm.storageLocation) {
+      errors.storageLocation = "This field cannot be empty";
+    }
+    if (Object.keys(errors).length > 0) {
+      setPostOutputErrors(errors);
+      return;
+    }
+
+    const woId = initialData?.wo;
+    const dateForBatch = new Date().toISOString().slice(0, 10);
+    const qty = parseInt(String(postOutputForm.quantity).replace(/,/g, ""), 10) || 0;
+    const costPerUnit = parseInt(String(postOutputForm.costPerPcs).replace(/,/g, ""), 10) || 0;
+
+    addBatch({
+      id: `batch-${Date.now()}`,
+      materialId: targetMaterialId,
+      batchNo: `BN-${dateForBatch.replace(/-/g, "")}-${Math.floor(Math.random() * 1000).toString().padStart(3, "0")}`,
+      initialQty: qty,
+      currentQty: qty,
+      reservedQty: 0,
+      costPerUnit,
+      purchaseDate: dateForBatch,
+      expiryDate: postOutputForm.expiryDate || "",
+      expectedDate: dateForBatch,
+      receivedDate: dateForBatch,
+      storageLocation: postOutputForm.storageLocation,
+      vendor: "Internal Production",
+      attachments: [],
+      status: "Received",
+      reference: woId,
+      notes: postOutputForm.notes || "",
+    });
+
+    setIsCompleteModalOpen(false);
+    setRequestHistory((prev) =>
+      prev.map((r) =>
+        r.status !== "Completed" && r.status !== "Cancelled" ? { ...r, status: "Completed" } : r
+      )
+    );
+    setWoStatus("completed");
+    setCompletedDate(dateForBatch);
+    setPostedToStock(true);
+    addActivityLog("Completed");
+    addActivityLog("Posted Output to Stock", `${qty} unit posted to stock batch.`);
+    setToastMessage("Stock build confirmed and posted to stock");
     setShowSuccessToast(true);
   };
 
@@ -3263,6 +3381,29 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
     ? buildDummyPoDetailData(singleVendorForm.poNumber, singleVendorForm)
     : null;
 
+  // Measure actual rendered row heights so the collapsed "Allow Outsourced
+  // Stages" list clips at exactly 4 full rows + half of the 5th, regardless
+  // of how tall each row ends up being (text wrapping, mini bar size, etc).
+  useEffect(() => {
+    const el = outsourceStagesListRef.current;
+    if (!el || outsourceSteps.length <= 4) {
+      setOutsourceStagesCollapsedHeight(null);
+      return;
+    }
+    const rows = Array.from(el.children);
+    if (rows.length < 5) {
+      setOutsourceStagesCollapsedHeight(null);
+      return;
+    }
+    const gap = 12;
+    let height = 0;
+    for (let i = 0; i < 4; i++) {
+      height += rows[i].offsetHeight + gap;
+    }
+    height += rows[4].offsetHeight / 2;
+    setOutsourceStagesCollapsedHeight(height);
+  }, [outsourceSteps, vendors, routingStages]);
+
   return (
     <div
       style={{
@@ -4054,7 +4195,11 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
           >
             <LabelValue
               label="Order Number"
-              value={initialData?.ord || "ORD-248824-20251109-00001"}
+              value={
+                fulfillmentType === "StockBuild"
+                  ? "-"
+                  : initialData?.ord || "ORD-248824-20251109-00001"
+              }
             />
             <LabelValue
               label="Planned Start - End Date"
@@ -4086,7 +4231,11 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
             />
 
             <LabelValue label="Created On" value={`2025-12-08; 15:00`} />
-            <LabelValue label="Notes" value="-" />
+            <LabelValue
+              label="Fulfillment Type"
+              value={fulfillmentType === "StockBuild" ? "Stock Build" : "Customer Order"}
+            />
+            <LabelValue label="Notes" value={initialData?.notes || "-"} />
           </div>
         </Card>
 
@@ -4097,7 +4246,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
               fontWeight: "var(--font-weight-bold)",
             }}
           >
-            Target Product
+            {targetType === "Material" ? "Target Material" : "Target Product"}
           </span>
           <div
             style={{
@@ -4925,36 +5074,69 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
               >
                 Allow Outsourced Stages
               </span>
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "12px",
-                  width: "100%",
-                }}
-              >
-                {outsourceSteps.map((stepId) => {
-                  const st = routingStages.find((s) => s.step === stepId);
-                  if (!st) return null;
-                  
-                  const stepVendorOutput = vendors
-                    .filter((v) => !v.assignedSteps || v.assignedSteps.length === 0 || v.assignedSteps.includes(stepId))
-                    .reduce((sum, v) => sum + (parseInt(v.output, 10) || 0), 0);
+              <div style={{ position: "relative", width: "100%" }}>
+                <div
+                  ref={outsourceStagesListRef}
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "12px",
+                    width: "100%",
+                    maxHeight:
+                      !isOutsourceStagesExpanded && outsourceStagesCollapsedHeight != null
+                        ? `${outsourceStagesCollapsedHeight}px`
+                        : "none",
+                    overflow: "hidden",
+                  }}
+                >
+                  {outsourceSteps.map((stepId) => {
+                    const st = routingStages.find((s) => s.step === stepId);
+                    if (!st) return null;
 
-                  return (
-                    <div key={stepId} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
-                      <span style={{
-                        fontSize: "var(--text-title-3)",
-                        fontWeight: "var(--font-weight-bold)",
-                        color: "var(--neutral-on-surface-primary)",
-                      }}>
-                        Step {st.step}: {st.route} - {st.op}
-                      </span>
-                      {renderAllocationBar(stepVendorOutput, "mini")}
-                    </div>
-                  );
-                })}
+                    const stepVendorOutput = vendors
+                      .filter((v) => !v.assignedSteps || v.assignedSteps.length === 0 || v.assignedSteps.includes(stepId))
+                      .reduce((sum, v) => sum + (parseInt(v.output, 10) || 0), 0);
+
+                    return (
+                      <div key={stepId} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%", flexShrink: 0 }}>
+                        <span style={{
+                          fontSize: "var(--text-title-3)",
+                          fontWeight: "var(--font-weight-bold)",
+                          color: "var(--neutral-on-surface-primary)",
+                        }}>
+                          Step {st.step}: {st.route} - {st.op}
+                        </span>
+                        {renderAllocationBar(stepVendorOutput, "mini")}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {!isOutsourceStagesExpanded && outsourceStagesCollapsedHeight != null ? (
+                  <div
+                    style={{
+                      position: "absolute",
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      height: "32px",
+                      pointerEvents: "none",
+                      background: "linear-gradient(to bottom, rgba(255, 255, 255, 0), var(--neutral-surface-primary))",
+                    }}
+                  />
+                ) : null}
               </div>
+
+              {outsourceSteps.length > 4 ? (
+                <Button
+                  variant="tertiary"
+                  size="small"
+                  onClick={() => setIsOutsourceStagesExpanded((prev) => !prev)}
+                  style={{ alignSelf: "flex-start", padding: 0 }}
+                >
+                  {isOutsourceStagesExpanded ? "Show less" : `Show all (${outsourceSteps.length} steps)`}
+                </Button>
+              ) : null}
             </div>
 
             <div
@@ -6273,9 +6455,9 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
           <Button
             variant="filled"
             size="medium"
-            onClick={() => setIsCompleteModalOpen(true)}
+            onClick={openCompleteModal}
           >
-            Complete
+            {fulfillmentType === "StockBuild" ? "Confirm Stock Build" : "Complete"}
           </Button>
         </div>
       ) : null}
@@ -6283,18 +6465,14 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
       <GeneralModal
         isOpen={isCompleteModalOpen}
         onClose={() => setIsCompleteModalOpen(false)}
-        title="Complete Work Order?"
-        description="This action can't be undone. Actual COGS will be calculated from received materials."
+        title={fulfillmentType === "StockBuild" ? "Confirm stock build?" : "Complete Work Order?"}
+        description={
+          fulfillmentType === "StockBuild"
+            ? "The actual output quantity and production cost will be used to update your inventory. Make sure the information is correct before continuing."
+            : "This action can't be undone. Actual COGS will be calculated from received materials."
+        }
         footer={
           <>
-            <Button
-              variant="filled"
-              size="large"
-              style={{ width: "100%" }}
-              onClick={handleCompleteWorkOrder}
-            >
-              Complete
-            </Button>
             <Button
               variant="outlined"
               size="large"
@@ -6303,9 +6481,75 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
             >
               Cancel
             </Button>
+            <Button
+              variant="filled"
+              size="large"
+              style={{ width: "100%" }}
+              onClick={fulfillmentType === "StockBuild" ? handleConfirmStockBuild : handleCompleteWorkOrder}
+            >
+              {fulfillmentType === "StockBuild" ? "Confirm" : "Complete"}
+            </Button>
           </>
         }
-      />
+      >
+        {fulfillmentType === "StockBuild" ? (
+          <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+            <div style={{ display: "flex", gap: "16px" }}>
+              <div style={{ flex: 1 }}>
+                <InputField
+                  label="Quantity"
+                  required
+                  value={postOutputForm.quantity}
+                  onChange={(e) => setPostOutputForm({ ...postOutputForm, quantity: e.target.value })}
+                  placeholder="Enter quantity"
+                  error={postOutputErrors.quantity}
+                  suffix={targetMaterialUom}
+                />
+              </div>
+              <div style={{ flex: 1 }}>
+                <InputField
+                  label="Cost per Unit"
+                  required
+                  value={postOutputForm.costPerPcs}
+                  onChange={(e) => setPostOutputForm({ ...postOutputForm, costPerPcs: e.target.value })}
+                  placeholder="Enter cost per unit"
+                  error={postOutputErrors.costPerPcs}
+                  prefix="IDR"
+                />
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: "16px" }}>
+              <div style={{ flex: 1 }}>
+                <InputField
+                  label="Storage Location"
+                  required
+                  value={postOutputForm.storageLocation}
+                  onChange={(e) => setPostOutputForm({ ...postOutputForm, storageLocation: e.target.value })}
+                  placeholder="Enter storage location"
+                  error={postOutputErrors.storageLocation}
+                />
+              </div>
+              <div style={{ flex: 1 }}>
+                <InputField
+                  label="Expiry Date"
+                  type="date"
+                  value={postOutputForm.expiryDate}
+                  onChange={(e) => setPostOutputForm({ ...postOutputForm, expiryDate: e.target.value })}
+                />
+              </div>
+            </div>
+            <InputField
+              label="Notes"
+              value={postOutputForm.notes}
+              onChange={(e) => setPostOutputForm({ ...postOutputForm, notes: e.target.value })}
+              placeholder="Add notes (optional)"
+              multiline
+              maxLength={400}
+              showCounter
+            />
+          </div>
+        ) : null}
+      </GeneralModal>
 
       <GeneralModal
         isOpen={isConfirmRemoveModalOpen && !!vendorToRemove}

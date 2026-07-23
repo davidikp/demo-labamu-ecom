@@ -75,6 +75,7 @@ const INITIAL_BOMS = [
     version: 1,
     status: "Active",
     description: "",
+    linkedTo: null,
     createdAt: "2026-04-22",
     updatedAt: "2026-04-22",
     materials: [
@@ -106,6 +107,7 @@ const INITIAL_BOMS = [
     version: 1,
     status: "Active",
     description: "",
+    linkedTo: null,
     createdAt: "2026-04-23",
     updatedAt: "2026-04-23",
     materials: [
@@ -133,6 +135,7 @@ const INITIAL_BOMS = [
     version: 1,
     status: "Active",
     description: "",
+    linkedTo: null,
     createdAt: "2026-05-06",
     updatedAt: "2026-05-06",
     materials: [material("mat-001", 1), material("mat-010", 4)],
@@ -149,6 +152,7 @@ const INITIAL_BOMS = [
     version: 1,
     status: "Active",
     description: "",
+    linkedTo: null,
     createdAt: "2026-05-06",
     updatedAt: "2026-05-06",
     materials: [material("mat-002", 2)],
@@ -165,6 +169,7 @@ const INITIAL_BOMS = [
     version: 1,
     status: "Active",
     description: "",
+    linkedTo: null,
     createdAt: "2026-05-06",
     updatedAt: "2026-05-06",
     materials: [material("mat-003", 5)],
@@ -181,6 +186,7 @@ const INITIAL_BOMS = [
     version: 1,
     status: "Active",
     description: "",
+    linkedTo: null,
     createdAt: "2026-05-06",
     updatedAt: "2026-05-06",
     materials: [material("mat-004", 1), material("mat-005", 10)],
@@ -197,6 +203,7 @@ const INITIAL_BOMS = [
     version: 1,
     status: "Active",
     description: "",
+    linkedTo: null,
     createdAt: "2026-05-06",
     updatedAt: "2026-05-06",
     materials: [material("mat-008", 4), material("mat-009", 2)],
@@ -210,6 +217,26 @@ const INITIAL_BOMS = [
       packing: breakdownField([line("Packing labour & materials", 400000)]),
       overhead: breakdownField([line("Factory overhead allocation", 300000)]),
       other: breakdownField([line("Tooling costs", 200000)]),
+    },
+  },
+  {
+    id: "BOM-000008",
+    name: "Copper Wire Sub-Assembly",
+    version: 1,
+    status: "Active",
+    description: "Insulated copper wire built internally from raw copper stock.",
+    linkedTo: { type: "Material", id: "mat-004" },
+    createdAt: "2026-06-10",
+    updatedAt: "2026-06-10",
+    materials: [material("mat-002", 3), material("mat-003", 1)],
+    routing: [
+      { step: 1, name: "Wire Sub-Assembly: Drawing", operation: "-", hours: 2 },
+      { step: 2, name: "Wire Sub-Assembly: Insulation", operation: "-", hours: 1 },
+    ],
+    cogs: {
+      ...DEFAULT_COGS(),
+      labour: breakdownField([line("Assembly labour", 150000)]),
+      packing: breakdownField([line("Packing labour & materials", 30000)]),
     },
   },
 ];
@@ -249,12 +276,33 @@ export const createBom = (data) => {
     materials: [],
     routing: [],
     cogs: DEFAULT_COGS(),
+    linkedTo: null,
     ...data,
     cogs: normalizeCogs(data.cogs),
   };
   boms = [record, ...boms];
   persistRuntime();
   return record;
+};
+
+export const getEligibleBoms = () => boms.filter((b) => !b.linkedTo);
+
+export const linkBomToMaterial = (bomId, materialId) => {
+  boms = boms.map((b) =>
+    b.id === bomId ? { ...b, linkedTo: { type: "Material", id: materialId } } : b
+  );
+  persistRuntime();
+  return getBom(bomId);
+};
+
+// Materials don't carry their own `bomId` field — the link lives on the BOM's
+// `linkedTo` — so this looks it up from that side.
+export const getBomLinkedToMaterial = (materialId) =>
+  boms.find((b) => b.linkedTo?.type === "Material" && b.linkedTo?.id === materialId) || null;
+
+export const unlinkBomFromMaterial = (bomId) => {
+  boms = boms.map((b) => (b.id === bomId ? { ...b, linkedTo: null } : b));
+  persistRuntime();
 };
 
 export const updateBom = (id, data) => {

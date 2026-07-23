@@ -247,8 +247,8 @@ export const MaterialCreateDrawer = ({ isOpen, onClose, onSave, initialData }) =
                   onChange={(val) => handleFieldChange("materialType", val)}
                   options={[
                     { value: "Raw", label: "Raw Material" },
-                    { value: "Component", label: "Semi-Finished Material" },
-                    { value: "Consumable", label: "Finished Material" }
+                    { value: "SemiFinished", label: "Semi-Finished Material" },
+                    { value: "Finished", label: "Finished Material" }
                   ]}
                   placeholder="Select material type"
                   hasError={!!errors.materialType}

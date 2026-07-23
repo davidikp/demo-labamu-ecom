@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 -)",
+      "Bash(awk 'NR<=689 && /^const |^function /{print NR\": \"$0}' /Users/davidikp/Documents/MRP/demo-mrp/src/App.jsx)",
+      "Bash(git checkout *)",
+      "Bash(git clean *)"
+    ]
+  }
+}

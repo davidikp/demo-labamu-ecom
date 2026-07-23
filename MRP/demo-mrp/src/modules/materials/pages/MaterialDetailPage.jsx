@@ -10,7 +10,8 @@ import { StatusBadge } from "../../../components/common/StatusBadge.jsx";
 import { StockBatchesTab } from "../components/StockBatchesTab.jsx";
 import { StockTransactionsTab } from "../components/StockTransactionsTab.jsx";
 import { MaterialCreateDrawer } from "../components/MaterialCreateDrawer.jsx";
-import { MOCK_STOCK_BATCHES } from "../mock/batchesMocks.js";
+import { MaterialBomCard } from "../components/MaterialBomCard.jsx";
+import { getBatches, setBatches } from "../mock/batchesStore.js";
 import { MOCK_STOCK_TRANSACTIONS } from "../mock/transactionsMocks.js";
 import { ChipTabBar } from "../../../components/molecules/ChipTabBar.jsx";
 
@@ -18,7 +19,14 @@ export const MaterialDetailPage = ({ material, onNavigate, showSnackbar, t }) =>
   const [activeTab, setActiveTab] = useState("stock_batches");
   const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
   const [currentMaterial, setCurrentMaterial] = useState(material);
-  const [localBatches, setLocalBatches] = useState(MOCK_STOCK_BATCHES);
+  const [localBatches, setLocalBatchesState] = useState(() => getBatches());
+  const setLocalBatches = (updater) => {
+    setLocalBatchesState((prev) => {
+      const next = typeof updater === "function" ? updater(prev) : updater;
+      setBatches(next);
+      return next;
+    });
+  };
   const [localTransactions, setLocalTransactions] = useState(MOCK_STOCK_TRANSACTIONS);
 
   const handleBack = () => {
@@ -49,8 +57,8 @@ export const MaterialDetailPage = ({ material, onNavigate, showSnackbar, t }) =>
   const formatType = (type) => {
     const typeMap = {
       "Raw": "Raw Material",
-      "Component": "Semi-Finished Material",
-      "Consumable": "Finished Material"
+      "SemiFinished": "Semi-Finished Material",
+      "Finished": "Finished Material"
     };
     return typeMap[type] || type;
   };
@@ -182,15 +190,15 @@ export const MaterialDetailPage = ({ material, onNavigate, showSnackbar, t }) =>
     return null;
   };
 
-  const DetailField = ({ label, value, fullWidth = false, isABC = false, extraComponent = null }) => (
-    <div style={{ 
-      display: "flex", 
-      flexDirection: "column", 
+  const DetailField = ({ label, value, fullWidth = false, isABC = false, extraComponent = null, children = null }) => (
+    <div style={{
+      display: "flex",
+      flexDirection: "column",
       gap: "4px",
       gridColumn: fullWidth ? "1 / -1" : "span 1"
     }}>
-      <span style={{ 
-        fontSize: "var(--text-body)", 
+      <span style={{
+        fontSize: "var(--text-body)",
         color: "var(--neutral-on-surface-secondary)",
         fontWeight: "var(--font-weight-regular)"
       }}>
@@ -200,10 +208,12 @@ export const MaterialDetailPage = ({ material, onNavigate, showSnackbar, t }) =>
         <div>
           {getABCBadge(value)}
         </div>
+      ) : children ? (
+        children
       ) : (
         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-          <span style={{ 
-            fontSize: "var(--text-title-3)", 
+          <span style={{
+            fontSize: "var(--text-title-3)",
             color: "var(--neutral-on-surface-primary)",
             fontWeight: "var(--font-weight-bold)"
           }}>
@@ -314,18 +324,24 @@ export const MaterialDetailPage = ({ material, onNavigate, showSnackbar, t }) =>
             
             <DetailField label="ABC Classification" value={currentMaterial.abcClassification} isABC />
             <DetailField label="Unit of Measure" value={currentMaterial.unit} />
-            <DetailField 
-              label="On-Hand Stock" 
-              value={`${currentMaterial.onHandStock} ${currentMaterial.unit}`} 
+            <DetailField
+              label="On-Hand Stock"
+              value={`${currentMaterial.onHandStock} ${currentMaterial.unit}`}
               extraComponent={getStockWarningIcon(currentMaterial.stockRisk)}
             />
-            
+
             <DetailField label="Average Cost" value={formatCurrency(currentMaterial.averageCost)} />
-            
-            <DetailField 
-              label="Description" 
-              value={currentMaterial.description} 
-              fullWidth 
+
+            {currentMaterial.type !== "Raw" ? (
+              <DetailField label="Bill of Materials">
+                <MaterialBomCard material={currentMaterial} onNavigate={onNavigate} />
+              </DetailField>
+            ) : null}
+
+            <DetailField
+              label="Description"
+              value={currentMaterial.description}
+              fullWidth
             />
           </div>
         </div>

@@ -117,6 +117,9 @@ export const MOCK_WO_TABLE_DATA = [
   {
     wo: "WO-202604-001",
     ord: "ORD-202604-001",
+    targetType: "Product",
+    fulfillmentType: "CustomerOrder",
+    postedToStock: false,
     product: "Aluminum Frame X1",
     sku: "ALU-FR-X1",
     qty: 100,
@@ -134,6 +137,9 @@ export const MOCK_WO_TABLE_DATA = [
   {
     wo: "WO-202604-002",
     ord: "ORD-202604-002",
+    targetType: "Product",
+    fulfillmentType: "CustomerOrder",
+    postedToStock: false,
     product: "Steel Structure S1",
     sku: "STL-STR-S1",
     qty: 200,
@@ -151,6 +157,9 @@ export const MOCK_WO_TABLE_DATA = [
   {
     wo: "WO-202604-003",
     ord: "ORD-202604-003",
+    targetType: "Product",
+    fulfillmentType: "CustomerOrder",
+    postedToStock: false,
     product: "Plastic Container C5",
     sku: "PLAS-CTR-C5",
     qty: 500,
@@ -168,6 +177,9 @@ export const MOCK_WO_TABLE_DATA = [
   {
     wo: "WO-202604-004",
     ord: "ORD-202604-004",
+    targetType: "Product",
+    fulfillmentType: "CustomerOrder",
+    postedToStock: false,
     product: "Motor Winding M2",
     sku: "MOT-WND-M2",
     qty: 50,
@@ -185,6 +197,9 @@ export const MOCK_WO_TABLE_DATA = [
   {
     wo: "WO-202604-005",
     ord: "ORD-202604-005",
+    targetType: "Product",
+    fulfillmentType: "CustomerOrder",
+    postedToStock: false,
     product: "M6 Hex Bolt Assembly",
     sku: "FAST-M6-HEX",
     qty: 1000,
@@ -202,6 +217,9 @@ export const MOCK_WO_TABLE_DATA = [
   {
     wo: "WO-202604-006",
     ord: "ORD-202604-006",
+    targetType: "Product",
+    fulfillmentType: "CustomerOrder",
+    postedToStock: false,
     product: "Assembly Line Part A",
     sku: "ASM-LINE-PA",
     qty: 120,
@@ -219,6 +237,9 @@ export const MOCK_WO_TABLE_DATA = [
   {
     wo: "WO-202604-007",
     ord: "ORD-202604-007",
+    targetType: "Product",
+    fulfillmentType: "CustomerOrder",
+    postedToStock: false,
     product: "Custom Bracket B1",
     sku: "BRA-CUST-B1",
     qty: 300,
@@ -236,6 +257,9 @@ export const MOCK_WO_TABLE_DATA = [
   {
     wo: "WO-202604-008",
     ord: "ORD-202604-008",
+    targetType: "Product",
+    fulfillmentType: "CustomerOrder",
+    postedToStock: false,
     product: "Standard Frame SF",
     sku: "FRM-STD-SF",
     qty: 150,
@@ -253,6 +277,9 @@ export const MOCK_WO_TABLE_DATA = [
   {
     wo: "WO-202604-009",
     ord: "ORD-202604-009",
+    targetType: "Product",
+    fulfillmentType: "CustomerOrder",
+    postedToStock: false,
     product: "Global Cargo Panel",
     sku: "PNL-GLB-CP",
     qty: 80,
@@ -270,6 +297,9 @@ export const MOCK_WO_TABLE_DATA = [
   {
     wo: "WO-202603-001",
     ord: "ORD-202603-001",
+    targetType: "Product",
+    fulfillmentType: "CustomerOrder",
+    postedToStock: false,
     product: "Wooden Chair Frame",
     sku: "WCF-A1",
     qty: 100,
@@ -320,6 +350,9 @@ export const MOCK_WO_TABLE_DATA = [
   {
     wo: "WO-202603-002",
     ord: "ORD-202603-002",
+    targetType: "Product",
+    fulfillmentType: "CustomerOrder",
+    postedToStock: false,
     product: "Wooden Table Top",
     sku: "TBL-TOP-021",
     qty: 24,
@@ -342,6 +375,9 @@ export const MOCK_WO_TABLE_DATA = [
   {
     wo: "WO-2294824-20251109-00001",
     ord: "ORD-248824-20251109-00001",
+    targetType: "Product",
+    fulfillmentType: "CustomerOrder",
+    postedToStock: false,
     product: "Wooden Chair",
     sku: "CH-WD-23948",
     qty: 100,
@@ -362,6 +398,9 @@ export const MOCK_WO_TABLE_DATA = [
   {
     wo: "WO-2024-09-015-00003",
     ord: "ORD-99823-202511-00001",
+    targetType: "Product",
+    fulfillmentType: "CustomerOrder",
+    postedToStock: false,
     product: "Lemari Kayu",
     sku: "CUP-WD-4482",
     qty: 20,
@@ -379,6 +418,9 @@ export const MOCK_WO_TABLE_DATA = [
   {
     wo: "WO-2026-03-025-00008",
     ord: "ORD-55523-202603-00008",
+    targetType: "Product",
+    fulfillmentType: "CustomerOrder",
+    postedToStock: false,
     product: "Cabinet Premium",
     sku: "CAB-PR-9921",
     qty: 100,
@@ -491,6 +533,9 @@ export const MOCK_WO_TABLE_DATA = [
   {
     wo: "WO-2024-08-012-00002",
     ord: "ORD-38023-204802-00001",
+    targetType: "Product",
+    fulfillmentType: "CustomerOrder",
+    postedToStock: false,
     product: "Meja Makan",
     sku: "TBL-WD-8293",
     qty: 15,
@@ -508,6 +553,9 @@ export const MOCK_WO_TABLE_DATA = [
   {
     wo: "WO-2024-08-012-00001",
     ord: "ORD-38023-204802-00001",
+    targetType: "Product",
+    fulfillmentType: "CustomerOrder",
+    postedToStock: false,
     product: "Meja Makan Coklat K...",
     sku: "TBL-WD-8293-B",
     qty: 15,
@@ -576,6 +624,9 @@ export const MOCK_WO_TABLE_DATA = [
   {
     wo: "WO-202603-099",
     ord: "ORD-202603-099",
+    targetType: "Product",
+    fulfillmentType: "CustomerOrder",
+    postedToStock: false,
     product: "Luxury Cabinet Cancelled",
     sku: "CAB-LUX-CAN",
     qty: 50,
@@ -608,4 +659,62 @@ export const MOCK_WO_TABLE_DATA = [
       { step: 2, route: "Main", op: "Assembly", prog: 0, comp: 0 },
     ],
   },
+  {
+    wo: "WO-202606-001",
+    ord: null,
+    targetType: "Material",
+    fulfillmentType: "StockBuild",
+    postedToStock: false,
+    product: "Copper Wire 1.5mm",
+    sku: "COP-W-15",
+    materialId: "mat-004",
+    qty: 60,
+    priority: "Medium",
+    pColor: "var(--status-orange-primary)",
+    pBadge: "yellow-light",
+    start: "2026-06-12",
+    end: "2026-06-16",
+    createdBy: "Natasha",
+    status: "In Progress",
+    statusKey: "in_progress",
+    sBadge: "yellow",
+    bomId: "BOM-000008",
+  },
 ];
+
+// Runtime WO creation (e.g. the standalone "+ Create Work Order" entry point
+// for a Material Stock Build). MOCK_WO_TABLE_DATA is mutated in place — this
+// mirrors the existing session-caching pattern already used elsewhere in this
+// module (see WorkOrderDetailPage.jsx's useEffect that writes status/vendor
+// changes back into this same array) — so both the list and detail pages,
+// which read this array directly, pick the new row up immediately.
+const nextWoId = () => {
+  const today = new Date();
+  const y = today.getFullYear();
+  const m = String(today.getMonth() + 1).padStart(2, "0");
+  const prefix = `WO-${y}${m}`;
+  const seq = MOCK_WO_TABLE_DATA.filter((w) => w.wo.startsWith(prefix)).length + 1;
+  return `${prefix}-${String(seq).padStart(3, "0")}`;
+};
+
+export const createWorkOrder = (data) => {
+  const record = {
+    wo: nextWoId(),
+    ord: null,
+    createdBy: "Natasha",
+    priority: "Medium",
+    pColor: "var(--status-orange-primary)",
+    pBadge: "yellow-light",
+    start: null,
+    end: null,
+    status: "Not Started",
+    statusKey: "not_started",
+    sBadge: "grey",
+    targetType: "Material",
+    fulfillmentType: "StockBuild",
+    postedToStock: false,
+    ...data,
+  };
+  MOCK_WO_TABLE_DATA.unshift(record);
+  return record;
+};

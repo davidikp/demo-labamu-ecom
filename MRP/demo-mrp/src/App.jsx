@@ -419,7 +419,7 @@ const ModuleRenderer = ({
     viewState.data = { id, poNumber: id, wo: id, material: { sku: id } };
   }
 
-  const isSpecialView = ["list", "create", "settings", "manage"].includes(viewState.view) ||
+  const isSpecialView = ["list", "create", "create_material", "settings", "manage"].includes(viewState.view) ||
                         activeModule === "dashboard" ||
                         activeModule === "email_outbox" ||
                         activeModule === "analytics" ||
@@ -692,6 +692,7 @@ const ModuleRenderer = ({
         <WorkOrderListPage
           onNavigate={onNavigate}
           t={t}
+          showSnackbar={showPoSnackbar}
         />
       );
     }

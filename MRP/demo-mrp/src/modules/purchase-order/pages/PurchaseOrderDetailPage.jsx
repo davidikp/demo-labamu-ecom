@@ -2399,7 +2399,7 @@ export const PurchaseOrderDetailPage = ({
                                         description: line.desc || "-",
                                         category: line.type === 'wo' ? "Work Order" : "Raw Material",
                                         status: "Active",
-                                        type: line.type === 'wo' ? "Component" : "Raw",
+                                        type: line.type === 'wo' ? "SemiFinished" : "Raw",
                                         unit: "Pcs",
                                         onHandStock: 0,
                                         averageCost: line.price || 0

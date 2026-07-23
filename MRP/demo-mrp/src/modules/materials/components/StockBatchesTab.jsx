@@ -30,6 +30,7 @@ import { TableSearchField } from "../../../components/table/TableSearchField.jsx
 import { GeneralModal } from "../../../components/modal/GeneralModal.jsx";
 import { FilterMenu } from "../../../components/molecules/FilterMenu.jsx";
 import { FormField, InputField } from "../../../components/index.js";
+import { TextField } from "../../../ce-ui";
 import { MOCK_STOCK_BATCHES } from "../mock/batchesMocks.js";
 import { MOCK_VENDORS } from "../../../data/vendors.js";
 import { 
@@ -627,10 +628,11 @@ export const StockBatchesTab = ({
     storageLocation: "",
     vendor: "",
     attachments: [],
-    poRef: null
+    reference: null,
+    notes: ""
   });
   const [errors, setErrors] = useState({});
-  const isPoBatch = drawerMode === "edit" && !!formData.poRef;
+  const isPoBatch = drawerMode === "edit" && !!formData.reference;
 
   
   // Dispose Modal State
@@ -662,7 +664,9 @@ export const StockBatchesTab = ({
       receivedDate: "",
       storageLocation: "",
       vendor: "",
-      attachments: []
+      attachments: [],
+      reference: null,
+      notes: ""
     });
     setErrors({});
   };
@@ -733,7 +737,8 @@ export const StockBatchesTab = ({
       storageLocation: batch.storageLocation || "",
       vendor: batch.vendor || "",
       attachments: Array.isArray(batch.attachments) ? batch.attachments : [],
-      poRef: batch.poRef
+      reference: batch.reference,
+      notes: batch.notes || ""
     });
     setDrawerMode("edit");
   };
@@ -750,7 +755,7 @@ export const StockBatchesTab = ({
       const initial = parseInt(formData.quantity.replace(/,/g, ''), 10);
       const current = parseInt(formData.currentQuantity.replace(/,/g, ''), 10);
       
-      if (formData.poRef && current > initial) {
+      if (formData.reference && current > initial) {
         newErrors.currentQuantity = `Current quantity cannot exceed the received quantity in the purchase order (${initial})`;
       } else if (current > initial) {
         newErrors.currentQuantity = "Current quantity cannot exceed the initial quantity";
@@ -790,7 +795,8 @@ export const StockBatchesTab = ({
         vendor: formData.vendor,
         attachments: formData.attachments,
         status: finalStatus,
-        poRef: originalBatch.poRef // preserve poRef
+        reference: originalBatch.reference, // preserve reference
+        notes: formData.notes || ""
       };
 
       if (drawerMode === "edit") {
@@ -925,7 +931,7 @@ export const StockBatchesTab = ({
     if (activeFilters.status.length > 0) {
       result = result.filter(b => {
         const isPartiallyReceived =
-          b.status === "Received" && b.poRef && b.currentQty > 0 && b.currentQty < b.initialQty;
+          b.status === "Received" && b.reference && b.currentQty > 0 && b.currentQty < b.initialQty;
         const effectiveStatus = isPartiallyReceived ? "Partially Received" : b.status;
         return activeFilters.status.includes(effectiveStatus);
       });
@@ -998,7 +1004,8 @@ export const StockBatchesTab = ({
     { label: "Received Date", key: "receivedDate", width: "130px" },
     { label: "Storage Location", key: "storageLocation", width: "160px" },
     { label: "Vendor", key: "vendor", width: "160px" },
-    { label: "PO Ref", key: "poRef", width: "140px" },
+    { label: "References", key: "reference", width: "140px" },
+    { label: "Notes", key: "notes", width: "200px" },
     { label: "Attachments", key: "attachments", width: "240px" },
     { label: "Status", key: "status", width: "144px" },
     { label: "Actions", key: "actions", width: "100px", sticky: true }
@@ -1213,11 +1220,11 @@ export const StockBatchesTab = ({
                   <div style={{ width: columns[9].width, padding: "0 12px", fontSize: "var(--text-title-3)", color: "var(--neutral-on-surface-primary)", flexShrink: 0 }}>{row.storageLocation || "-"}</div>
                   <div style={{ width: columns[10].width, padding: "0 12px", fontSize: "var(--text-title-3)", color: "var(--neutral-on-surface-primary)", flexShrink: 0 }}>{row.vendor}</div>
                   <div style={{ width: columns[11].width, padding: "0 12px", fontSize: "var(--text-title-3)", flexShrink: 0 }}>
-                    {row.poRef ? (
-                      <span 
-                        style={{ 
-                          color: "var(--feature-brand-primary)", 
-                          cursor: "pointer", 
+                    {row.reference ? (
+                      <span
+                        style={{
+                          color: "var(--feature-brand-primary)",
+                          cursor: "pointer",
                           fontWeight: "bold",
                           textDecoration: "none"
                         }}
@@ -1225,26 +1232,48 @@ export const StockBatchesTab = ({
                         onMouseLeave={(e) => e.currentTarget.style.textDecoration = "none"}
                         onClick={(e) => {
                           e.stopPropagation();
-                          onNavigate?.("purchase_order_detail", { 
-                            poNumber: row.poRef,
-                            from: "material_detail",
-                            returnTo: { view: "materials_detail", data: currentMaterial }
-                          });
+                          if (row.reference.startsWith("WO-")) {
+                            onNavigate?.("work_order_detail", {
+                              wo: row.reference,
+                              from: "material_detail",
+                              returnTo: { view: "materials_detail", data: currentMaterial }
+                            });
+                          } else {
+                            onNavigate?.("purchase_order_detail", {
+                              poNumber: row.reference,
+                              from: "material_detail",
+                              returnTo: { view: "materials_detail", data: currentMaterial }
+                            });
+                          }
                         }}
                       >
-                        {row.poRef}
+                        {row.reference}
                       </span>
                     ) : (
                       <span style={{ color: "var(--neutral-on-surface-tertiary)" }}>-</span>
                     )}
                   </div>
                   
+                  {/* Notes */}
+                  <div style={{
+                    width: columns[12].width,
+                    padding: "8px 12px",
+                    fontSize: "var(--text-title-3)",
+                    color: "var(--neutral-on-surface-primary)",
+                    flexShrink: 0,
+                    whiteSpace: "normal",
+                    wordBreak: "break-word",
+                    lineHeight: "1.4"
+                  }}>
+                    {row.notes || <span style={{ color: "var(--neutral-on-surface-tertiary)" }}>-</span>}
+                  </div>
+
                   {/* Attachments */}
-                  <div style={{ 
-                    width: columns[12].width, 
+                  <div style={{
+                    width: columns[13].width,
                     padding: "0 12px",
-                    display: "flex", 
-                    alignItems: "center", 
+                    display: "flex",
+                    alignItems: "center",
                     flexShrink: 0
                   }}>
                     {row.attachments?.length > 0 ? (
@@ -1275,7 +1304,7 @@ export const StockBatchesTab = ({
                     {(() => {
                       const isPartiallyReceived =
                         row.status === "Received" &&
-                        row.poRef &&
+                        row.reference &&
                         row.currentQty > 0 &&
                         row.currentQty < row.initialQty;
                       const displayStatus = isPartiallyReceived ? "Partially Received" : row.status;
@@ -1311,14 +1340,14 @@ export const StockBatchesTab = ({
                     boxSizing: "border-box",
                     flexShrink: 0
                   }}>
-                    <Tooltip content={row.poRef && row.status === "Requested" ? "Cannot edit requested PO batch" : "Edit"}>
+                    <Tooltip content={row.reference && row.status === "Requested" ? "Cannot edit requested PO batch" : "Edit"}>
                       <div style={{ display: "flex" }}>
-                        <IconButton 
-                          icon={EditIcon} 
-                          onClick={() => openEditDrawer(row)} 
-                          size="small" 
+                        <IconButton
+                          icon={EditIcon}
+                          onClick={() => openEditDrawer(row)}
+                          size="small"
                           color="var(--feature-brand-primary)"
-                          disabled={row.poRef && row.status === "Requested"}
+                          disabled={row.reference && row.status === "Requested"}
                         />
                       </div>
                     </Tooltip>
@@ -1490,7 +1519,7 @@ export const StockBatchesTab = ({
               />
 
               <FormField label="Vendor">
-                <DropdownSelect 
+                <DropdownSelect
                   value={formData.vendor}
                   onChange={(val) => setFormData({...formData, vendor: val})}
                   options={MOCK_VENDORS.map(v => ({ value: v.name, label: v.name }))}
@@ -1500,6 +1529,17 @@ export const StockBatchesTab = ({
                   disabled={isPoBatch}
                 />
               </FormField>
+
+              <TextField
+                label="Notes"
+                multiline
+                rows={3}
+                showCount
+                maxLength={400}
+                placeholder="Add notes..."
+                value={formData.notes || ""}
+                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+              />
 
               {/* Attachments Section */}
               <FormField label="Attachments">
