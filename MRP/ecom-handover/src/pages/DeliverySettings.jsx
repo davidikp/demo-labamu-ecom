@@ -307,7 +307,7 @@ const LALAMOVE_COVERED_CITIES = ['Jakarta Selatan', 'Jakarta Pusat', 'Jakarta Ut
 
 function CourierServiceTab({
   t, country, city,
-  lalamoveEnabled, onLalamoveEnabledChange, instant, onInstantChange, scheduled, onScheduledChange,
+  lalamoveEnabled, onLalamoveEnabledChange,
   apiKey, onApiKeyChange, apiSecret, onApiSecretChange,
   savedApiKey, onSavedApiKeyChange, savedApiSecret, onSavedApiSecretChange,
   connectionStatus, onConnectionStatusChange,
@@ -381,10 +381,6 @@ function CourierServiceTab({
 
   const handleToggleLalamove = (checked) => {
     onLalamoveEnabledChange(checked);
-    if (!checked) {
-      onInstantChange(false);
-      onScheduledChange(false);
-    }
   };
 
   return (
@@ -399,27 +395,12 @@ function CourierServiceTab({
             <span className="flex-1" />
             <ChevronRight size={20} className="text-lb-on-surface-3 shrink-0" aria-hidden="true" />
           </div>
-          <div className="h-px bg-lb-line-1" />
           {isOutOfCoverage && (
             <>
-              <Infobox variant="warning" description={t('courier.outOfCoverage', "Your address is outside the courier's coverage area. Please use a different delivery address.")} />
               <div className="h-px bg-lb-line-1" />
+              <Infobox variant="warning" description={t('courier.outOfCoverage', "Your address is outside the courier's coverage area. Please use a different delivery address.")} />
             </>
           )}
-          <div className="flex items-center gap-2">
-            <Checkbox checked={lalamoveEnabled && instant && !isOutOfCoverage} disabled={!lalamoveEnabled || isOutOfCoverage} onChange={onInstantChange} />
-            <div>
-              <p className="font-lb text-[14px] text-lb-on-surface m-0">{t('courier.instantDelivery.label')}</p>
-              <p className="font-lb text-[12px] text-lb-on-surface-2 m-0">{t('courier.instantDelivery.description')}</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <Checkbox checked={lalamoveEnabled && scheduled && !isOutOfCoverage} disabled={!lalamoveEnabled || isOutOfCoverage} onChange={onScheduledChange} />
-            <div>
-              <p className="font-lb text-[14px] text-lb-on-surface m-0">{t('courier.scheduledDelivery.label')}</p>
-              <p className="font-lb text-[12px] text-lb-on-surface-2 m-0">{t('courier.scheduledDelivery.description')}</p>
-            </div>
-          </div>
         </div>
       </div>
 
@@ -591,8 +572,6 @@ export default function DeliverySettings() {
   const [selectedPlace, setSelectedPlace] = useState(saved?.selectedPlace ?? null);
 
   const [lalamoveEnabled, setLalamoveEnabled] = useState(saved?.lalamoveEnabled ?? true);
-  const [instant, setInstant] = useState(saved?.instant ?? true);
-  const [scheduled, setScheduled] = useState(saved?.scheduled ?? true);
   const [apiKey, setApiKey] = useState(saved?.apiKey ?? '');
   const [apiSecret, setApiSecret] = useState(saved?.apiSecret ?? '');
   const [savedApiKey, setSavedApiKey] = useState(saved?.savedApiKey ?? '');
@@ -617,7 +596,7 @@ export default function DeliverySettings() {
     saveDeliverySettings({
       purchasability: effectivePurchasability, contactName, phone,
       country: pickupCountry, province, city: pickupCity, district, region, zip, address, selectedPlace,
-      lalamoveEnabled, instant, scheduled, apiKey, apiSecret, savedApiKey, savedApiSecret, connectionStatus,
+      lalamoveEnabled, apiKey, apiSecret, savedApiKey, savedApiSecret, connectionStatus,
     });
     showSnackbar(t('saveSuccess'), 'green');
   };
@@ -665,8 +644,6 @@ export default function DeliverySettings() {
               t={t}
               country={pickupCountry} city={pickupCity}
               lalamoveEnabled={lalamoveEnabled} onLalamoveEnabledChange={setLalamoveEnabled}
-              instant={instant} onInstantChange={setInstant}
-              scheduled={scheduled} onScheduledChange={setScheduled}
               apiKey={apiKey} onApiKeyChange={setApiKey}
               apiSecret={apiSecret} onApiSecretChange={setApiSecret}
               savedApiKey={savedApiKey} onSavedApiKeyChange={setSavedApiKey}

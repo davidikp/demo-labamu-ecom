@@ -216,7 +216,14 @@ export const PICKUP_PROFILE = {
   name: 'Charlie',
   phone: '+6281234567890',
   email: 'charlie@mail.com',
-  address: 'Alam Sutera, Jl. Jalur Sutera Boulevard No.45, Kuncoran, Kec. Pinang, Kota Tangerang, Banten 15320',
+  country: 'Indonesia',
+  province: 'Banten',
+  city: 'Kota Tangerang',
+  district: 'Kecamatan Pinang',
+  region: 'Kuncoran',
+  zip: '15320',
+  address: 'Alam Sutera, Jl Jalur Sutera Boulevard No.45',
+  pinpointAddress: 'Alam Sutera, Jl. Jalur Sutera Boulevard No.45, Kuncoran, Kec. Pinang, Kota Tangerang, Banten 15320',
 };
 
 export const PAYMENT_METHODS = [

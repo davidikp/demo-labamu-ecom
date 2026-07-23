@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Copy, MessageCircle, Check, Printer } from 'lucide-react';
@@ -122,6 +122,7 @@ export default function OrderDetail() {
   const [advancing, setAdvancing] = useState(false);
   const [showPlaceOrderModal, setShowPlaceOrderModal] = useState(false);
   const [confirmAction, setConfirmAction] = useState(null); // null | 'markReady' | 'confirmPickup'
+  const [autoAdvanceCountdown, setAutoAdvanceCountdown] = useState(4);
 
   useEffect(() => {
     let alive = true;
@@ -143,15 +144,28 @@ export default function OrderDetail() {
   // Once a Delivery order's courier is booked, the rest of the flow advances
   // on its own every 4s instead of requiring a "Mark as ..." click for every
   // step. Pickup orders stay fully manual (merchant confirms each step).
+  // Ticks every 1s so the countdown shown in the header stays in sync with
+  // the actual advance call. The remaining-seconds count lives in a ref (not
+  // a setState updater) so React StrictMode's double-invoke of updater
+  // functions can't call advanceOrderStatus twice and skip a step.
+  const autoAdvanceRemainingRef = useRef(4);
   useEffect(() => {
     if (!order || order.order_type !== 'Delivery') return;
     const done = order.step_index === order.steps.length - 1;
     const isFirstStep = order.step_index === 0;
     if (done || order.no_driver_found || isFirstStep) return;
-    const timer = setInterval(() => {
-      advanceOrderStatus(order.id).then(res => setOrder(res.data));
-    }, 4000);
-    return () => clearInterval(timer);
+    autoAdvanceRemainingRef.current = 4;
+    setAutoAdvanceCountdown(4);
+    const tick = setInterval(() => {
+      autoAdvanceRemainingRef.current -= 1;
+      if (autoAdvanceRemainingRef.current <= 0) {
+        clearInterval(tick);
+        advanceOrderStatus(order.id).then(res => setOrder(res.data));
+      } else {
+        setAutoAdvanceCountdown(autoAdvanceRemainingRef.current);
+      }
+    }, 1000);
+    return () => clearInterval(tick);
   }, [order?.id, order?.order_type, order?.step_index, order?.no_driver_found, order?.steps?.length]);
 
   async function runAdvance() {
@@ -241,22 +255,30 @@ export default function OrderDetail() {
   const isCancelled = order?.order_status === 'Cancelled';
   const isNoDriverFound = isDelivery && !!order?.no_driver_found;
   const isDone = order && order.step_index === order.steps.length - 1;
-  const showManualAction = order && (isDelivery ? (order.step_index === 0 || isNoDriverFound) : true);
   const actionLabel = isDelivery
     ? (order?.step_index === 0 || isNoDriverFound ? t('orders:detail.placeOrder') : t('orders:detail.nextStep', { step: order?.steps?.[order.step_index + 1] || '' }))
     : (order?.step_index === 0 ? t('orders:detail.markAsReady') : t('orders:detail.confirmPickupButton'));
   const displaySteps = isNoDriverFound
     ? order.steps.map((s, i) => i === order.step_index ? t('orders:detail.noDriverStep') : s)
     : order?.steps;
+  // Delivery orders auto-advance through the middle steps (Waiting for Pickup,
+  // On Delivery) with no merchant action needed, so the footer is hidden then.
+  const isAutoAdvancing = order && isDelivery && !isNoDriverFound
+    && order.step_index > 0 && order.step_index < order.steps.length - 1;
 
   return (
     <div style={{ padding: '24px', paddingBottom: '96px', background: '#F4F4F4', minHeight: 'calc(100vh - 56px)', fontFamily: "'Lato', sans-serif" }}>
-      <div style={{ marginBottom: '20px' }}>
+      <div style={{ marginBottom: '20px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px' }}>
         <Breadcrumbs
           title={t('orders:detail.pageTitle')}
           breadcrumbs={[{ name: t('orders:list.pageTitle'), onClick: () => navigate('/orders') }]}
           onBack={() => navigate('/orders')}
         />
+        {isAutoAdvancing && (
+          <span style={{ marginTop: '4px', fontSize: '13px', color: '#9CA3AF', fontStyle: 'italic', whiteSpace: 'nowrap' }}>
+            {t('orders:detail.autoUpdatingCountdown', { seconds: autoAdvanceCountdown })}
+          </span>
+        )}
       </div>
 
       {!error && !loading && order && (
@@ -451,20 +473,16 @@ export default function OrderDetail() {
         </div>
       )}
 
-      {!error && !loading && order && !isDone && !isCancelled && (
+      {!error && !loading && order && !isDone && !isCancelled && !isAutoAdvancing && (
         <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: '#FFFFFF', borderTop: '1px solid #E9E9E9', padding: '16px 24px', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '12px', zIndex: 10 }}>
           {order.lalamove_booking && !isNoDriverFound && (
             <Button variant="secondary" onClick={handlePrintShippingLabel} leftIcon={<Printer size={16} />}>
               {t('orders:detail.printShippingLabel')}
             </Button>
           )}
-          {showManualAction ? (
-            <Button variant="primary" onClick={handleAdvance} disabled={advancing}>
-              {actionLabel}
-            </Button>
-          ) : (
-            <span style={{ fontSize: '13px', color: '#9CA3AF', fontStyle: 'italic' }}>{t('orders:detail.autoUpdating')}</span>
-          )}
+          <Button variant="primary" onClick={handleAdvance} disabled={advancing}>
+            {actionLabel}
+          </Button>
         </div>
       )}
 
@@ -473,6 +491,8 @@ export default function OrderDetail() {
           onClose={() => setShowPlaceOrderModal(false)}
           onSubmit={handlePlaceOrderSubmit}
           forceFragile={order.fragile === 'Yes'}
+          customerAddress={order.customer_address}
+          customerPaidAmount={order.shipping_cost}
         />
       )}
 

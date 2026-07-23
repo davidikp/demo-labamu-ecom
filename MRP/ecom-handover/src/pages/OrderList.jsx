@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { fetchOrders } from '../services/orderService';
-import { Table, StatusBadge, FilterPill } from '../ce-ui';
+import { Table, StatusBadge, FilterPill, SearchBar } from '../ce-ui';
 
 const DATE_PRESET_OPTIONS = [
   { value: 'last30', label: 'Last 30 Days' },
@@ -42,6 +42,7 @@ export default function OrderList() {
   const [isLoading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  const [search, setSearch] = useState('');
   const [datePreset, setDatePreset] = useState('');
   const [customDateFrom, setCustomDateFrom] = useState(null);
   const [customDateTo, setCustomDateTo] = useState(null);
@@ -59,7 +60,7 @@ export default function OrderList() {
       try {
         const res = await fetchOrders({
           page, pageSize: size, datePreset, customDateFrom, customDateTo,
-          orderTypes, orderStatuses, sortKey, sortDir,
+          orderTypes, orderStatuses, search, sortKey, sortDir,
         });
         if (alive) { setOrders(res.data || []); setTotal(res.meta?.total || 0); }
       } catch (e) {
@@ -70,7 +71,7 @@ export default function OrderList() {
     }
     load();
     return () => { alive = false; };
-  }, [page, size, datePreset, customDateFrom, customDateTo, orderTypes, orderStatuses, sortKey, sortDir]);
+  }, [page, size, datePreset, customDateFrom, customDateTo, orderTypes, orderStatuses, search, sortKey, sortDir]);
 
   const columns = [
     {
@@ -136,33 +137,41 @@ export default function OrderList() {
               emptyStateTitle={t('orders:list.emptyTitle')}
               emptyStateDescription={t('orders:list.emptySub')}
               toolbar={
-                <div style={{ display: 'flex', gap: '12px' }}>
-                  <FilterPill
-                    label={t('orders:list.filters.date')}
-                    options={DATE_PRESET_OPTIONS}
-                    value={datePreset}
-                    onChange={v => { setDatePreset(v); setCustomDateFrom(null); setCustomDateTo(null); setPage(1); }}
-                    customDateEnabled
-                    customDateFrom={customDateFrom}
-                    customDateTo={customDateTo}
-                    onCustomDateChange={(from, to) => { setCustomDateFrom(from); setCustomDateTo(to); setPage(1); }}
-                    searchable={false}
-                  />
-                  <FilterPill
-                    label={t('orders:list.filters.orderType')}
-                    options={ORDER_TYPE_OPTIONS}
-                    multiple
-                    values={orderTypes}
-                    onChangeMultiple={v => { setOrderTypes(v); setPage(1); }}
-                    searchable={false}
-                  />
-                  <FilterPill
-                    label={t('orders:list.filters.orderStatus')}
-                    options={ORDER_STATUS_OPTIONS}
-                    multiple
-                    values={orderStatuses}
-                    onChangeMultiple={v => { setOrderStatuses(v); setPage(1); }}
-                    searchable={false}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', width: '100%' }}>
+                  <div style={{ display: 'flex', gap: '12px' }}>
+                    <FilterPill
+                      label={t('orders:list.filters.date')}
+                      options={DATE_PRESET_OPTIONS}
+                      value={datePreset}
+                      onChange={v => { setDatePreset(v); setCustomDateFrom(null); setCustomDateTo(null); setPage(1); }}
+                      customDateEnabled
+                      customDateFrom={customDateFrom}
+                      customDateTo={customDateTo}
+                      onCustomDateChange={(from, to) => { setCustomDateFrom(from); setCustomDateTo(to); setPage(1); }}
+                      searchable={false}
+                    />
+                    <FilterPill
+                      label={t('orders:list.filters.orderType')}
+                      options={ORDER_TYPE_OPTIONS}
+                      multiple
+                      values={orderTypes}
+                      onChangeMultiple={v => { setOrderTypes(v); setPage(1); }}
+                      searchable={false}
+                    />
+                    <FilterPill
+                      label={t('orders:list.filters.orderStatus')}
+                      options={ORDER_STATUS_OPTIONS}
+                      multiple
+                      values={orderStatuses}
+                      onChangeMultiple={v => { setOrderStatuses(v); setPage(1); }}
+                      searchable={false}
+                    />
+                  </div>
+                  <SearchBar
+                    className="w-full min-w-0 sm:w-72 sm:max-w-sm sm:shrink-0"
+                    value={search}
+                    onChange={e => { setSearch(e.target.value); setPage(1); }}
+                    placeholder={t('orders:list.searchPlaceholder')}
                   />
                 </div>
               }

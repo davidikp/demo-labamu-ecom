@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ChevronDown, HelpCircle, Calendar, Check } from 'lucide-react';
+import { ChevronDown, HelpCircle, Calendar, Check, ArrowRight } from 'lucide-react';
 import {
   PICKUP_PROFILE, PAYMENT_METHODS, VEHICLE_TYPES, TOLL_FEE_OPTIONS,
   getServicesForVehicle, computeDeliveryTotal,
@@ -10,6 +10,7 @@ import { Popup, Checkbox, TextField, MainBtn } from '../../ce-ui';
 // a `minDate` — ce-ui's own DateTimePicker doesn't expose that, so past days
 // couldn't otherwise be visually greyed out and disabled.
 import { CalendarGrid, sameDay } from '../../ce-ui/ui/date-picker';
+import lalamoveLogo from '../../assets/delivery/lalamove-logo.png';
 
 const VEHICLE_GUIDE_URL = 'https://www.lalamove.com/id/id-lalamove-vehicle-comparison-en?embed=true';
 
@@ -355,7 +356,7 @@ function ServiceRow({ label, priceLabel, checked, onChange, disabled }) {
   );
 }
 
-export default function PlaceOrderModal({ onClose, onSubmit, forceFragile }) {
+export default function PlaceOrderModal({ onClose, onSubmit, forceFragile, customerAddress, customerPaidAmount }) {
   const { t } = useTranslation();
 
   const [scheduledAt, setScheduledAt] = useState(null);
@@ -366,9 +367,11 @@ export default function PlaceOrderModal({ onClose, onSubmit, forceFragile }) {
   const [selectedToll, setSelectedToll] = useState([]);
   const [tollExpanded, setTollExpanded] = useState(false);
   const [errors, setErrors] = useState({});
+  const [agreeToCoverDifference, setAgreeToCoverDifference] = useState(false);
 
   const { services, hasToll } = vehicle ? getServicesForVehicle(vehicle) : { services: [], hasToll: false };
   const total = vehicle ? computeDeliveryTotal(vehicle, selectedServices, selectedToll) : null;
+  const exceedsCustomerPaid = total != null && customerPaidAmount != null && total > customerPaidAmount;
 
   function toggleService(key) {
     if (forceFragile && key === 'fragile') return;
@@ -389,6 +392,7 @@ export default function PlaceOrderModal({ onClose, onSubmit, forceFragile }) {
     const nextErrors = {};
     if (!payment) nextErrors.payment = t('orders:placeOrder.required');
     if (!vehicle) nextErrors.vehicle = t('orders:placeOrder.required');
+    if (exceedsCustomerPaid && !agreeToCoverDifference) nextErrors.agreeToCoverDifference = t('orders:placeOrder.required');
     if (Object.keys(nextErrors).length > 0) {
       setErrors(nextErrors);
       return;
@@ -409,12 +413,23 @@ export default function PlaceOrderModal({ onClose, onSubmit, forceFragile }) {
       title={t('orders:placeOrder.title')}
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', fontFamily: "'Lato', sans-serif" }}>
-        {/* Pickup address */}
+        {/* Pickup -> customer address */}
         <div style={{ border: '1px solid #E9E9E9', borderRadius: '10px', padding: '14px 16px' }}>
-          <p style={{ margin: '0 0 8px', fontSize: '13px', color: '#7E7E7E' }}>{t('orders:placeOrder.pickupAddress')}</p>
-          <p style={{ margin: '0 0 4px', fontSize: '16px', fontWeight: 700, color: '#282828' }}>{PICKUP_PROFILE.name}</p>
-          <p style={{ margin: '0 0 6px', fontSize: '13px', color: '#282828' }}>{PICKUP_PROFILE.phone} &nbsp;|&nbsp; {PICKUP_PROFILE.email}</p>
-          <p style={{ margin: 0, fontSize: '13px', color: '#7E7E7E', lineHeight: '18px' }}>{PICKUP_PROFILE.address}</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '12px' }}>
+            <img src={lalamoveLogo} alt="Lalamove" style={{ height: '14px', width: 'auto', objectFit: 'contain' }} />
+            <p style={{ margin: 0, fontSize: '13px', color: '#7E7E7E' }}>{t('orders:placeOrder.lalamoveDelivery')}</p>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px' }}>
+            <div style={{ flex: 1 }}>
+              <p style={{ margin: '0 0 4px', fontSize: '13px', color: '#9CA3AF' }}>{t('orders:placeOrder.from')}:</p>
+              <p style={{ margin: 0, fontSize: '13px', color: '#282828', lineHeight: '18px' }}>{PICKUP_PROFILE.pinpointAddress}</p>
+            </div>
+            <ArrowRight size={16} color="#7E7E7E" style={{ flexShrink: 0, marginTop: '20px' }} />
+            <div style={{ flex: 1 }}>
+              <p style={{ margin: '0 0 4px', fontSize: '13px', color: '#9CA3AF' }}>{t('orders:placeOrder.to')}:</p>
+              <p style={{ margin: 0, fontSize: '13px', color: '#282828', lineHeight: '18px' }}>{customerAddress || '-'}</p>
+            </div>
+          </div>
         </div>
 
         {/* Time + Payment */}
@@ -512,9 +527,34 @@ export default function PlaceOrderModal({ onClose, onSubmit, forceFragile }) {
         background: '#FFFFFF', borderTop: '1px solid #E9E9E9', padding: '16px 24px',
         display: 'flex', flexDirection: 'column', gap: '12px',
       }}>
-        <p style={{ margin: 0, textAlign: 'center', fontSize: '15px', fontWeight: 700, color: '#282828' }}>
-          {t('orders:placeOrder.totalDelivery')}: {total != null ? formatPrice(total) : 'IDR -'}
-        </p>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          {customerPaidAmount != null && (
+            <span style={{ fontSize: '14px', color: '#7E7E7E' }}>
+              {t('orders:placeOrder.customerPaid')}: {formatPrice(customerPaidAmount)}
+            </span>
+          )}
+          <span style={{ marginLeft: 'auto', fontSize: '15px', fontWeight: 700, color: '#282828' }}>
+            {t('orders:placeOrder.totalDelivery')}: {total != null ? formatPrice(total) : 'IDR -'}
+          </span>
+        </div>
+
+        {exceedsCustomerPaid && (
+          <div>
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: '10px',
+              background: '#FFF7ED', border: '1px solid #FDBA74', borderRadius: '8px', padding: '12px',
+            }}>
+              <Checkbox checked={agreeToCoverDifference} onChange={setAgreeToCoverDifference} />
+              <span style={{ fontSize: '13px', color: '#C2410C', lineHeight: 1.5 }}>
+                {t('orders:placeOrder.coverDifferenceNotice')}
+              </span>
+            </div>
+            {errors.agreeToCoverDifference && (
+              <p style={{ margin: '6px 0 0', fontSize: '12px', color: '#D0021B' }}>{errors.agreeToCoverDifference}</p>
+            )}
+          </div>
+        )}
+
         <div style={{ display: 'flex', gap: '12px' }}>
           <MainBtn className="flex-1" variant="secondary" size="lg" label={t('orders:placeOrder.cancel')} onClick={onClose} />
           <MainBtn className="flex-1" variant="primary" size="lg" label={t('orders:placeOrder.title')} onClick={handleSubmit} />
