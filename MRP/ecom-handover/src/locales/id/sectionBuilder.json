@@ -1,0 +1,243 @@
+{
+  "editor": {
+    "common": {
+      "cancel": "Batal",
+      "delete": "Hapus",
+      "confirm": "Konfirmasi",
+      "close": "Tutup"
+    },
+    "previewLive": {
+      "invalidLink": "Tautan pratinjau ini tidak valid atau sudah kedaluwarsa."
+    },
+    "sectionBuilder": {
+      "actions": {
+        "reorderSections": "Ubah urutan bagian",
+        "addSection": "Tambah {{type}}",
+        "duplicateSection": "Duplikat {{type}}",
+        "deleteSection": "Hapus {{type}}",
+        "addPage": "Tambah halaman — {{name}}",
+        "renamePage": "Ubah nama halaman",
+        "deletePage": "Hapus halaman",
+        "updatePageSeo": "Perbarui SEO halaman",
+        "togglePageNav": "Alihkan visibilitas navigasi halaman",
+        "themePreset": "Preset tema → {{name}}",
+        "show": "Tampilkan {{label}}",
+        "hide": "Sembunyikan {{label}}",
+        "fieldChange": "{{type}} → {{field}}"
+      },
+      "discardConfirm": {
+        "title": "Buang semua perubahan yang belum dipublikasikan? Tokomu akan kembali ke versi terakhir yang dipublikasikan. Tindakan ini tidak bisa dibatalkan.",
+        "confirmLabel": "Buang"
+      },
+      "publishSuccess": {
+        "message": "Berhasil! Tokomu sudah tayang!",
+        "viewLiveStore": "Lihat toko live →"
+      }
+    },
+    "addSectionList": {
+      "addSection": "Tambah bagian",
+      "pageGettingLong": "Halamanmu semakin panjang. Terlalu banyak bagian bisa memperlambat tokomu.",
+      "dismiss": "Tutup",
+      "removeToAddMore": "Hapus satu bagian untuk menambah lagi (maks {{n}})"
+    },
+    "canvas": {
+      "unknownSectionType": "Jenis bagian tidak dikenali: {{type}}",
+      "hiddenLabel": "{{label}} disembunyikan",
+      "moveUp": "Pindah ke atas",
+      "moveDown": "Pindah ke bawah",
+      "duplicate": "Duplikat",
+      "deleteConfirm": {
+        "title": "Hapus bagian ini? Tindakan ini tidak bisa dibatalkan."
+      },
+      "empty": "Belum ada bagian"
+    },
+    "concurrentEditingBanner": {
+      "message": "{{editorName}} sedang mengedit toko ini. Mempublikasikan sekarang bisa menimpa perubahan mereka."
+    },
+    "draftRecoveryBanner": {
+      "momentsAgo": "baru saja",
+      "minutesAgo_other": "{{count}} menit yang lalu",
+      "hoursAgo_other": "{{count}} jam yang lalu",
+      "restoredFrom": "Draf dipulihkan dari {{time}}.",
+      "keepDraft": "Simpan draf",
+      "discardAndLoad": "Buang dan muat versi terakhir yang dipublikasikan"
+    },
+    "mediaLibraryPanel": {
+      "unsupportedFileType": "Jenis file tidak didukung — gunakan JPG, PNG, WebP, atau SVG.",
+      "fileTooLarge": "Ukuran file terlalu besar — maks 10MB. Coba kompres gambarmu.",
+      "heading": "Pustaka media",
+      "chooseImage": "Pilih gambar",
+      "searchPlaceholder": "Cari berdasarkan nama file",
+      "emptyState": "Belum ada gambar. Yuk, unggah gambar pertamamu di atas.",
+      "noSearchResults": "Tidak ada gambar yang cocok dengan '{{query}}'. Coba nama lain.",
+      "deleteAnyway": "Tetap Hapus",
+      "usedInWarning": "Gambar ini digunakan di {{sections}}. Menghapusnya akan meninggalkan gambar rusak di tokomu — lanjutkan?",
+      "deleteConfirmTitle": "Hapus {{filename}}? Tindakan ini tidak bisa dibatalkan."
+    },
+    "pagesPanel": {
+      "addPage": "+ Tambah halaman",
+      "pageNameLabel": "Nama halaman",
+      "pageNamePlaceholder": "Tentang Kami",
+      "slugLabel": "Slug URL",
+      "slugInUse": "Slug ini sudah digunakan.",
+      "create": "Buat",
+      "seoHeading": "SEO",
+      "metaTitleLabel": "Judul Meta",
+      "metaDescriptionLabel": "Deskripsi Meta",
+      "metaDescriptionPlaceholder": "Jelaskan halaman ini dalam 1-2 kalimat",
+      "rename": "Ubah nama",
+      "showNav": "Tampilkan",
+      "hideNav": "Sembunyikan",
+      "deleteConfirmTitle": "Hapus {{name}}? Pengunjung yang membuka URL ini akan melihat halaman 404. Tindakan ini tidak bisa dibatalkan.",
+      "heading": "Halaman",
+      "pageCount": "{{n}} halaman",
+      "systemPages": "Halaman sistem",
+      "customPages": "Halaman kustom",
+      "noCustomPages": "Belum ada halaman kustom. Buat satu di bawah ini."
+    },
+    "publishDrawer": {
+      "heading": "Sebelum kamu publikasikan",
+      "warning": "Tokomu mungkin tidak berfungsi dengan baik bagi pembeli.",
+      "publishAnyway": "Tetap Publikasikan"
+    },
+    "sectionListItem": {
+      "dragAriaLabel": "seret untuk mengubah urutan"
+    },
+    "settingsPanel": {
+      "emptyHeading": "Pilih bagian untuk diedit",
+      "emptySubtext": "Klik bagian mana saja di kanvas atau sidebar untuk membuka pengaturannya"
+    },
+    "sidebar": {
+      "header": "Header",
+      "footer": "Footer",
+      "hiddenSuffix": "(disembunyikan)",
+      "show": "Tampilkan",
+      "hide": "Sembunyikan",
+      "sectionsTab": "Bagian",
+      "pagesTab": "Halaman",
+      "sectionCount": "{{n}}/{{max}} bagian",
+      "mediaLibraryAriaLabel": "pustaka media",
+      "themeSettingsAriaLabel": "pengaturan tema",
+      "globalHeading": "Global",
+      "emptySections": "Tambahkan bagian pertamamu di bawah ini",
+      "sectionsHeadingCompact": "Bagian"
+    },
+    "themePanel": {
+      "apply": "Terapkan",
+      "addToCartSample": "Tambah ke keranjang",
+      "heading": "Tema",
+      "presets": "Preset",
+      "sample": "Contoh",
+      "applyPresetConfirmTitle": "Terapkan {{name}}? Ini akan mengganti font dan warna Anda saat ini. Konten section Anda tidak akan berubah."
+    },
+    "topBar": {
+      "title": "Storefront Builder",
+      "unsavedChanges": "Anda punya perubahan yang belum disimpan",
+      "undo": "Urungkan",
+      "redo": "Ulangi",
+      "preview": "Pratinjau",
+      "publish": "Publikasikan",
+      "moreOptions": "Opsi lainnya",
+      "discardChanges": "Buang perubahan"
+    },
+    "viewportToggle": {
+      "desktop": "Desktop",
+      "mobile": "Seluler",
+      "ariaLabel": "Viewport"
+    }
+  },
+  "fields": {
+    "contrastBadge": {
+      "good": "Kontras Baik",
+      "low": "Kontras Rendah"
+    },
+    "fontPickerField": {
+      "sampleText": "Toko Saya — contoh teks pratinjau font"
+    },
+    "imageField": {
+      "unsupportedFileType": "Jenis file tidak didukung — gunakan JPG, PNG, WebP, atau SVG.",
+      "fileTooLarge": "Ukuran file terlalu besar — maks 10MB",
+      "imageDeleted": "Gambar telah dihapus — silakan unggah gambar baru",
+      "chooseFromLibrary": "Pilih dari pustaka"
+    },
+    "repeaterField": {
+      "itemLabel": "Item {{n}}",
+      "removeItem": "Hapus item",
+      "maxItemsReached": "Maksimal {{n}} item telah tercapai",
+      "addItem": "Tambah item",
+      "dragToReorder": "Seret untuk mengubah urutan"
+    }
+  },
+  "sections": {
+    "common": {
+      "noImage": "Tidak ada gambar",
+      "link": "Tautan"
+    },
+    "announcementBar": {
+      "defaultMessage": "Gratis ongkir untuk pembelian di atas Rp750.000"
+    },
+    "brandValues": {
+      "defaultHeading": "Kenapa Belanja di Sini",
+      "emptyState": "Tambahkan nilai brand pertamamu di bawah ini",
+      "defaultValueLabel": "Nilai"
+    },
+    "collectionList": {
+      "defaultHeading": "Belanja per Kategori"
+    },
+    "contactForm": {
+      "defaultHeading": "Hubungi Kami",
+      "namePlaceholder": "Namamu",
+      "emailPlaceholder": "Emailmu",
+      "phonePlaceholder": "Telepon",
+      "subjectPlaceholder": "Subjek",
+      "messagePlaceholder": "Pesanmu",
+      "sendButton": "Kirim"
+    },
+    "dividerSpacer": {
+      "label": "Spasi ({{height}}px)"
+    },
+    "faqAccordion": {
+      "defaultQuestion": "Pertanyaan",
+      "defaultAnswer": "Jawaban ada di sini.",
+      "defaultHeading": "Pertanyaan yang Sering Diajukan",
+      "emptyState": "Tambahkan FAQ pertamamu di bawah ini"
+    },
+    "featuredProducts": {
+      "soldOut": "Stok Habis",
+      "defaultHeading": "Produk Unggulan",
+      "viewAll": "Lihat Semua Produk"
+    },
+    "footer": {
+      "linksHeading": "Tautan",
+      "copyright": "© {{year}} Toko Saya. Hak cipta dilindungi.",
+      "socialPlaceholder": "IG FB TikTok"
+    },
+    "header": {
+      "defaultNavShop": "Belanja",
+      "defaultNavAbout": "Tentang",
+      "defaultStoreName": "Toko Saya"
+    },
+    "heroBanner": {
+      "defaultHeading": "Selamat Datang di Toko Kami",
+      "defaultButtonText": "Belanja Sekarang"
+    },
+    "imageWithText": {
+      "defaultHeading": "Tentang Kisah Kami"
+    },
+    "newsletterSignup": {
+      "defaultHeading": "Berlangganan Newsletter Kami",
+      "emailPlaceholder": "emailmu@contoh.com",
+      "subscribeButton": "Berlangganan",
+      "disclaimer": "Bebas spam. Berhenti berlangganan kapan saja."
+    },
+    "richText": {
+      "emptyState": "Tambahkan konten ke bagian ini."
+    },
+    "testimonials": {
+      "defaultHeading": "Kata Pelanggan Kami",
+      "emptyState": "Tambahkan kutipan pertamamu di bawah ini",
+      "defaultQuote": "Pengalaman yang luar biasa!",
+      "defaultAuthor": "Pelanggan yang puas"
+    }
+  }
+}

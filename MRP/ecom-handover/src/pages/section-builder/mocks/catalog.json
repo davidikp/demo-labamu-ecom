@@ -1,0 +1,15 @@
+{
+  "products": [
+    { "id": "p1", "name": "Classic Tote Bag", "price": 45.0, "compareAtPrice": null, "image": null, "vendor": "House Brand", "stock": 12 },
+    { "id": "p2", "name": "Minimal Leather Wallet", "price": 32.0, "compareAtPrice": 40.0, "image": null, "vendor": "House Brand", "stock": 0 },
+    { "id": "p3", "name": "Everyday Sneakers", "price": 68.0, "compareAtPrice": null, "image": null, "vendor": "House Brand", "stock": 5 },
+    { "id": "p4", "name": "Wool Scarf", "price": 24.0, "compareAtPrice": null, "image": null, "vendor": "House Brand", "stock": 20 }
+  ],
+  "collections": [
+    { "id": "c1", "name": "Best Sellers", "handle": "best-sellers", "image": null, "productIds": ["p1", "p3"] },
+    { "id": "c2", "name": "New Arrivals", "handle": "new-arrivals", "image": null, "productIds": ["p2", "p4"] }
+  ],
+  "customers": [
+    { "id": "cu1", "email": "demo.customer@example.com", "source": "newsletter" }
+  ]
+}
