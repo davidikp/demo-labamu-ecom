@@ -25,6 +25,7 @@ import { MOCK_VENDORS } from "../../../../data/vendors.js";
 import { MOCK_COMPANY } from "../../../../data/company.js";
 import { downloadVendorReleasePdf } from "../../utils/vendorReleasePdfExport.js";
 import { IconButton } from "../../../../components/common/IconButton.jsx";
+import { ClampedDescriptionText } from "../../../../components/common/ClampedDescriptionText.jsx";
 import {
   Button,
   StatusBadge,
@@ -359,18 +360,7 @@ const PoReceiptsTab = ({
                           color: "var(--neutral-on-surface-secondary)",
                         })}
                       >
-                          <span
-                            style={{
-                              display: "block",
-                              fontSize: "var(--text-title-3)",
-                              color: "var(--neutral-on-surface-secondary)",
-                              lineHeight: "1.4",
-                              wordBreak: "break-word",
-                              whiteSpace: "pre-wrap"
-                            }}
-                          >
-                            {displayValue(line.desc)}
-                          </span>
+                          <ClampedDescriptionText text={displayValue(line.desc)} />
                       </div>
                       <div style={poReferenceTableCellStyle({ minWidth: 0, padding: "12px 0", flexDirection: "column", alignItems: "flex-start", gap: "4px" })}>
                         <span

@@ -21,8 +21,9 @@ import { MOCK_MATERIALS_DATA } from "../../materials/mock/materialsMocks.js";
 import { getBom, DEFAULT_COGS, resolveMaterialOption } from "../../bill-of-materials/mock/bomMocks.js";
 import { computeMaterialCost, computeTotalCogs, fieldTotal, formatIDR } from "../../bill-of-materials/utils/bomUtils.js";
 import { DetailCard, detailTableHeaderRowStyle, detailTableRowStyle } from "../../bill-of-materials/components/BomShared.jsx";
-import { getRequests, addRequest, getStockBatchesForSku } from "../../material-request/mock/materialRequestMocks.js";
+import { getRequests, addRequest, getStockBatchesForSku, REQUEST_STATUS_META } from "../../material-request/mock/materialRequestMocks.js";
 import { addBatch } from "../../materials/mock/batchesStore.js";
+import { addTransaction } from "../../materials/mock/transactionsStore.js";
 import { formatCurrency, formatNumberWithCommas, parseNumberFromCommas } from "../../../utils/format/formatUtils.js";
 import { normalizeProofDocuments, createUploadDocumentRecord, validateUploadFile } from "../../../utils/upload/uploadUtils.js";
 import { MAX_PROOF_UPLOAD_FILES } from "../../../constants/appConstants.js";
@@ -904,7 +905,8 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
 
   const [readyStartDate, setReadyStartDate] = useState("");
   const [readyEndDate, setReadyEndDate] = useState("");
-  const [isCompleteModalOpen, setIsCompleteModalOpen] = useState(false);
+  const [isStockBuildFormModalOpen, setIsStockBuildFormModalOpen] = useState(false);
+  const [isFinalCompleteModalOpen, setIsFinalCompleteModalOpen] = useState(false);
   const [completedDate, setCompletedDate] = useState(() => {
     const cached = initialData?.wo ? MOCK_WO_TABLE_DATA.find((w) => w.wo === initialData.wo) : null;
     return initialData?.completedDate || cached?.completedDate || null;
@@ -924,11 +926,16 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
 
   // --- Request Material flow state ---
   const [materials, setMaterials] = useState(() => initialBomMaterials(initialData?.wo, initialData));
-  const [requestHistory, setRequestHistory] = useState(() => initialRequestHistory(initialData?.wo));
+  const [requestHistory, setRequestHistory] = useState(() => {
+    const cachedWo = initialData?.wo
+      ? MOCK_WO_TABLE_DATA.find((w) => w.wo === initialData.wo)
+      : null;
+    return initialData?.requestHistory || cachedWo?.requestHistory || initialRequestHistory(initialData?.wo);
+  });
   // Ongoing work order has prior requests, so the history is available up front.
   // Other work orders only show it after a request is submitted in-session.
   const [hasSubmittedRequest, setHasSubmittedRequest] = useState(
-    initialData?.wo === ONGOING_REQUEST_WO
+    initialData?.wo === ONGOING_REQUEST_WO || requestHistory.length > 0
   );
   const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
@@ -948,10 +955,40 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
     ...overrides,
   });
 
+  // Requested/Received Qty must match whatever the Material Request module
+  // currently shows for this WO's requests. "Requested Qty" only counts
+  // quantity still sitting in an active (non-terminal) request — once a
+  // request reaches Completed/Cancelled it's resolved, so any of it that
+  // wasn't actually fulfilled drops back out of "requested" and becomes
+  // available to request again (i.e. shortage), rather than sitting there
+  // as a permanently-outstanding number. "Received Qty" always reflects
+  // however much the module has actually allocated (fulfillableQty),
+  // regardless of the request's status.
+  const getLiveMaterialRequestTotals = (sku) => {
+    const relevantRequests = getRequests().filter((r) =>
+      requestHistory.some((rh) => rh.id === r.requestId)
+    );
+    let requestedQty = 0;
+    let receivedQty = 0;
+    relevantRequests.forEach((r) => {
+      const isActive = r.status !== "completed" && r.status !== "cancelled";
+      (r.items || []).forEach((item) => {
+        if (item.sku !== sku) return;
+        if (isActive) {
+          requestedQty += Number(item.requestedQty) || 0;
+        }
+        const fulfillable = item.allocation?.fulfillableQty;
+        if (typeof fulfillable === "number") receivedQty += fulfillable;
+      });
+    });
+    return { requestedQty, receivedQty };
+  };
+
   const remainingForMaterial = (name) => {
     const m = materials.find((mat) => mat.type === "BOM" && mat.name === name);
     if (!m) return null;
-    return Math.max(0, m.requiredQty - m.requestedQty - m.receivedQty);
+    const live = getLiveMaterialRequestTotals(m.sku);
+    return Math.max(0, m.requiredQty - live.requestedQty - live.receivedQty);
   };
 
   const unitForDraftRow = (row) => {
@@ -965,19 +1002,17 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
 
   const buildRemainingBomDraft = () =>
     materials
-      .filter(
-        (m) => m.type === "BOM" && m.requiredQty - m.requestedQty - m.receivedQty > 0
-      )
+      .filter((m) => m.type === "BOM" && remainingForMaterial(m.name) > 0)
       .map((m) =>
         makeDraftRow({
           type: "BOM",
           materialName: m.name,
-          qty: String(m.requiredQty - m.requestedQty - m.receivedQty),
+          qty: String(remainingForMaterial(m.name)),
         })
       );
 
   const shortageMaterials = materials.filter(
-    (m) => m.type === "BOM" && m.requiredQty - m.requestedQty - m.receivedQty > 0
+    (m) => m.type === "BOM" && remainingForMaterial(m.name) > 0
   );
 
   const openRequestModal = (prefillRemaining = false) => {
@@ -1038,15 +1073,22 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
     return `REQ${String(num + 1).padStart(7, "0")}`;
   };
 
-  // Open the material request detail page in a new tab (the row lives inside a modal,
-  // so we avoid replacing the current page). The history stores the display id
-  // (e.g. REQ0129032); the material request store keys it as `requestId`. A fresh tab
-  // has no navigation state, so we route by the id the detail page resolves with.
+  // Navigate to the material request detail page in the same session (the row
+  // lives inside a modal). The history stores the display id (e.g. REQ0129032);
+  // the material request store keys it as `requestId`, so resolve to that id.
   const openRequestDetail = (req) => {
     const match = getRequests().find((r) => r.requestId === req.id);
     const id = match ? match.id : req.id;
-    // Opened from the Work Order side → default the detail page to the Production POV.
-    window.open(`/material-request/${id}?pov=production`, "_blank", "noopener");
+    // Opened from the Work Order side → default the detail page to the Production POV,
+    // and remember this work order so its Back button returns here instead of the list.
+    onNavigate("material_request_detail", {
+      id,
+      pov: "production",
+      returnTo: {
+        view: "work_order_detail",
+        data: initialData,
+      },
+    });
   };
 
   const formatRequestTimestamp = () => {
@@ -1100,9 +1142,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
       const qtyNum = parseFloat(row.qty) || 0;
       if (row.type === "BOM") {
         const mat = materials.find((m) => m.type === "BOM" && m.name === row.materialName);
-        const remaining = mat
-          ? Math.max(0, mat.requiredQty - mat.requestedQty - mat.receivedQty)
-          : null;
+        const remaining = mat ? remainingForMaterial(mat.name) : null;
         const isExceeding = remaining != null && qtyNum > remaining;
         const sku = mat ? mat.sku : "";
         return {
@@ -1317,9 +1357,10 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
   const targetType = initialData?.targetType || cachedWoForCogs?.targetType || "Product";
   const fulfillmentType = initialData?.fulfillmentType || cachedWoForCogs?.fulfillmentType || "CustomerOrder";
   const targetMaterialId = initialData?.materialId || cachedWoForCogs?.materialId || null;
-  const targetMaterialUom = targetMaterialId
-    ? MOCK_MATERIALS_DATA.find((m) => m.id === targetMaterialId)?.unit || "unit"
-    : "unit";
+  const targetMaterialObj = targetMaterialId
+    ? MOCK_MATERIALS_DATA.find((m) => m.id === targetMaterialId)
+    : null;
+  const targetMaterialUom = targetMaterialObj?.unit || "unit";
   const [actualCogs, setActualCogs] = useState(() => {
     const savedCogs = initialData?.actualCogs || cachedWoForCogs?.actualCogs;
     if (savedCogs) return savedCogs;
@@ -1495,9 +1536,11 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
         actualCogs,
         completedDate,
         postedToStock,
+        requestHistory,
+        materials,
       };
     }
-  }, [vendors, routingStages, outsourceSteps, woStatus, displayStartDate, displayEndDate, actualCogsBomId, actualCogs, completedDate, postedToStock]);
+  }, [vendors, routingStages, outsourceSteps, woStatus, displayStartDate, displayEndDate, actualCogsBomId, actualCogs, completedDate, postedToStock, requestHistory, materials]);
 
   const hasStages = routingStages.length > 0;
   const allStagesCompleted =
@@ -1511,9 +1554,21 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
 
   // A work order can only complete once no material request is still ongoing —
   // i.e. every request is Completed/Cancelled (or there is no request history).
-  const hasOngoingMaterialRequest = requestHistory.some(
-    (r) => r.status !== "Completed" && r.status !== "Cancelled"
-  );
+  // Status lives in the Material Request module's own store and progresses
+  // independently, so check the live status rather than the frozen one
+  // captured when the request was first made.
+  const hasOngoingMaterialRequest = requestHistory.some((r) => {
+    const liveRequest = getRequests().find((req) => req.requestId === r.id);
+    const liveStatus = liveRequest?.status;
+    return liveStatus ? liveStatus !== "completed" && liveStatus !== "cancelled" : true;
+  });
+
+  // Requested/Received Qty in the Materials table must match whatever the
+  // Material Request module currently shows for this WO's requests — sum
+  // requestedQty across every item with this SKU, and receivedQty from
+  // however much of it the module has actually allocated (fulfillableQty),
+  // rather than trusting a one-time bump made only when the request was
+  // first submitted (which never reflected later progress/completion).
 
   const canCompleteWorkOrder =
     allStagesCompleted &&
@@ -1521,21 +1576,13 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
     woStatus !== "completed" &&
     (fulfillmentType !== "StockBuild" || woStatus === "in_progress");
 
-  const handleCompleteWorkOrder = () => {
-    setIsCompleteModalOpen(false);
-    // Finalize any material request that hadn't reached a terminal status yet.
-    setRequestHistory((prev) =>
-      prev.map((r) =>
-        r.status !== "Completed" && r.status !== "Cancelled" ? { ...r, status: "Completed" } : r
-      )
-    );
-    setWoStatus("completed");
-    setCompletedDate(new Date().toISOString().slice(0, 10));
-    addActivityLog("Completed");
-    setToastMessage("Work order completed");
-    setShowSuccessToast(true);
-  };
+  // Whether this WO ever had any material request activity — drives which
+  // completion-confirmation copy shows (see handleOpenFinalCompleteModal).
+  const hasNoRecordedMaterialUsage = requestHistory.length === 0;
 
+  // Step 1 for Stock Build: opens the form modal (Quantity/Cost/Storage/etc).
+  // Product/Customer Order work orders skip straight to the final confirm
+  // step since they have no output-posting form to fill in.
   const openCompleteModal = () => {
     if (fulfillmentType === "StockBuild") {
       const linkedBom = actualCogsBomId ? getBom(actualCogsBomId) : null;
@@ -1548,11 +1595,15 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
         notes: "",
       });
       setPostOutputErrors({});
+      setIsStockBuildFormModalOpen(true);
+    } else {
+      setIsFinalCompleteModalOpen(true);
     }
-    setIsCompleteModalOpen(true);
   };
 
-  const handleConfirmStockBuild = () => {
+  // Step 1 -> Step 2 for Stock Build: validates the form, then hands off to
+  // the same final "Complete Work Order?" confirmation Product orders use.
+  const handleStockBuildFormConfirm = () => {
     const errors = {};
     if (!postOutputForm.quantity || Number(postOutputForm.quantity) <= 0) {
       errors.quantity = "This field cannot be empty";
@@ -1567,44 +1618,72 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
       setPostOutputErrors(errors);
       return;
     }
+    setIsStockBuildFormModalOpen(false);
+    setIsFinalCompleteModalOpen(true);
+  };
 
-    const woId = initialData?.wo;
-    const dateForBatch = new Date().toISOString().slice(0, 10);
-    const qty = parseInt(String(postOutputForm.quantity).replace(/,/g, ""), 10) || 0;
-    const costPerUnit = parseInt(String(postOutputForm.costPerPcs).replace(/,/g, ""), 10) || 0;
+  // Final step for both flows: actually marks the WO Completed, and for
+  // Stock Build also creates the Stock Batch + an "In" Stock Transaction.
+  const handleFinalComplete = () => {
+    const today = new Date().toISOString().slice(0, 10);
 
-    addBatch({
-      id: `batch-${Date.now()}`,
-      materialId: targetMaterialId,
-      batchNo: `BN-${dateForBatch.replace(/-/g, "")}-${Math.floor(Math.random() * 1000).toString().padStart(3, "0")}`,
-      initialQty: qty,
-      currentQty: qty,
-      reservedQty: 0,
-      costPerUnit,
-      purchaseDate: dateForBatch,
-      expiryDate: postOutputForm.expiryDate || "",
-      expectedDate: dateForBatch,
-      receivedDate: dateForBatch,
-      storageLocation: postOutputForm.storageLocation,
-      vendor: "Internal Production",
-      attachments: [],
-      status: "Received",
-      reference: woId,
-      notes: postOutputForm.notes || "",
-    });
+    if (fulfillmentType === "StockBuild") {
+      const woId = initialData?.wo;
+      const qty = parseInt(String(postOutputForm.quantity).replace(/,/g, ""), 10) || 0;
+      const costPerUnit = parseInt(String(postOutputForm.costPerPcs).replace(/,/g, ""), 10) || 0;
+      const batchNo = `BN-${today.replace(/-/g, "")}-${Math.floor(Math.random() * 1000).toString().padStart(3, "0")}`;
 
-    setIsCompleteModalOpen(false);
+      addBatch({
+        id: `batch-${Date.now()}`,
+        materialId: targetMaterialId,
+        batchNo,
+        initialQty: qty,
+        currentQty: qty,
+        reservedQty: 0,
+        costPerUnit,
+        purchaseDate: today,
+        expiryDate: postOutputForm.expiryDate || "",
+        expectedDate: today,
+        receivedDate: today,
+        storageLocation: postOutputForm.storageLocation,
+        vendor: "Internal Production",
+        attachments: [],
+        status: "Received",
+        reference: woId,
+        notes: postOutputForm.notes || "",
+      });
+
+      addTransaction({
+        id: `tx-${Date.now()}`,
+        materialId: targetMaterialId,
+        date: new Date().toISOString(),
+        batchNo,
+        type: "In",
+        quantity: qty,
+        unit: targetMaterialUom,
+        workOrder: woId,
+        product: targetMaterialObj?.name || initialData?.product || "-",
+        reason: "Stock Build Output",
+        actionBy: "Natasha",
+      });
+
+      setPostedToStock(true);
+      addActivityLog("Posted Output to Stock", `${qty} unit posted to stock batch.`);
+    }
+
+    // Finalize any material request that hadn't reached a terminal status yet.
     setRequestHistory((prev) =>
       prev.map((r) =>
         r.status !== "Completed" && r.status !== "Cancelled" ? { ...r, status: "Completed" } : r
       )
     );
     setWoStatus("completed");
-    setCompletedDate(dateForBatch);
-    setPostedToStock(true);
+    setCompletedDate(today);
     addActivityLog("Completed");
-    addActivityLog("Posted Output to Stock", `${qty} unit posted to stock batch.`);
-    setToastMessage("Stock build confirmed and posted to stock");
+    setIsFinalCompleteModalOpen(false);
+    setToastMessage(
+      fulfillmentType === "StockBuild" ? "Stock build confirmed and posted to stock" : "Work order completed"
+    );
     setShowSuccessToast(true);
   };
 
@@ -3402,7 +3481,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
     }
     height += rows[4].offsetHeight / 2;
     setOutsourceStagesCollapsedHeight(height);
-  }, [outsourceSteps, vendors, routingStages]);
+  }, [outsourceSteps, vendors, routingStages, woStatus]);
 
   return (
     <div
@@ -3463,7 +3542,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
           <div
             onClick={(e) => e.stopPropagation()}
             style={{
-              width: "560px",
+              width: "640px",
               maxWidth: "100%",
               height: "100%",
               background: "var(--neutral-surface-primary)",
@@ -3580,7 +3659,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
             >
               <div style={{ width: "144px", flexShrink: 0 }}>Type</div>
               <div style={{ flex: "2" }}>Material</div>
-              <div style={{ flex: "1" }}>Quantity</div>
+              <div style={{ width: "160px", flexShrink: 0 }}>Quantity</div>
               <div style={{ width: "40px" }} />
             </div>
 
@@ -3673,7 +3752,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                       />
                       {err("material") && <span style={errStyle}>{err("material")}</span>}
                     </div>
-                    <div style={{ flex: "1" }}>
+                    <div style={{ width: "160px", flexShrink: 0 }}>
                       <InputField
                         type="number"
                         placeholder="Enter qty"
@@ -4010,7 +4089,16 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
               <div style={{ flex: "1" }}>Requested By</div>
               <div style={{ flex: "0.7" }}>Status</div>
             </div>
-            {requestHistory.map((req) => (
+            {requestHistory.map((req) => {
+              // The Material Request module is the source of truth for status
+              // (it progresses independently — New Request → Preparing →
+              // Transferring → Completed/Cancelled); look it up live instead of
+              // trusting the frozen status captured when the request was made.
+              const liveRequest = getRequests().find((r) => r.requestId === req.id);
+              const statusMeta = liveRequest ? REQUEST_STATUS_META[liveRequest.status] : null;
+              const displayStatus = statusMeta?.label || req.status;
+              const displayVariant = statusMeta?.badge || REQUEST_STATUS_VARIANT[req.status] || "grey";
+              return (
               <div
                 key={req.id}
                 onClick={() => openRequestDetail(req)}
@@ -4050,14 +4138,13 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                   {req.by}
                 </div>
                 <div style={{ flex: "0.7" }}>
-                  <StatusBadge
-                    variant={REQUEST_STATUS_VARIANT[req.status] || "grey"}
-                  >
-                    {req.status}
+                  <StatusBadge variant={displayVariant}>
+                    {displayStatus}
                   </StatusBadge>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </GeneralModal>
@@ -4426,6 +4513,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
             </div>
             {materials.map((row, i) => {
               const isBom = row.type === "BOM";
+              const liveTotals = getLiveMaterialRequestTotals(row.sku);
               return (
               <div
                 key={row.id}
@@ -4466,8 +4554,8 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                 <div style={{ flex: "1" }}>
                   {isBom ? `${row.requiredQty} ${row.unit}` : "—"}
                 </div>
-                <div style={{ flex: "1" }}>{`${row.requestedQty} ${row.unit}`}</div>
-                <div style={{ flex: "1" }}>{`${row.receivedQty} ${row.unit}`}</div>
+                <div style={{ flex: "1" }}>{`${liveTotals.requestedQty} ${row.unit}`}</div>
+                <div style={{ flex: "1" }}>{`${liveTotals.receivedQty} ${row.unit}`}</div>
               </div>
               );
             })}
@@ -6463,12 +6551,107 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
       ) : null}
 
       <GeneralModal
-        isOpen={isCompleteModalOpen}
-        onClose={() => setIsCompleteModalOpen(false)}
-        title={fulfillmentType === "StockBuild" ? "Confirm stock build?" : "Complete Work Order?"}
+        isOpen={isStockBuildFormModalOpen}
+        onClose={() => setIsStockBuildFormModalOpen(false)}
+        title="Confirm stock build?"
+        description="The actual output quantity and production cost will be used to update your inventory. Make sure the information is correct before continuing."
+        footer={
+          <>
+            <Button
+              variant="outlined"
+              size="large"
+              style={{ width: "100%" }}
+              onClick={() => setIsStockBuildFormModalOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="filled"
+              size="large"
+              style={{ width: "100%" }}
+              onClick={handleStockBuildFormConfirm}
+            >
+              Confirm
+            </Button>
+          </>
+        }
+      >
+        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+            <span style={{ fontSize: "var(--text-body)", color: "var(--neutral-on-surface-secondary)" }}>
+              Material
+            </span>
+            <span style={{ fontSize: "var(--text-title-3)", fontWeight: "var(--font-weight-bold)", color: "var(--neutral-on-surface-primary)" }}>
+              {targetMaterialObj?.name || initialData?.product || "-"}
+              {" "}
+              <span style={{ fontWeight: "var(--font-weight-regular)", color: "var(--neutral-on-surface-secondary)" }}>
+                (SKU: {targetMaterialObj?.sku || initialData?.sku || "-"})
+              </span>
+            </span>
+          </div>
+          <div style={{ display: "flex", gap: "16px" }}>
+            <div style={{ flex: 1 }}>
+              <InputField
+                label="Quantity"
+                required
+                value={postOutputForm.quantity}
+                onChange={(e) => setPostOutputForm({ ...postOutputForm, quantity: e.target.value })}
+                placeholder="Enter quantity"
+                error={postOutputErrors.quantity}
+                suffix={targetMaterialUom}
+              />
+            </div>
+            <div style={{ flex: 1 }}>
+              <InputField
+                label="Cost per Unit"
+                required
+                value={postOutputForm.costPerPcs}
+                onChange={(e) => setPostOutputForm({ ...postOutputForm, costPerPcs: e.target.value })}
+                placeholder="Enter cost per unit"
+                error={postOutputErrors.costPerPcs}
+                prefix="IDR"
+              />
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: "16px" }}>
+            <div style={{ flex: 1 }}>
+              <InputField
+                label="Storage Location"
+                required
+                value={postOutputForm.storageLocation}
+                onChange={(e) => setPostOutputForm({ ...postOutputForm, storageLocation: e.target.value })}
+                placeholder="Enter storage location"
+                error={postOutputErrors.storageLocation}
+              />
+            </div>
+            <div style={{ flex: 1 }}>
+              <InputField
+                label="Expiry Date"
+                type="date"
+                value={postOutputForm.expiryDate}
+                onChange={(e) => setPostOutputForm({ ...postOutputForm, expiryDate: e.target.value })}
+              />
+            </div>
+          </div>
+          <InputField
+            label="Notes"
+            value={postOutputForm.notes}
+            onChange={(e) => setPostOutputForm({ ...postOutputForm, notes: e.target.value })}
+            placeholder="Add notes (optional)"
+            multiline
+            maxLength={400}
+            showCounter
+          />
+        </div>
+      </GeneralModal>
+
+      <GeneralModal
+        isOpen={isFinalCompleteModalOpen}
+        onClose={() => setIsFinalCompleteModalOpen(false)}
+        title="Complete Work Order?"
         description={
-          fulfillmentType === "StockBuild"
-            ? "The actual output quantity and production cost will be used to update your inventory. Make sure the information is correct before continuing."
+          hasNoRecordedMaterialUsage
+            ? "This work order has no recorded material usage. Do you want to proceed with completion?"
             : "This action can't be undone. Actual COGS will be calculated from received materials."
         }
         footer={
@@ -6477,7 +6660,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
               variant="outlined"
               size="large"
               style={{ width: "100%" }}
-              onClick={() => setIsCompleteModalOpen(false)}
+              onClick={() => setIsFinalCompleteModalOpen(false)}
             >
               Cancel
             </Button>
@@ -6485,71 +6668,13 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
               variant="filled"
               size="large"
               style={{ width: "100%" }}
-              onClick={fulfillmentType === "StockBuild" ? handleConfirmStockBuild : handleCompleteWorkOrder}
+              onClick={handleFinalComplete}
             >
-              {fulfillmentType === "StockBuild" ? "Confirm" : "Complete"}
+              Complete
             </Button>
           </>
         }
-      >
-        {fulfillmentType === "StockBuild" ? (
-          <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-            <div style={{ display: "flex", gap: "16px" }}>
-              <div style={{ flex: 1 }}>
-                <InputField
-                  label="Quantity"
-                  required
-                  value={postOutputForm.quantity}
-                  onChange={(e) => setPostOutputForm({ ...postOutputForm, quantity: e.target.value })}
-                  placeholder="Enter quantity"
-                  error={postOutputErrors.quantity}
-                  suffix={targetMaterialUom}
-                />
-              </div>
-              <div style={{ flex: 1 }}>
-                <InputField
-                  label="Cost per Unit"
-                  required
-                  value={postOutputForm.costPerPcs}
-                  onChange={(e) => setPostOutputForm({ ...postOutputForm, costPerPcs: e.target.value })}
-                  placeholder="Enter cost per unit"
-                  error={postOutputErrors.costPerPcs}
-                  prefix="IDR"
-                />
-              </div>
-            </div>
-            <div style={{ display: "flex", gap: "16px" }}>
-              <div style={{ flex: 1 }}>
-                <InputField
-                  label="Storage Location"
-                  required
-                  value={postOutputForm.storageLocation}
-                  onChange={(e) => setPostOutputForm({ ...postOutputForm, storageLocation: e.target.value })}
-                  placeholder="Enter storage location"
-                  error={postOutputErrors.storageLocation}
-                />
-              </div>
-              <div style={{ flex: 1 }}>
-                <InputField
-                  label="Expiry Date"
-                  type="date"
-                  value={postOutputForm.expiryDate}
-                  onChange={(e) => setPostOutputForm({ ...postOutputForm, expiryDate: e.target.value })}
-                />
-              </div>
-            </div>
-            <InputField
-              label="Notes"
-              value={postOutputForm.notes}
-              onChange={(e) => setPostOutputForm({ ...postOutputForm, notes: e.target.value })}
-              placeholder="Add notes (optional)"
-              multiline
-              maxLength={400}
-              showCounter
-            />
-          </div>
-        ) : null}
-      </GeneralModal>
+      />
 
       <GeneralModal
         isOpen={isConfirmRemoveModalOpen && !!vendorToRemove}

@@ -1056,6 +1056,11 @@ export default function App() {
         navigate(path, { state: data, ...options });
         return;
       }
+      if (view === "material_request_detail") {
+        const path = data?.id ? `/material-request/${data.id}${data?.pov ? `?pov=${data.pov}` : ""}` : "/material-request";
+        navigate(path, { state: data, ...options });
+        return;
+      }
       if (view.startsWith("analytics_")) {
         const subView = view.replace("analytics_", "");
         if (["po_report", "vendor_liability_report", "ap_aging_report"].includes(subView)) {

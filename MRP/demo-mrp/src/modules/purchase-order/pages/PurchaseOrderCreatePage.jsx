@@ -152,6 +152,7 @@ import {
   LOCALIZABLE_ATTRIBUTES,
 } from "../../../utils/localization/localizationUtils.js";
 import { Button } from "../../../components/common/Button.jsx";
+import { ClampedDescriptionText } from "../../../components/common/ClampedDescriptionText.jsx";
 import { Checkbox } from "../../../components/common/Checkbox.jsx";
 import { DropdownSelect } from "../../../components/common/DropdownSelect.jsx";
 import { IconButton } from "../../../components/common/IconButton.jsx";
@@ -3262,17 +3263,7 @@ export const PurchaseOrderCreatePage = ({
                               </span>
                             </div>
                             <div style={{ minWidth: 0, padding: "12px 0", paddingRight: "24px" }}>
-                              <span
-                                style={{
-                                  display: "block",
-                                  fontSize: "var(--text-title-3)",
-                                  color: "var(--neutral-on-surface-secondary)",
-                                  wordBreak: "break-word",
-                                  whiteSpace: "pre-wrap"
-                                }}
-                              >
-                                {line.desc || "-"}
-                              </span>
+                              <ClampedDescriptionText text={line.desc || "-"} />
                             </div>
                             <span
                               style={{

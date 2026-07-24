@@ -146,6 +146,13 @@ export const MaterialRequestDetailPage = ({ onNavigate, initialData, requestId, 
     null;
 
   const [request, setRequest] = useState(resolved);
+  const handleBack = () => {
+    if (initialData?.returnTo) {
+      onNavigate(initialData.returnTo.view, initialData.returnTo.data);
+    } else {
+      onNavigate("list");
+    }
+  };
   const { notify: notifyMr, resolveTodo: resolveMrTodo, currentUser: mrUser } = useNotifications();
   // Point of view: "inventory" (default) prepares/transfers; "production" receives.
   // Opening from the Work Order request history (?pov=production) defaults to Production.
@@ -210,7 +217,7 @@ export const MaterialRequestDetailPage = ({ onNavigate, initialData, requestId, 
     return (
       <div style={{ padding: "40px", textAlign: "center" }}>
         <p style={{ color: "var(--neutral-on-surface-tertiary)" }}>Request not found.</p>
-        <Button onClick={() => onNavigate("list")}>Back to Material Request</Button>
+        <Button onClick={handleBack}>Back to Material Request</Button>
       </div>
     );
   }
@@ -761,7 +768,7 @@ export const MaterialRequestDetailPage = ({ onNavigate, initialData, requestId, 
           <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
             <div
               style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", marginLeft: "-4px" }}
-              onClick={() => onNavigate("list")}
+              onClick={handleBack}
             >
               <ChevronLeftIcon size={28} color="var(--neutral-on-surface-primary)" />
               <h1 style={{ margin: 0, fontSize: "var(--text-large-title)", fontWeight: "var(--font-weight-bold)" }}>
@@ -769,7 +776,7 @@ export const MaterialRequestDetailPage = ({ onNavigate, initialData, requestId, 
               </h1>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "var(--text-title-3)", marginLeft: "32px" }}>
-              <span style={{ color: "var(--neutral-on-surface-secondary)", cursor: "pointer" }} onClick={() => onNavigate("list")}>
+              <span style={{ color: "var(--neutral-on-surface-secondary)", cursor: "pointer" }} onClick={handleBack}>
                 Material Request
               </span>
               <span style={{ color: "var(--neutral-on-surface-tertiary)" }}>/</span>

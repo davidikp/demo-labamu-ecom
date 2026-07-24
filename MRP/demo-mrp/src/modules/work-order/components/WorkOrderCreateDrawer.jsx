@@ -239,6 +239,15 @@ export const WorkOrderCreateDrawer = ({ isOpen, onClose, onCreated }) => {
 
         {/* Drawer Body */}
         <div style={{ flex: 1, overflowY: "auto", padding: "24px", display: "flex", flexDirection: "column", gap: "24px" }}>
+          <div style={{ display: "flex", gap: "16px" }}>
+            <div style={{ flex: 1 }}>
+              <InputField label="Target Type" value="Material" disabled />
+            </div>
+            <div style={{ flex: 1 }}>
+              <InputField label="Fulfillment Type" value="Stock Build" disabled />
+            </div>
+          </div>
+
           <FormField label="Target Material" required error={errors.materialId}>
             <MaterialComboBox
               value={formData.materialId}

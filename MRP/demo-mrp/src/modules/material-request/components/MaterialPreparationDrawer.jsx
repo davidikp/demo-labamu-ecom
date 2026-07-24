@@ -7,6 +7,7 @@ import { GeneralModal } from "../../../components/modal/GeneralModal.jsx";
 import { DropdownSelect } from "../../../components/common/DropdownSelect.jsx";
 import { InputField } from "../../../components/molecules/InputField.jsx";
 import { ROW_STATUS_META, deriveRowStatusKey, totalAvailable } from "../mock/materialRequestMocks.js";
+import { Infobox } from "../../../ce-ui";
 
 const thStyle = (overrides = {}) => ({
   padding: "16px 12px",
@@ -236,6 +237,9 @@ export const MaterialPreparationDrawer = ({
   const hasInvalid = computed.some(
     (c) => (c.needsReason && !c.reason.trim()) || c.exceeds || c.hasBatchError || c.hasZeroQty
   );
+  // Nothing to prepare at all — every item is fully unavailable, so there's no
+  // valid allocation to review/confirm. The requester should cancel instead.
+  const hasNothingToPrepare = computed.length > 0 && computed.every((c) => c.total === 0);
 
   const handleReview = () => {
     if (hasInvalid) {
@@ -669,23 +673,38 @@ export const MaterialPreparationDrawer = ({
             borderTop: "1px solid var(--neutral-line-separator-1)",
             boxShadow: "var(--elevation-sticky)",
             display: "flex",
+            flexDirection: "column",
             gap: "12px",
           }}
         >
-          {readOnly ? (
-            <>
-              <Button variant="outlined" size="xl" onClick={() => setStep("edit")} style={{ flex: 1 }}>
-                Back
+          {!readOnly && hasNothingToPrepare ? (
+            <Infobox
+              variant="warning"
+              appearance="filled"
+              message="None of the requested materials have stock available to prepare. Please cancel this request instead."
+            />
+          ) : null}
+          <div style={{ display: "flex", gap: "12px" }}>
+            {readOnly ? (
+              <>
+                <Button variant="outlined" size="xl" onClick={() => setStep("edit")} style={{ flex: 1 }}>
+                  Back
+                </Button>
+                <Button size="xl" onClick={handleConfirm} style={{ flex: 1 }}>
+                  {confirmLabel}
+                </Button>
+              </>
+            ) : (
+              <Button
+                size="xl"
+                onClick={handleReview}
+                disabled={hasNothingToPrepare}
+                style={{ width: "100%" }}
+              >
+                Review Material Preparation
               </Button>
-              <Button size="xl" onClick={handleConfirm} style={{ flex: 1 }}>
-                {confirmLabel}
-              </Button>
-            </>
-          ) : (
-            <Button size="xl" onClick={handleReview} style={{ width: "100%" }}>
-              Review Material Preparation
-            </Button>
-          )}
+            )}
+          </div>
         </div>
       </div>
 

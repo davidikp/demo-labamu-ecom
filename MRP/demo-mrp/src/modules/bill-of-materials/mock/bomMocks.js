@@ -206,7 +206,7 @@ const INITIAL_BOMS = [
     linkedTo: null,
     createdAt: "2026-05-06",
     updatedAt: "2026-05-06",
-    materials: [material("mat-008", 4), material("mat-009", 2)],
+    materials: [material("mat-008", 4), material("mat-009", 2), material("mat-014", 1)],
     routing: [
       { step: 1, name: "Premium Table Making: Processing", operation: "-", hours: 6 },
       { step: 2, name: "Premium Table Making: Finishing", operation: "-", hours: 2 },

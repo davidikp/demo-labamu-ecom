@@ -217,5 +217,21 @@ export const MOCK_MATERIALS_DATA = [
     status: "Active",
     description: "Industrial rubber gasket, Model X specification. High-temperature and chemical resistant seal.",
     gallery: []
+  },
+  {
+    id: "mat-014",
+    image: null,
+    name: "Imported Italian Carrara Marble Countertop Slab, Premium Polished Finish",
+    sku: "MRB-ITL-CAR-01",
+    category: "Finishing Materials",
+    abcClassification: "A",
+    type: "Raw",
+    onHandStock: 40,
+    unit: "Pcs",
+    stockRisk: "Healthy",
+    averageCost: 2200000,
+    status: "Active",
+    description: "Premium imported Italian Carrara marble slab, polished finish, used for high-end furniture countertops.",
+    gallery: []
   }
 ];

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from "react";
 
 // Icons
 import { ImageAssetIcon, HelpCircle } from "../../../components/icons/Icons.jsx";
+import { ClampedDescriptionText } from "../../../components/common/ClampedDescriptionText.jsx";
 
 // Notifications
 import { useNotifications } from "../../../context/NotificationContext.jsx";
@@ -2419,18 +2420,7 @@ export const PurchaseOrderDetailPage = ({
                                 </div>
                               </div>
                               <div style={{ minWidth: 0, padding: "16px 0", paddingRight: "24px" }}>
-                                <span
-                                  style={{
-                                    display: "block",
-                                    fontSize: "var(--text-title-3)",
-                                    color: "var(--neutral-on-surface-secondary)",
-                                    lineHeight: "1.4",
-                                    wordBreak: "break-word",
-                                    whiteSpace: "pre-wrap"
-                                  }}
-                                >
-                                  {displayValue(line.desc)}
-                                </span>
+                                <ClampedDescriptionText text={displayValue(line.desc)} />
                               </div>
                               <div style={{ minWidth: 0, padding: "12px 0", paddingRight: "16px" }}>
                                 <span

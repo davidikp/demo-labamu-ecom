@@ -12,7 +12,7 @@ import { StockTransactionsTab } from "../components/StockTransactionsTab.jsx";
 import { MaterialCreateDrawer } from "../components/MaterialCreateDrawer.jsx";
 import { MaterialBomCard } from "../components/MaterialBomCard.jsx";
 import { getBatches, setBatches } from "../mock/batchesStore.js";
-import { MOCK_STOCK_TRANSACTIONS } from "../mock/transactionsMocks.js";
+import { getTransactions, setTransactions } from "../mock/transactionsStore.js";
 import { ChipTabBar } from "../../../components/molecules/ChipTabBar.jsx";
 
 export const MaterialDetailPage = ({ material, onNavigate, showSnackbar, t }) => {
@@ -27,7 +27,14 @@ export const MaterialDetailPage = ({ material, onNavigate, showSnackbar, t }) =>
       return next;
     });
   };
-  const [localTransactions, setLocalTransactions] = useState(MOCK_STOCK_TRANSACTIONS);
+  const [localTransactions, setLocalTransactionsState] = useState(() => getTransactions());
+  const setLocalTransactions = (updater) => {
+    setLocalTransactionsState((prev) => {
+      const next = typeof updater === "function" ? updater(prev) : updater;
+      setTransactions(next);
+      return next;
+    });
+  };
 
   const handleBack = () => {
     if (material?.returnTo) {
