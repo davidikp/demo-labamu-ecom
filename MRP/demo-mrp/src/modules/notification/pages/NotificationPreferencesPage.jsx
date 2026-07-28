@@ -8,6 +8,7 @@ import {
   DEFAULT_NOTIFICATION_SETTINGS,
   NOTIFICATION_GROUPS,
   PERSONAL_PREFERENCE_OPTIONS,
+  REMINDER_SUPPORTED_RULE_IDS,
   buildDefaultCompanySettings,
   buildDefaultPersonalPreferences,
   clonePersonalPreferences,
@@ -255,7 +256,7 @@ const NotificationPreferencesPage = ({
                 color: "var(--neutral-on-surface-secondary)",
               }}
             >
-              {row.unit.rule.trigger}
+              {row.unit.rule.description}
             </span>
           </div>
         );
@@ -280,6 +281,28 @@ const NotificationPreferencesPage = ({
       header: "Todo",
       width: 130,
       render: (value) => <div style={cellPadStyle}>{value || "No Todo"}</div>,
+    },
+    {
+      key: "unit",
+      columnId: "remind",
+      header: "Remind Before",
+      width: 150,
+      render: (_value, row) => {
+        const primaryId = row.unit.memberIds[0];
+        if (!REMINDER_SUPPORTED_RULE_IDS.has(primaryId)) {
+          return (
+            <div style={{ ...cellPadStyle, color: "var(--neutral-on-surface-secondary)" }}>
+              —
+            </div>
+          );
+        }
+        const days = company[primaryId]?.remindBefore;
+        return (
+          <div style={{ ...cellPadStyle, color: "var(--neutral-on-surface-secondary)" }}>
+            Company reminder: {days} {days === 1 ? "day" : "days"} before
+          </div>
+        );
+      },
     },
     {
       key: "unit",

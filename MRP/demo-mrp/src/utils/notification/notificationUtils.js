@@ -4,7 +4,8 @@ import { PERSONAL_PREFERENCE_OPTIONS } from "../../data/notification/notificatio
 // in the company settings, else "off". Required rules are always on.
 export const companyStatusOf = (rule, companySettings) => {
   if (rule.type === "required") return "on";
-  return companySettings?.[rule.id]?.enabled ? "on" : "off";
+  const s = companySettings?.[rule.id];
+  return s && (s.inApp || s.email) ? "on" : "off";
 };
 
 // Effective notification status for a user, combining the company default with

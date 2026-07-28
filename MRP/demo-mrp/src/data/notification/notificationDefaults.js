@@ -1,24 +1,26 @@
 // Company Notification Settings catalog.
 //
-// Rebuilt to match the "Notification System - Expansion & Preferences" PRD:
-// notifications are grouped BY MODULE (not by delivery channel), each rule is
-// Required or Configurable, and each carries two independent delivery channels
-// (In-app and Email) plus read-only metadata (trigger, recipient, permission
-// mapping, Todo eligibility). There is no cadence/"delivery mode" concept.
+// Matches "Notification System - Expansion & Preferences" (Remind Before
+// revision): notifications grouped BY MODULE, each Required or Configurable,
+// with independent In-app / Email channels and read-only metadata (description,
+// recipient, permission mapping, Todo eligibility). The six "approaching"
+// notifications additionally carry a company-configured Remind Before (days).
 //
-// Everything here is in-memory demo data — no backend. Bahasa Indonesia copy
-// follows house style: "Anda" (never kamu/-mu) and "Material" (never "Bahan
-// Baku"). CTA wording is standard: "See Detail" (EN) / "Lihat Detail" (ID).
+// In-memory demo data — no backend. Bahasa Indonesia copy follows house style:
+// "Anda" (never kamu/-mu) and "Material" (never "Bahan Baku"). CTA wording is
+// standard: "See Detail" (EN) / "Lihat Detail" (ID).
 
 const SEE_DETAIL = { en: "See Detail", id: "Lihat Detail" };
 
-// Notification type. Required notifications are workflow-driven, cannot be
-// disabled, and render locked controls. Configurable notifications can be
-// toggled per channel by an admin (company) or user (personal preference).
 export const NOTIFICATION_TYPES = {
   required: "required",
   configurable: "configurable",
 };
+
+// Reminder-timing (Remind Before) defaults and bounds.
+export const DEFAULT_REMIND_BEFORE_DAYS = 7;
+export const MIN_REMIND_BEFORE_DAYS = 1;
+export const MAX_REMIND_BEFORE_DAYS = 90;
 
 // The nine modules, in display order (PRD acceptance criterion #2).
 export const DEFAULT_NOTIFICATION_SETTINGS = [
@@ -26,11 +28,12 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
     id: "approval",
     title: "Approval",
     description:
-      "Workflow approval events across RFQ, Quote, Order, Purchase Order, Custom Product Request, and Invoice. Recipients resolve directly from the approval workflow.",
+      "Workflow approval events across RFQ, Quote, Order, Purchase Order, and Custom Product Request. Recipients resolve directly from the approval workflow.",
     items: [
       {
         id: "approval_submission",
         name: "Approval Submission",
+        description: "Notify the approver when a record is submitted for their approval.",
         trigger: "Submitted for approval",
         type: "required",
         recipient: "Configured approver",
@@ -53,6 +56,7 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
       {
         id: "approval_progress_update",
         name: "Approval Progress Update",
+        description: "Update the submitter as each approver approves the record.",
         trigger: "One approver approves",
         type: "required",
         recipient: "Latest submitter",
@@ -75,6 +79,7 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
       {
         id: "final_approval",
         name: "Final Approval",
+        description: "Confirm to the submitter when all required approvals are complete.",
         trigger: "All approvers approve",
         type: "required",
         recipient: "Latest submitter",
@@ -97,6 +102,7 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
       {
         id: "approval_rejected",
         name: "Approval Rejected",
+        description: "Alert the submitter when an approver rejects the record.",
         trigger: "Rejected",
         type: "required",
         recipient: "Latest submitter",
@@ -119,6 +125,7 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
       {
         id: "revision_requested",
         name: "Revision Requested",
+        description: "Alert the submitter when an approver requests changes.",
         trigger: "Needs revision",
         type: "required",
         recipient: "Latest submitter",
@@ -144,14 +151,15 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
     id: "inventory",
     title: "Inventory",
     description:
-      "Stock-level and batch-expiry alerts for materials. Sent to subscribed users with Inventory access.",
+      "Stock-level and batch-expiry alerts for materials. Sent to eligible users with Inventory access.",
     items: [
       {
         id: "material_running_low",
         name: "Material Running Low",
+        description: "Warn when a material's available stock reaches its minimum level.",
         trigger: "Stock reaches minimum",
         type: "configurable",
-        recipient: "Subscribed users with Inventory access",
+        recipient: "Eligible users with Inventory access",
         permission: "Materials",
         todo: null,
         groupId: null,
@@ -171,9 +179,10 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
       {
         id: "material_out_of_stock",
         name: "Material Out of Stock",
+        description: "Alert when a material's available stock reaches zero.",
         trigger: "Stock reaches zero",
         type: "configurable",
-        recipient: "Subscribed users with Inventory access",
+        recipient: "Eligible users with Inventory access",
         permission: "Materials",
         todo: null,
         groupId: null,
@@ -193,12 +202,14 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
       {
         id: "material_expiring_soon",
         name: "Material Expiring Soon",
-        trigger: "Batch approaching expiry",
+        description: "Remind ahead of a material batch's expiry date.",
+        trigger: "Configured number of days before the batch expiry date",
         type: "configurable",
-        recipient: "Subscribed users with Inventory access",
+        recipient: "Eligible users with Inventory access",
         permission: "Batches",
         todo: null,
         groupId: null,
+        remindBefore: DEFAULT_REMIND_BEFORE_DAYS,
         defaults: { inApp: true, email: false },
         content: {
           inApp: {
@@ -215,9 +226,10 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
       {
         id: "material_expired",
         name: "Material Expired",
+        description: "Notify when a material batch has expired.",
         trigger: "Batch expires",
         type: "configurable",
-        recipient: "Subscribed users with Inventory access",
+        recipient: "Eligible users with Inventory access",
         permission: "Batches",
         todo: null,
         groupId: null,
@@ -245,6 +257,7 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
       {
         id: "mr_transfer_started",
         name: "Transfer Started",
+        description: "Ask the requester to confirm receipt once the transfer starts.",
         trigger: "Transfer started",
         type: "required",
         recipient: "Requester / material receiver",
@@ -267,6 +280,7 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
       {
         id: "mr_receipt_confirmed",
         name: "Receipt Confirmed",
+        description: "Tell the preparer when the requester confirms receipt.",
         trigger: "Receipt confirmed",
         type: "required",
         recipient: "Material preparer",
@@ -289,6 +303,7 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
       {
         id: "mr_receipt_rejected",
         name: "Receipt Rejected",
+        description: "Ask the preparer to resolve a rejected material receipt.",
         trigger: "Receipt rejected",
         type: "required",
         recipient: "Material preparer",
@@ -311,6 +326,7 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
       {
         id: "mr_cancelled_by_preparer",
         name: "Material Request Cancelled by Preparer",
+        description: "Notify the requester when the preparer cancels the request.",
         trigger: "Cancelled by preparer",
         type: "required",
         recipient: "Requester / material receiver",
@@ -333,13 +349,14 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
       {
         id: "mr_new_material_request",
         name: "New Material Request",
+        description: "Announce a newly created material request to preparers.",
         trigger: "New Material Request is created",
         type: "configurable",
-        recipient: "Subscribed material preparers",
+        recipient: "Eligible material preparers with access",
         permission: "Material Preparation",
         todo: null,
         groupId: null,
-        // Off by default (PRD System Rules: New Material Request is Off by default).
+        // Off by default (PRD System Rules).
         defaults: { enabled: false, inApp: true, email: false },
         content: {
           inApp: {
@@ -359,26 +376,28 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
     id: "work_order",
     title: "Work Order",
     description:
-      "Work Order deadlines, status changes, new work orders, and outsourced Purchase Order activity. Sent to subscribed users with Work Order access.",
+      "Work Order deadlines, status changes, new work orders, and outsourced Purchase Order activity. Sent to eligible users with Work Order access.",
     items: [
       {
         id: "wo_deadline_approaching",
         name: "Deadline Approaching",
-        trigger: "7 days before deadline",
+        description: "Remind ahead of a work order's deadline.",
+        trigger: "Configured reminder date before deadline",
         type: "configurable",
-        recipient: "Subscribed users with Work Order access",
+        recipient: "Eligible users with Work Orders access",
         permission: "Work Orders",
         todo: null,
         groupId: null,
+        remindBefore: DEFAULT_REMIND_BEFORE_DAYS,
         defaults: { inApp: true, email: true },
         content: {
           inApp: {
-            en: "Work Order [Number] is due in 7 days\nThe deadline is [Deadline Date]. Current status: [Status].\nCTA: See Detail",
-            id: "Work Order [Number] jatuh tempo dalam 7 hari\nBatas waktunya adalah [Deadline Date]. Status saat ini: [Status].\nCTA: Lihat Detail",
+            en: "Work Order [Number] is approaching its deadline\nThe deadline is [Deadline Date]. Current status: [Status].\nCTA: See Detail",
+            id: "Work Order [Number] mendekati batas waktu\nBatas waktunya adalah [Deadline Date]. Status saat ini: [Status].\nCTA: Lihat Detail",
           },
           email: {
-            subject: "Work Order [Number] is due in 7 days",
-            body: "Work Order [Number] is due on [Deadline Date]. Current status: [Status].",
+            subject: "Work Order [Number] is approaching its deadline",
+            body: "Work Order [Number] is approaching its deadline on [Deadline Date]. Current status: [Status].",
             cta: SEE_DETAIL,
           },
         },
@@ -386,9 +405,10 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
       {
         id: "wo_deadline_overdue",
         name: "Deadline Overdue",
+        description: "Alert when a work order passes its deadline unresolved.",
         trigger: "Deadline passed",
         type: "configurable",
-        recipient: "Subscribed users with Work Order access",
+        recipient: "Eligible users with Work Orders access",
         permission: "Work Orders",
         todo: null,
         groupId: null,
@@ -408,9 +428,10 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
       {
         id: "wo_changed_to_completed",
         name: "Changed to Completed",
+        description: "Notify when a work order is marked completed.",
         trigger: "Status changes to Completed",
         type: "configurable",
-        recipient: "Subscribed users with Work Order access",
+        recipient: "Eligible users with Work Orders access",
         permission: "Work Orders",
         todo: null,
         groupId: null,
@@ -430,9 +451,10 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
       {
         id: "wo_changed_to_cancelled",
         name: "Changed to Cancelled",
+        description: "Notify when a work order is cancelled.",
         trigger: "Status changes to Cancelled",
         type: "configurable",
-        recipient: "Subscribed users with Work Order access",
+        recipient: "Eligible users with Work Orders access",
         permission: "Work Orders",
         todo: null,
         groupId: null,
@@ -452,13 +474,14 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
       {
         id: "wo_new_work_order",
         name: "New Work Order",
+        description: "Announce a newly created work order.",
         trigger: "Work Order is created with status Not Started",
         type: "configurable",
-        recipient: "Subscribed users with Work Order access",
+        recipient: "Eligible users with Work Orders access",
         permission: "Work Orders",
         todo: null,
         groupId: null,
-        // Off by default (PRD System Rules: New Work Order is Off by default).
+        // Off by default (PRD System Rules).
         defaults: { enabled: false, inApp: true, email: false },
         content: {
           inApp: {
@@ -475,10 +498,11 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
       {
         id: "wo_outsource_po_issued",
         name: "Outsource Purchase Order Issued",
+        description: "Notify when a purchase order for an outsourced work order is issued.",
         trigger:
           "A Purchase Order containing one or more outsourced Work Orders changes to Issued (one notification per linked Work Order)",
         type: "configurable",
-        recipient: "Eligible subscribed users with access to the related Work Order",
+        recipient: "Eligible users with access to the related Work Order",
         permission: "Work Orders",
         todo: null,
         groupId: null,
@@ -498,14 +522,14 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
       {
         id: "wo_outsource_po_receipt_recorded",
         name: "Outsource Purchase Order Receipt Recorded",
+        description: "Notify when a partial receipt is recorded for an outsourced work order.",
         trigger:
           "A receipt transaction is recorded for an outsourced Work Order that remains partially received",
         type: "configurable",
-        recipient: "Eligible subscribed users with access to the related Work Order",
+        recipient: "Eligible users with access to the related Work Order",
         permission: "Work Orders",
         todo: null,
-        // Grouped admin toggle: "Receipt Status Updates" controls both
-        // Receipt Recorded and Fully Received (PRD §6.9 grouped-setting note).
+        // Grouped admin toggle: "Receipt Status Updates" (PRD §6.9).
         groupId: "wo_receipt_status",
         defaults: { inApp: true, email: false },
         content: {
@@ -519,10 +543,11 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
       {
         id: "wo_outsource_po_fully_received",
         name: "Outsource Purchase Order Fully Received",
+        description: "Notify when an outsourced work order is fully received.",
         trigger:
           "A receipt transaction brings an outsourced Work Order to its total ordered quantity",
         type: "configurable",
-        recipient: "Eligible subscribed users with access to the related Work Order",
+        recipient: "Eligible users with access to the related Work Order",
         permission: "Work Orders",
         todo: null,
         groupId: "wo_receipt_status",
@@ -546,13 +571,15 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
       {
         id: "cpr_new_request",
         name: "New Request",
+        description: "Announce a newly created custom product request.",
         trigger: "New request",
         type: "configurable",
         recipient: "Subscribed users with CPR access",
         permission: "Custom Product Requests",
         todo: null,
         groupId: null,
-        defaults: { inApp: true, email: false },
+        // Off by default (PRD System Rules).
+        defaults: { enabled: false, inApp: true, email: false },
         content: {
           inApp: {
             en: "New Custom Product Request [Number]\nCreated by [Requester Name] for [Customer Name].\nCTA: See Detail",
@@ -576,20 +603,22 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
       {
         id: "quote_valid_until_reminder",
         name: "Quote Valid Until Reminder",
-        trigger: "7 days before valid-until date",
+        description: "Remind ahead of a quote's validity expiry.",
+        trigger: "Configured reminder date before valid-until date",
         type: "configurable",
         recipient: "Subscribed users with Quote access",
         permission: "Quotes",
         todo: null,
         groupId: null,
+        remindBefore: DEFAULT_REMIND_BEFORE_DAYS,
         defaults: { inApp: true, email: true },
         content: {
           inApp: {
-            en: "Quote [Number] will expire in 7 days\nThe quote is valid until [Valid Until Date].\nCTA: See Detail",
-            id: "Quote [Number] akan berakhir dalam 7 hari\nQuote berlaku sampai [Valid Until Date].\nCTA: Lihat Detail",
+            en: "Quote [Number] is approaching its validity date\nThe Quote is valid until [Valid Until Date].\nCTA: See Detail",
+            id: "Quote [Number] mendekati tanggal berakhir\nQuote berlaku sampai [Valid Until Date].\nCTA: Lihat Detail",
           },
           email: {
-            subject: "Quote [Number] will expire in 7 days",
+            subject: "Quote [Number] is approaching its validity date",
             body: "Quote [Number] is valid until [Valid Until Date]. Please review and follow up before it expires.",
             cta: SEE_DETAIL,
           },
@@ -598,6 +627,7 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
       {
         id: "quote_approved_by_customer",
         name: "Quote Approved by Customer",
+        description: "Notify when a customer approves a quote in the portal.",
         trigger: "Customer approves Quote through Customer Portal",
         type: "required",
         recipient: "Customer Portal sender",
@@ -620,6 +650,7 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
       {
         id: "quote_rejected_by_customer",
         name: "Quote Rejected by Customer",
+        description: "Notify when a customer rejects a quote in the portal.",
         trigger: "Customer rejects Quote through Customer Portal",
         type: "required",
         recipient: "Customer Portal sender",
@@ -642,6 +673,7 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
       {
         id: "quote_revision_requested_by_customer",
         name: "Quote Revision Requested by Customer",
+        description: "Notify when a customer requests quote changes in the portal.",
         trigger: "Customer requests changes through Customer Portal",
         type: "required",
         recipient: "Customer Portal sender",
@@ -667,26 +699,28 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
     id: "orders",
     title: "Orders",
     description:
-      "Order deadlines, status changes, new orders, and linked-invoice payment. Sent to subscribed users with Order access.",
+      "Order deadlines, status changes, new orders, and linked-invoice payment. Sent to eligible users with Order access.",
     items: [
       {
         id: "order_deadline_approaching",
         name: "Order Deadline Approaching",
-        trigger: "7 days before deadline",
+        description: "Remind ahead of an order's deadline.",
+        trigger: "Configured reminder date before deadline",
         type: "configurable",
-        recipient: "Subscribed users with Order access",
+        recipient: "Eligible users with Orders access",
         permission: "Orders",
         todo: null,
         groupId: null,
+        remindBefore: DEFAULT_REMIND_BEFORE_DAYS,
         defaults: { inApp: true, email: true },
         content: {
           inApp: {
-            en: "Order [Number] is due in 7 days\nThe deadline is [Deadline Date]. Current status: [Status].\nCTA: See Detail",
-            id: "Order [Number] jatuh tempo dalam 7 hari\nBatas waktunya adalah [Deadline Date]. Status saat ini: [Status].\nCTA: Lihat Detail",
+            en: "Order [Number] is approaching its deadline\nThe deadline is [Deadline Date]. Current status: [Status].\nCTA: See Detail",
+            id: "Order [Number] mendekati batas waktu\nBatas waktunya adalah [Deadline Date]. Status saat ini: [Status].\nCTA: Lihat Detail",
           },
           email: {
-            subject: "Order [Number] is due in 7 days",
-            body: "Order [Number] is due on [Deadline Date]. Current status: [Status].",
+            subject: "Order [Number] is approaching its deadline",
+            body: "Order [Number] is approaching its deadline on [Deadline Date]. Current status: [Status].",
             cta: SEE_DETAIL,
           },
         },
@@ -694,9 +728,10 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
       {
         id: "order_deadline_overdue",
         name: "Order Deadline Overdue",
+        description: "Alert when an order passes its deadline unresolved.",
         trigger: "Deadline passed",
         type: "configurable",
-        recipient: "Subscribed users with Order access",
+        recipient: "Eligible users with Orders access",
         permission: "Orders",
         todo: null,
         groupId: null,
@@ -716,9 +751,10 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
       {
         id: "order_changed_to_completed",
         name: "Changed to Completed",
+        description: "Notify when an order is marked completed.",
         trigger: "Status changes to Completed",
         type: "configurable",
-        recipient: "Subscribed users with Order access",
+        recipient: "Eligible users with Orders access",
         permission: "Orders",
         todo: null,
         groupId: null,
@@ -738,9 +774,10 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
       {
         id: "order_changed_to_cancelled",
         name: "Changed to Cancelled",
+        description: "Notify when an order is cancelled.",
         trigger: "Status changes to Cancelled",
         type: "configurable",
-        recipient: "Subscribed users with Order access",
+        recipient: "Eligible users with Orders access",
         permission: "Orders",
         todo: null,
         groupId: null,
@@ -760,13 +797,14 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
       {
         id: "order_new_order",
         name: "New Order",
+        description: "Announce a newly created order.",
         trigger: "Order is created with status Not Started",
         type: "configurable",
-        recipient: "Subscribed users with Order access",
+        recipient: "Eligible users with Orders access",
         permission: "Orders",
         todo: null,
         groupId: null,
-        // Off by default (PRD System Rules: New Order is Off by default).
+        // Off by default (PRD System Rules).
         defaults: { enabled: false, inApp: true, email: false },
         content: {
           inApp: {
@@ -783,9 +821,10 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
       {
         id: "order_invoice_paid",
         name: "Order Invoice Paid",
+        description: "Notify when an invoice linked to an order is fully paid.",
         trigger: "An Invoice linked to an Order changes to Paid",
         type: "configurable",
-        recipient: "Eligible subscribed users with access to the related Order",
+        recipient: "Eligible users with access to the related Order",
         permission: "Orders",
         todo: null,
         groupId: null,
@@ -813,21 +852,23 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
       {
         id: "invoice_due_date_approaching",
         name: "Due Date Approaching",
-        trigger: "7 days before due date",
+        description: "Remind ahead of an invoice's due date.",
+        trigger: "Configured reminder date before due date",
         type: "configurable",
         recipient: "Subscribed users with Invoice access",
         permission: "Invoices",
         todo: null,
         groupId: null,
+        remindBefore: DEFAULT_REMIND_BEFORE_DAYS,
         defaults: { inApp: true, email: true },
         content: {
           inApp: {
-            en: "Invoice [Number] is due in 7 days\nThe due date is [Due Date]. Outstanding amount: [Amount] [Currency].\nCTA: See Detail",
-            id: "Invoice [Number] jatuh tempo dalam 7 hari\nTanggal jatuh tempo adalah [Due Date]. Sisa tagihan: [Amount] [Currency].\nCTA: Lihat Detail",
+            en: "Invoice [Number] is approaching its due date\nThe due date is [Due Date]. Outstanding amount: [Amount] [Currency].\nCTA: See Detail",
+            id: "Invoice [Number] mendekati tanggal jatuh tempo\nTanggal jatuh tempo adalah [Due Date]. Sisa tagihan: [Amount] [Currency].\nCTA: Lihat Detail",
           },
           email: {
-            subject: "Invoice [Number] is due in 7 days",
-            body: "Invoice [Number] is due on [Due Date]. Outstanding amount: [Amount] [Currency].",
+            subject: "Invoice [Number] is approaching its due date",
+            body: "Invoice [Number] is approaching its due date on [Due Date]. Outstanding amount: [Amount] [Currency].",
             cta: SEE_DETAIL,
           },
         },
@@ -835,6 +876,7 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
       {
         id: "invoice_overdue",
         name: "Invoice Overdue",
+        description: "Alert when an invoice passes its due date unpaid.",
         trigger: "Due date passed and unpaid",
         type: "configurable",
         recipient: "Subscribed users with Invoice access",
@@ -857,6 +899,7 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
       {
         id: "invoice_approved_by_customer",
         name: "Invoice Approved by Customer",
+        description: "Notify when a customer approves an invoice in the portal.",
         trigger: "Customer approves Invoice through Customer Portal",
         type: "required",
         recipient: "Invoice owner or Customer Portal sender",
@@ -879,6 +922,7 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
       {
         id: "invoice_rejected_by_customer",
         name: "Invoice Rejected by Customer",
+        description: "Notify when a customer rejects an invoice in the portal.",
         trigger: "Customer rejects Invoice through Customer Portal",
         type: "required",
         recipient: "Invoice owner or Customer Portal sender",
@@ -901,6 +945,7 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
       {
         id: "invoice_revision_requested_by_customer",
         name: "Invoice Revision Requested by Customer",
+        description: "Notify when a customer requests invoice changes in the portal.",
         trigger: "Customer requests changes through Customer Portal",
         type: "required",
         recipient: "Invoice owner or Customer Portal sender",
@@ -923,6 +968,7 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
       {
         id: "invoice_payment_proof_submitted",
         name: "Payment Proof Submitted",
+        description: "Ask the owner to review customer-submitted payment proof.",
         trigger: "Payment proof submitted through portal",
         type: "required",
         recipient: "Invoice owner or portal sender",
@@ -945,6 +991,7 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
       {
         id: "invoice_payment_proof_rejected",
         name: "Payment Proof Rejected",
+        description: "Notify the customer when their payment proof is rejected.",
         trigger: "Internal reviewer rejects customer payment proof",
         type: "required",
         recipient: "Customer",
@@ -975,6 +1022,7 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
       {
         id: "po_payment_overdue",
         name: "Payment Overdue",
+        description: "Alert when a purchase order payment passes its due date.",
         trigger: "Payment due date passed",
         type: "configurable",
         recipient: "Subscribed users with Purchase Order access",
@@ -997,21 +1045,23 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
       {
         id: "po_expected_end_date_approaching",
         name: "Expected End Date Approaching",
-        trigger: "7 days before expected end date",
+        description: "Remind ahead of a purchase order's expected end date.",
+        trigger: "Configured reminder date before expected end date",
         type: "configurable",
         recipient: "Subscribed users with Purchase Order access",
         permission: "Purchase Orders",
         todo: null,
         groupId: null,
+        remindBefore: DEFAULT_REMIND_BEFORE_DAYS,
         defaults: { inApp: true, email: false },
         content: {
           inApp: {
-            en: "Purchase Order [Number] is expected to end in 7 days\nThe expected end date is [Expected End Date]. Current status: [Status].\nCTA: See Detail",
-            id: "Purchase Order [Number] diperkirakan selesai dalam 7 hari\nTanggal selesai yang diharapkan adalah [Expected End Date]. Status saat ini: [Status].\nCTA: Lihat Detail",
+            en: "Purchase Order [Number] is approaching its expected end date\nThe expected end date is [Expected End Date]. Current status: [Status].\nCTA: See Detail",
+            id: "Purchase Order [Number] mendekati tanggal selesai yang diperkirakan\nTanggal selesai yang diharapkan adalah [Expected End Date]. Status saat ini: [Status].\nCTA: Lihat Detail",
           },
           email: {
-            subject: "Purchase Order [Number] is expected to end in 7 days",
-            body: "The expected end date is [Expected End Date]. Current status: [Status].",
+            subject: "Purchase Order [Number] is approaching its expected end date",
+            body: "Purchase Order [Number] is approaching its expected end date on [Expected End Date]. Current status: [Status].",
             cta: SEE_DETAIL,
           },
         },
@@ -1019,6 +1069,7 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
       {
         id: "po_expected_end_date_overdue",
         name: "Expected End Date Overdue",
+        description: "Alert when a purchase order passes its expected end date.",
         trigger: "Expected end date passed",
         type: "configurable",
         recipient: "Subscribed users with Purchase Order access",
@@ -1043,7 +1094,6 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
 ];
 
 // Grouped admin toggles: one control writes to several rule ids at once.
-// (PRD §6.9 "Receipt Status Updates".)
 export const NOTIFICATION_GROUPS = {
   wo_receipt_status: {
     id: "wo_receipt_status",
@@ -1055,30 +1105,39 @@ export const NOTIFICATION_GROUPS = {
   },
 };
 
-// Flat list of every rule with its owning module id attached — convenient for
-// building the per-rule settings state and for the personal-preference engine.
+// Rules that support a company-configured "approaching" reminder (Remind Before).
+export const REMINDER_SUPPORTED_RULE_IDS = new Set([
+  "material_expiring_soon",
+  "wo_deadline_approaching",
+  "quote_valid_until_reminder",
+  "order_deadline_approaching",
+  "invoice_due_date_approaching",
+  "po_expected_end_date_approaching",
+]);
+
+// Flat list of every rule with its owning module id attached.
 export const ALL_NOTIFICATION_RULES = DEFAULT_NOTIFICATION_SETTINGS.flatMap(
   (section) => section.items.map((item) => ({ ...item, moduleId: section.id }))
 );
 
 // Build the default company-settings state: per rule id →
-// { enabled, inApp, email }. `enabled` is the notification's Default status;
-// inApp/email are the delivery channels. Required rules are always fully on
-// and cannot be changed. `enabled` defaults to true unless a rule opts out.
+// { inApp, email, [remindBefore] }. A notification's on/off status is derived
+// from its channels — it is "on" when at least one channel is enabled, and at
+// least one channel must always stay on. remindBefore (days) is present only
+// for reminder-supported rules. Required rules are always fully on.
 export const buildDefaultCompanySettings = () =>
   ALL_NOTIFICATION_RULES.reduce((acc, rule) => {
-    acc[rule.id] =
+    const base =
       rule.type === "required"
-        ? { enabled: true, inApp: true, email: true }
-        : {
-            enabled: rule.defaults.enabled !== false,
-            inApp: rule.defaults.inApp,
-            email: rule.defaults.email,
-          };
+        ? { inApp: true, email: true }
+        : { inApp: rule.defaults.inApp, email: rule.defaults.email };
+    if (REMINDER_SUPPORTED_RULE_IDS.has(rule.id)) {
+      base.remindBefore = rule.remindBefore ?? DEFAULT_REMIND_BEFORE_DAYS;
+    }
+    acc[rule.id] = base;
     return acc;
   }, {});
 
-// Deep clone a company-settings state object so edits never mutate the source.
 export const cloneCompanySettings = (settings) =>
   Object.entries(settings || buildDefaultCompanySettings()).reduce(
     (acc, [id, channels]) => {
@@ -1095,12 +1154,10 @@ export const PERSONAL_PREFERENCE_OPTIONS = {
   off: "off",
 };
 
-// Build the default personal-preference state: every rule → "use_company_default".
 export const buildDefaultPersonalPreferences = () =>
   ALL_NOTIFICATION_RULES.reduce((acc, rule) => {
     acc[rule.id] = {
       preference: PERSONAL_PREFERENCE_OPTIONS.useCompanyDefault,
-      // Channel choices apply when the effective status resolves to On.
       inApp: rule.defaults.inApp,
       email: rule.defaults.email,
     };

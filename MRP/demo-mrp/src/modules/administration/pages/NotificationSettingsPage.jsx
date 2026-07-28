@@ -2,16 +2,24 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "../../../components/common/Button.jsx";
 import { StatusBadge } from "../../../components/common/StatusBadge.jsx";
 import { ToggleSwitch } from "../../../components/common/ToggleSwitch.jsx";
+import { TableSearchField } from "../../../components/table/TableSearchField.jsx";
+import { GeneralModal } from "../../../components/modal/GeneralModal.jsx";
 import { ChipTabs, Table } from "../../../ce-ui";
+import {
+  clearNavigationGuard,
+  setNavigationGuard,
+} from "../../../utils/navigationGuard.js";
 import {
   ALL_NOTIFICATION_RULES,
   DEFAULT_NOTIFICATION_SETTINGS,
+  MAX_REMIND_BEFORE_DAYS,
+  MIN_REMIND_BEFORE_DAYS,
   NOTIFICATION_GROUPS,
+  REMINDER_SUPPORTED_RULE_IDS,
   buildDefaultCompanySettings,
   cloneCompanySettings,
 } from "../../../data/notification/notificationDefaults.js";
 
-// Vertical breathing room for table cells (ce-ui rows have no vertical padding).
 const cellPadStyle = { padding: "12px 0", lineHeight: "20px" };
 const toggleCellStyle = {
   padding: "12px 0",
@@ -19,6 +27,15 @@ const toggleCellStyle = {
   justifyContent: "center",
   alignItems: "center",
 };
+
+// Darker grey for a locked (disabled + on) toggle so it reads as "on but
+// locked", clearly distinct from a disabled-off toggle.
+const LOCKED_ON_TOGGLE_CLASS = "!bg-[#9AA0A6]";
+
+const remindBeforeInvalid = (value) =>
+  !Number.isInteger(value) ||
+  value < MIN_REMIND_BEFORE_DAYS ||
+  value > MAX_REMIND_BEFORE_DAYS;
 
 // Collapse grouped admin toggles (e.g. "Receipt Status Updates") into one row.
 const buildDisplayUnits = (items) => {
@@ -40,7 +57,7 @@ const buildDisplayUnits = (items) => {
       rule: {
         id: rule.groupId,
         name: group?.label || rule.name,
-        trigger: "Outsource receipt recorded / fully received",
+        description: "Outsourced receipt recorded and fully received updates.",
         type: "configurable",
         recipient: rule.recipient,
         permission: rule.permission,
@@ -59,6 +76,7 @@ const NotificationSettingsPage = ({
   const [activeModule, setActiveModule] = useState(
     DEFAULT_NOTIFICATION_SETTINGS[0]?.id
   );
+  const [searchQuery, setSearchQuery] = useState("");
   const [settings, setSettings] = useState(() =>
     cloneCompanySettings(notificationSettings || buildDefaultCompanySettings())
   );
@@ -66,7 +84,10 @@ const NotificationSettingsPage = ({
     cloneCompanySettings(notificationSettings || buildDefaultCompanySettings())
   );
   const [toastMessage, setToastMessage] = useState("");
-  const [validationError, setValidationError] = useState("");
+  // Which toggle tripped the "at least one channel" guard: { id, channel } | null.
+  const [channelError, setChannelError] = useState(null);
+  // Pending navigation awaiting discard confirmation: null | {type:"cancel"}
+  const [pendingAction, setPendingAction] = useState(null);
   const toastTimerRef = useRef(null);
 
   useEffect(() => {
@@ -90,8 +111,29 @@ const NotificationSettingsPage = ({
     toastTimerRef.current = window.setTimeout(() => setToastMessage(""), 3200);
   };
 
+  const isDirty = useMemo(
+    () => JSON.stringify(settings) !== JSON.stringify(savedSnapshot),
+    [settings, savedSnapshot]
+  );
+
+  // Register a navigation guard so leaving Notification Settings with unsaved
+  // changes prompts to discard. Switching chip tabs stays internal (not routed
+  // through the guard), so drafts persist across modules.
+  const isDirtyRef = useRef(false);
+  useEffect(() => {
+    isDirtyRef.current = isDirty;
+  }, [isDirty]);
+  useEffect(() => {
+    const guard = (proceed) => {
+      if (!isDirtyRef.current) return true;
+      setPendingAction({ type: "leave", proceed });
+      return false;
+    };
+    setNavigationGuard(guard);
+    return () => clearNavigationGuard(guard);
+  }, []);
+
   const patchRules = (ids, patch) => {
-    setValidationError("");
     setSettings((prev) => {
       const next = { ...prev };
       ids.forEach((id) => {
@@ -101,30 +143,74 @@ const NotificationSettingsPage = ({
     });
   };
 
-  const handleSave = () => {
-    const offenders = ALL_NOTIFICATION_RULES.filter(
-      (rule) => rule.type !== "required"
-    ).filter((rule) => {
-      const s = settings[rule.id];
-      return s?.enabled && !s.inApp && !s.email;
-    });
-    if (offenders.length > 0) {
-      setValidationError(
-        `Enable at least one delivery channel (In-app or Email) for: ${offenders
-          .map((r) => r.name)
-          .join(", ")}.`
-      );
-      return;
+  // Channel change with the "at least one channel" guard (AC #9), shown inline
+  // in the offending row.
+  const setChannel = (unit, channel, nextValue) => {
+    const primaryId = unit.memberIds[0];
+    const state = settings[primaryId] || {};
+    if (!nextValue) {
+      const other = channel === "inApp" ? "email" : "inApp";
+      if (!state[other]) {
+        setChannelError({ id: primaryId, channel });
+        return;
+      }
     }
+    if (channelError?.id === primaryId) setChannelError(null);
+    patchRules(unit.memberIds, { [channel]: nextValue });
+  };
+
+  const setRemind = (unit, rawValue) => {
+    patchRules(unit.memberIds, {
+      remindBefore: rawValue === "" ? "" : Number(rawValue),
+    });
+  };
+
+  const handleSave = () => {
+    // Both-channels-off is blocked at toggle time; reminder validity is shown
+    // inline per input. Block the save if anything is still invalid.
+    const hasChannelOffender = ALL_NOTIFICATION_RULES.filter(
+      (rule) => rule.type !== "required"
+    ).some((rule) => {
+      const s = settings[rule.id];
+      return !s?.inApp && !s?.email;
+    });
+    const hasReminderOffender = ALL_NOTIFICATION_RULES.filter((rule) =>
+      REMINDER_SUPPORTED_RULE_IDS.has(rule.id)
+    ).some((rule) => remindBeforeInvalid(settings[rule.id]?.remindBefore));
+    if (hasChannelOffender || hasReminderOffender) return;
+
     const saved = cloneCompanySettings(settings);
     setSavedSnapshot(saved);
     onSaveNotificationSettings?.(saved);
+    setChannelError(null);
     showToast("Notification settings saved");
   };
 
-  const handleCancel = () => {
+  // Switching module tabs keeps the draft — no confirmation (drafts persist
+  // across modules within Notification Settings).
+  const requestModule = (id) => {
+    if (id === activeModule) return;
+    setActiveModule(id);
+    setSearchQuery("");
+    setChannelError(null);
+  };
+
+  const requestCancel = () => {
+    if (!isDirty) return;
+    setPendingAction({ type: "cancel" });
+  };
+
+  const confirmDiscard = () => {
+    const action = pendingAction;
     setSettings(cloneCompanySettings(savedSnapshot));
-    setValidationError("");
+    setChannelError(null);
+    setPendingAction(null);
+    if (action?.type === "leave") {
+      // Allow the deferred navigation to proceed (component will unmount).
+      clearNavigationGuard();
+      action.proceed?.();
+      return;
+    }
     showToast("Changes discarded");
   };
 
@@ -143,74 +229,117 @@ const NotificationSettingsPage = ({
 
   const renderToggle = (unit, channel) => {
     const primaryId = unit.memberIds[0];
-    const state = settings[primaryId] || {
-      enabled: false,
-      inApp: false,
-      email: false,
-    };
+    const state = settings[primaryId] || { inApp: false, email: false };
     const isRequired = unit.kind === "rule" && unit.rule.type === "required";
-
-    if (channel === "enabled") {
+    if (isRequired) {
       return (
-        <ToggleSwitch
-          checked={isRequired ? true : state.enabled}
-          disabled={isRequired}
-          onChange={(next) => patchRules(unit.memberIds, { enabled: next })}
-        />
+        <ToggleSwitch checked disabled className={LOCKED_ON_TOGGLE_CLASS} onChange={() => {}} />
       );
     }
-    const channelsDisabled = isRequired || !state.enabled;
+    const showError =
+      channelError?.id === primaryId && channelError?.channel === channel;
     return (
-      <ToggleSwitch
-        checked={isRequired ? true : state[channel]}
-        disabled={channelsDisabled}
-        onChange={(next) => patchRules(unit.memberIds, { [channel]: next })}
-      />
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "4px" }}>
+        <ToggleSwitch
+          checked={state[channel]}
+          onChange={(next) => setChannel(unit, channel, next)}
+        />
+        {showError ? (
+          <span
+            style={{
+              fontSize: "11px",
+              lineHeight: "14px",
+              color: "var(--status-red-primary)",
+              textAlign: "center",
+            }}
+          >
+            At least one channel must stay on.
+          </span>
+        ) : null}
+      </div>
     );
   };
 
-  const rows = useMemo(
-    () =>
-      buildDisplayUnits(activeSection.items).map((unit) => ({
-        id: unit.key,
-        unit,
-        name: unit.rule.name,
-        recipient: unit.rule.recipient,
-        permission: unit.rule.permission,
-        todo: unit.rule.todo,
-      })),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [activeSection]
-  );
+  const renderRemindBefore = (unit) => {
+    const primaryId = unit.memberIds[0];
+    if (!REMINDER_SUPPORTED_RULE_IDS.has(primaryId)) {
+      return <span style={{ color: "var(--neutral-on-surface-secondary)" }}>—</span>;
+    }
+    const value = settings[primaryId]?.remindBefore;
+    const invalid = remindBeforeInvalid(value);
+    return (
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "4px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+          <input
+            type="number"
+            min={MIN_REMIND_BEFORE_DAYS}
+            max={MAX_REMIND_BEFORE_DAYS}
+            step={1}
+            value={value ?? ""}
+            onChange={(event) => setRemind(unit, event.target.value)}
+            style={{
+              width: "56px",
+              height: "34px",
+              padding: "0 8px",
+              borderRadius: "8px",
+              border: `1px solid ${
+                invalid ? "var(--status-red-primary)" : "var(--neutral-line-separator-1)"
+              }`,
+              fontSize: "var(--text-title-3)",
+              textAlign: "center",
+              boxSizing: "border-box",
+            }}
+          />
+          <span style={{ fontSize: "12px", color: "var(--neutral-on-surface-secondary)" }}>
+            days
+          </span>
+        </div>
+        {invalid ? (
+          <span
+            style={{
+              fontSize: "11px",
+              lineHeight: "14px",
+              color: "var(--status-red-primary)",
+              textAlign: "center",
+            }}
+          >
+            Remind Day must be between {MIN_REMIND_BEFORE_DAYS}-{MAX_REMIND_BEFORE_DAYS} days
+          </span>
+        ) : null}
+      </div>
+    );
+  };
+
+  const filteredUnits = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    return buildDisplayUnits(activeSection.items).filter((unit) => {
+      if (!q) return true;
+      const r = unit.rule;
+      return `${r.name} ${r.description} ${r.permission || "No permission mapping"}`
+        .toLowerCase()
+        .includes(q);
+    });
+  }, [activeSection, searchQuery]);
+
+  const rows = filteredUnits.map((unit) => ({
+    id: unit.key,
+    unit,
+    name: unit.rule.name,
+    permission: unit.rule.permission,
+  }));
 
   const columns = [
     {
       key: "name",
       header: "Notification",
-      width: 300,
+      width: 320,
       render: (_value, row) => {
         const isRequired =
           row.unit.kind === "rule" && row.unit.rule.type === "required";
         return (
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: "6px",
-              padding: "12px 0",
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-                flexWrap: "wrap",
-              }}
-            >
-              <span style={{ fontWeight: "var(--font-weight-bold)" }}>
-                {row.name}
-              </span>
+          <div style={{ display: "flex", flexDirection: "column", gap: "6px", padding: "12px 0" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+              <span style={{ fontWeight: "var(--font-weight-bold)" }}>{row.name}</span>
               <StatusBadge variant={isRequired ? "blue-light" : "grey-light"}>
                 {isRequired ? "Required" : "Configurable"}
               </StatusBadge>
@@ -222,40 +351,28 @@ const NotificationSettingsPage = ({
                 color: "var(--neutral-on-surface-secondary)",
               }}
             >
-              {row.unit.rule.trigger}
+              {row.unit.rule.description}
             </span>
           </div>
         );
       },
     },
     {
-      key: "recipient",
-      header: "Recipient",
-      width: 240,
-      render: (value) => <div style={cellPadStyle}>{value}</div>,
-    },
-    {
       key: "permission",
       header: "Permission",
-      width: 190,
+      width: 220,
       render: (value) => (
         <div style={cellPadStyle}>{value || "No permission mapping"}</div>
       ),
     },
     {
-      key: "todo",
-      header: "Todo",
-      width: 160,
-      render: (value) => <div style={cellPadStyle}>{value || "No Todo"}</div>,
-    },
-    {
       key: "unit",
-      columnId: "status",
-      header: "Status",
+      columnId: "remind",
+      header: "Remind Before",
       align: "center",
-      width: 90,
+      width: 170,
       render: (_value, row) => (
-        <div style={toggleCellStyle}>{renderToggle(row.unit, "enabled")}</div>
+        <div style={toggleCellStyle}>{renderRemindBefore(row.unit)}</div>
       ),
     },
     {
@@ -263,7 +380,7 @@ const NotificationSettingsPage = ({
       columnId: "inapp",
       header: "In-app",
       align: "center",
-      width: 90,
+      width: 100,
       render: (_value, row) => (
         <div style={toggleCellStyle}>{renderToggle(row.unit, "inApp")}</div>
       ),
@@ -273,7 +390,7 @@ const NotificationSettingsPage = ({
       columnId: "email",
       header: "Email",
       align: "center",
-      width: 90,
+      width: 100,
       render: (_value, row) => (
         <div style={toggleCellStyle}>{renderToggle(row.unit, "email")}</div>
       ),
@@ -339,29 +456,14 @@ const NotificationSettingsPage = ({
       <ChipTabs
         tabs={chipTabs}
         activeTab={activeModule}
-        onChange={setActiveModule}
+        onChange={requestModule}
         className="flex-wrap"
       />
 
-      {validationError ? (
-        <div
-          style={{
-            padding: "12px 16px",
-            borderRadius: "12px",
-            border: "1px solid var(--status-red-primary)",
-            background: "var(--status-red-container, #FEF2F2)",
-            color: "var(--status-red-primary)",
-            fontSize: "var(--text-title-3)",
-          }}
-        >
-          {validationError}
-        </div>
-      ) : null}
-
       {/* Content card — no accent bar, no divider between header and table.
-          The scoped rule aligns the ce-ui table cells (default px-4) to the
-          20px header padding. */}
-      <style>{`.notif-card table th, .notif-card table td { padding-left: 20px; padding-right: 20px; }`}</style>
+          Scoped rule aligns the ce-ui table cells (default px-4) to 20px. */}
+      <style>{`.notif-card table th, .notif-card table td { padding-left: 20px; padding-right: 20px; }
+        .notif-card table td { vertical-align: top; }`}</style>
       <div
         className="notif-card"
         style={{
@@ -375,29 +477,33 @@ const NotificationSettingsPage = ({
       >
         <div
           style={{
-            padding: "20px 20px 4px",
+            padding: "20px 20px 12px",
             display: "flex",
-            flexDirection: "column",
-            gap: "6px",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+            gap: "16px",
           }}
         >
-          <span
-            style={{
-              fontSize: "16px",
-              fontWeight: "var(--font-weight-bold)",
-            }}
-          >
-            {activeSection.title}
-          </span>
-          <span
-            style={{
-              fontSize: "var(--text-title-3)",
-              lineHeight: "20px",
-              color: "var(--neutral-on-surface-secondary)",
-            }}
-          >
-            {activeSection.description}
-          </span>
+          <div style={{ display: "flex", flexDirection: "column", gap: "6px", minWidth: 0 }}>
+            <span style={{ fontSize: "16px", fontWeight: "var(--font-weight-bold)" }}>
+              {activeSection.title}
+            </span>
+            <span
+              style={{
+                fontSize: "var(--text-title-3)",
+                lineHeight: "20px",
+                color: "var(--neutral-on-surface-secondary)",
+              }}
+            >
+              {activeSection.description}
+            </span>
+          </div>
+          <TableSearchField
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+            placeholder="Search notification, description, or permission"
+            width="360px"
+          />
         </div>
         <Table
           columns={columns}
@@ -427,13 +533,40 @@ const NotificationSettingsPage = ({
           zIndex: 5,
         }}
       >
-        <Button variant="outlined" size="large" onClick={handleCancel}>
+        <Button variant="outlined" size="large" onClick={requestCancel}>
           Cancel
         </Button>
         <Button variant="filled" size="large" onClick={handleSave}>
           Save Changes
         </Button>
       </div>
+
+      {/* Discard-changes confirmation modal (matches Purchase Order create). */}
+      <GeneralModal
+        isOpen={pendingAction !== null}
+        onClose={() => setPendingAction(null)}
+        title="Discard changes?"
+        footer={
+          <>
+            <Button
+              variant="filled"
+              size="large"
+              style={{ width: "100%" }}
+              onClick={confirmDiscard}
+            >
+              Yes, Discard
+            </Button>
+            <Button
+              variant="outlined"
+              size="large"
+              style={{ width: "100%" }}
+              onClick={() => setPendingAction(null)}
+            >
+              Keep Editing
+            </Button>
+          </>
+        }
+      />
     </div>
   );
 };

@@ -47,6 +47,7 @@ import {
   buildDefaultCompanySettings,
   buildDefaultPersonalPreferences,
 } from "./data/notification/notificationDefaults.js";
+import { requestNavigation } from "./utils/navigationGuard.js";
 import {
   applyDomLocalization,
   getTranslation,
@@ -1154,20 +1155,24 @@ export default function App() {
   };
 
   const handleModuleChange = (moduleId) => {
-    const route = MODULE_TO_ROUTE[moduleId];
-    if (route) {
-      navigate(`/${route}`);
-    } else if (moduleId.startsWith("analytics_")) {
-      const subRoute = moduleId.replace("analytics_", "").replace(/_/g, '-');
-      if (["po-report", "vendor-liability-report", "ap-aging-report"].includes(subRoute)) {
-        navigate(`/procurement-ap-report/${subRoute}`);
+    // Route through the navigation guard so a page with unsaved changes (e.g.
+    // Notification Settings) can prompt before the module actually changes.
+    requestNavigation(() => {
+      const route = MODULE_TO_ROUTE[moduleId];
+      if (route) {
+        navigate(`/${route}`);
+      } else if (moduleId.startsWith("analytics_")) {
+        const subRoute = moduleId.replace("analytics_", "").replace(/_/g, '-');
+        if (["po-report", "vendor-liability-report", "ap-aging-report"].includes(subRoute)) {
+          navigate(`/procurement-ap-report/${subRoute}`);
+        } else {
+          navigate(`/${subRoute}`);
+        }
       } else {
-        navigate(`/${subRoute}`);
+        // Direct moduleId as route if not mapped
+        navigate(`/${moduleId.replace(/_/g, '-')}`);
       }
-    } else {
-      // Direct moduleId as route if not mapped
-      navigate(`/${moduleId.replace(/_/g, '-')}`);
-    }
+    });
   };
 
   const pathParts = location.pathname.split("/").filter(Boolean);

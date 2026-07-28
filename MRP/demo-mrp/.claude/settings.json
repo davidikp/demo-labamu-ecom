@@ -9,7 +9,8 @@
       "Bash(npx esbuild *)",
       "Bash(echo \"exit: $?\")",
       "Bash(echo \"App exit: $?\")",
-      "Bash(node --input-type=module -e ' *)"
+      "Bash(node --input-type=module -e ' *)",
+      "Bash(echo \"exit $?\")"
     ]
   }
 }
