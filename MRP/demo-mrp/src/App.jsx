@@ -27,6 +27,7 @@ import { OrderDetailPage } from "./modules/orders/pages/OrderDetailPage.jsx";
 import { OrderSettingsPage } from "./modules/orders/pages/OrderSettingsPage.jsx";
 import { UserManagementPage } from "./modules/administration/pages/UserManagementPage.jsx";
 import { NotificationSettingsPage } from "./modules/administration/pages/NotificationSettingsPage.jsx";
+import { NotificationPreferencesPage } from "./modules/notification/pages/NotificationPreferencesPage.jsx";
 import { MaterialsListPage } from "./modules/materials/pages/MaterialsListPage.jsx";
 import { MaterialDetailPage } from "./modules/materials/pages/MaterialDetailPage.jsx";
 import { MaterialManagePage } from "./modules/materials/pages/MaterialManagePage.jsx";
@@ -42,7 +43,10 @@ import { POReportPage } from "./modules/analytics/pages/POReportPage.jsx";
 import { VendorLiabilityReportPage } from "./modules/analytics/pages/VendorLiabilityReportPage.jsx";
 import { APAgingReportPage } from "./modules/analytics/pages/APAgingReportPage.jsx";
 import { DEFAULT_SYSTEM_NOTIFICATIONS } from "./data/notification/systemNotifications.js";
-import { cloneNotificationSettings } from "./data/notification/notificationDefaults.js";
+import {
+  buildDefaultCompanySettings,
+  buildDefaultPersonalPreferences,
+} from "./data/notification/notificationDefaults.js";
 import {
   applyDomLocalization,
   getTranslation,
@@ -89,6 +93,7 @@ const TRANSLATIONS = {
       user_management: "User Management",
       fx_management: "FX Management",
       notification_settings: "Notification Settings",
+      notification_preferences: "Notification Preferences",
       email_outbox: "Email Outbox",
       company_settings: "Company Settings",
       labamu_staff: "Labamu Staff",
@@ -157,6 +162,7 @@ const TRANSLATIONS = {
       user_management: "Manajemen Pengguna",
       fx_management: "Manajemen FX",
       notification_settings: "Pengaturan Notifikasi",
+      notification_preferences: "Preferensi Notifikasi",
       email_outbox: "Kotak Keluar Email",
       company_settings: "Pengaturan Perusahaan",
       labamu_staff: "Staf Labamu",
@@ -212,6 +218,7 @@ const MODULE_TO_ROUTE = {
   administration: "administration",
   user_management: "user-management",
   notification_settings: "notification-settings",
+  notification_preferences: "notification-preferences",
   user_guide: "user-guide",
   material_forecast: "material-planning",
   procurement_ap_report: "procurement-ap-report",
@@ -406,6 +413,8 @@ const ModuleRenderer = ({
   handleModuleChange,
   materialPlanningSettings,
   setMaterialPlanningSettings,
+  personalNotificationPreferences,
+  setPersonalNotificationPreferences,
 }) => {
   const { module: moduleRoute, id, subview } = useParams();
   const activeModule = ROUTE_TO_MODULE[moduleRoute] || moduleRoute?.replace(/-/g, '_');
@@ -422,6 +431,7 @@ const ModuleRenderer = ({
   const isSpecialView = ["list", "create", "create_material", "settings", "manage"].includes(viewState.view) ||
                         activeModule === "dashboard" ||
                         activeModule === "email_outbox" ||
+                        activeModule === "notification_preferences" ||
                         activeModule === "analytics" ||
                         activeModule === "administration" ||
                         activeModule === "material_forecast" ||
@@ -879,6 +889,18 @@ const ModuleRenderer = ({
       />
     );
   }
+  if (activeModule === "notification_preferences") {
+    return (
+      <NotificationPreferencesPage
+        isSidebarCollapsed={isSidebarCollapsed}
+        companySettings={notificationSettings}
+        personalPreferences={personalNotificationPreferences}
+        onSavePersonalPreferences={(prefs) =>
+          setPersonalNotificationPreferences(prefs)
+        }
+      />
+    );
+  }
   if (activeModule === "material_request") {
     if (viewState.view === "list") {
       return <MaterialRequestListPage onNavigate={onNavigate} t={t} />;
@@ -972,8 +994,10 @@ export default function App() {
     approvers: [],
   });
   const [notificationSettings, setNotificationSettings] = useState(() =>
-    cloneNotificationSettings()
+    buildDefaultCompanySettings()
   );
+  const [personalNotificationPreferences, setPersonalNotificationPreferences] =
+    useState(() => buildDefaultPersonalPreferences());
   const [systemNotifications, setSystemNotifications] = useState(
     DEFAULT_SYSTEM_NOTIFICATIONS
   );
@@ -1212,6 +1236,7 @@ export default function App() {
             notifications={systemNotifications}
             onNotificationsChange={setSystemNotifications}
             onOpenNotificationSettings={() => handleModuleChange("notification_settings")}
+            onOpenNotificationPreferences={() => handleModuleChange("notification_preferences")}
           />
           {poSnackbar.open && (
             <div
@@ -1289,6 +1314,8 @@ export default function App() {
                 handleModuleChange={handleModuleChange}
                 materialPlanningSettings={materialPlanningSettings}
                 setMaterialPlanningSettings={setMaterialPlanningSettings}
+                personalNotificationPreferences={personalNotificationPreferences}
+                setPersonalNotificationPreferences={setPersonalNotificationPreferences}
               />
             } />
             <Route path="/:module/:id" element={
@@ -1309,6 +1336,8 @@ export default function App() {
                 handleModuleChange={handleModuleChange}
                 materialPlanningSettings={materialPlanningSettings}
                 setMaterialPlanningSettings={setMaterialPlanningSettings}
+                personalNotificationPreferences={personalNotificationPreferences}
+                setPersonalNotificationPreferences={setPersonalNotificationPreferences}
               />
             } />
             <Route path="/:module/:id/:subview" element={
@@ -1329,6 +1358,8 @@ export default function App() {
                 handleModuleChange={handleModuleChange}
                 materialPlanningSettings={materialPlanningSettings}
                 setMaterialPlanningSettings={setMaterialPlanningSettings}
+                personalNotificationPreferences={personalNotificationPreferences}
+                setPersonalNotificationPreferences={setPersonalNotificationPreferences}
               />
             } />
             <Route path="*" element={

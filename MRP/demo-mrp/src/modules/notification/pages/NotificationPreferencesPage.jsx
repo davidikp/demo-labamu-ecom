@@ -7,11 +7,21 @@ import {
   ALL_NOTIFICATION_RULES,
   DEFAULT_NOTIFICATION_SETTINGS,
   NOTIFICATION_GROUPS,
+  PERSONAL_PREFERENCE_OPTIONS,
   buildDefaultCompanySettings,
-  cloneCompanySettings,
+  buildDefaultPersonalPreferences,
+  clonePersonalPreferences,
 } from "../../../data/notification/notificationDefaults.js";
+import {
+  effectiveSourceLabel,
+  resolveEffectiveStatus,
+} from "../../../utils/notification/notificationUtils.js";
 
-// Vertical breathing room for table cells (ce-ui rows have no vertical padding).
+// The demo user (Owner) can access every module, so no rows are hidden. In a
+// real build this set would come from the user's sub-resource permissions and
+// gate visibility per PRD AC #9.
+const ACCESSIBLE_PERMISSIONS = null; // null = all accessible
+
 const cellPadStyle = { padding: "12px 0", lineHeight: "20px" };
 const toggleCellStyle = {
   padding: "12px 0",
@@ -19,6 +29,28 @@ const toggleCellStyle = {
   justifyContent: "center",
   alignItems: "center",
 };
+
+const PREFERENCE_CHOICES = [
+  { value: PERSONAL_PREFERENCE_OPTIONS.useCompanyDefault, label: "Default" },
+  { value: PERSONAL_PREFERENCE_OPTIONS.on, label: "On" },
+  { value: PERSONAL_PREFERENCE_OPTIONS.off, label: "Off" },
+];
+
+const prefPillStyle = (isActive) => ({
+  flex: 1,
+  height: "28px",
+  padding: "0 10px",
+  borderRadius: "8px",
+  border: "none",
+  background: isActive ? "var(--feature-brand-primary)" : "transparent",
+  color: isActive
+    ? "var(--feature-brand-on-primary, #FFFFFF)"
+    : "var(--neutral-on-surface-secondary)",
+  fontSize: "12px",
+  fontWeight: isActive ? "var(--font-weight-bold)" : "var(--font-weight-regular)",
+  cursor: "pointer",
+  whiteSpace: "nowrap",
+});
 
 // Collapse grouped admin toggles (e.g. "Receipt Status Updates") into one row.
 const buildDisplayUnits = (items) => {
@@ -51,31 +83,39 @@ const buildDisplayUnits = (items) => {
   return units;
 };
 
-const NotificationSettingsPage = ({
+const canAccess = (permission) =>
+  ACCESSIBLE_PERMISSIONS === null ||
+  permission === null ||
+  ACCESSIBLE_PERMISSIONS.includes(permission);
+
+const NotificationPreferencesPage = ({
   isSidebarCollapsed, // preserved for API compatibility with the shell
-  notificationSettings,
-  onSaveNotificationSettings,
+  companySettings,
+  personalPreferences,
+  onSavePersonalPreferences,
 }) => {
+  const company = companySettings || buildDefaultCompanySettings();
+
   const [activeModule, setActiveModule] = useState(
     DEFAULT_NOTIFICATION_SETTINGS[0]?.id
   );
-  const [settings, setSettings] = useState(() =>
-    cloneCompanySettings(notificationSettings || buildDefaultCompanySettings())
+  const [prefs, setPrefs] = useState(() =>
+    clonePersonalPreferences(personalPreferences || buildDefaultPersonalPreferences())
   );
   const [savedSnapshot, setSavedSnapshot] = useState(() =>
-    cloneCompanySettings(notificationSettings || buildDefaultCompanySettings())
+    clonePersonalPreferences(personalPreferences || buildDefaultPersonalPreferences())
   );
   const [toastMessage, setToastMessage] = useState("");
   const [validationError, setValidationError] = useState("");
   const toastTimerRef = useRef(null);
 
   useEffect(() => {
-    const next = cloneCompanySettings(
-      notificationSettings || buildDefaultCompanySettings()
+    const next = clonePersonalPreferences(
+      personalPreferences || buildDefaultPersonalPreferences()
     );
-    setSettings(next);
-    setSavedSnapshot(cloneCompanySettings(next));
-  }, [notificationSettings]);
+    setPrefs(next);
+    setSavedSnapshot(clonePersonalPreferences(next));
+  }, [personalPreferences]);
 
   useEffect(
     () => () => {
@@ -92,7 +132,7 @@ const NotificationSettingsPage = ({
 
   const patchRules = (ids, patch) => {
     setValidationError("");
-    setSettings((prev) => {
+    setPrefs((prev) => {
       const next = { ...prev };
       ids.forEach((id) => {
         next[id] = { ...next[id], ...patch };
@@ -101,12 +141,22 @@ const NotificationSettingsPage = ({
     });
   };
 
+  const ruleById = useMemo(
+    () =>
+      ALL_NOTIFICATION_RULES.reduce((acc, r) => {
+        acc[r.id] = r;
+        return acc;
+      }, {}),
+    []
+  );
+
   const handleSave = () => {
-    const offenders = ALL_NOTIFICATION_RULES.filter(
-      (rule) => rule.type !== "required"
-    ).filter((rule) => {
-      const s = settings[rule.id];
-      return s?.enabled && !s.inApp && !s.email;
+    const offenders = ALL_NOTIFICATION_RULES.filter((rule) => {
+      if (rule.type === "required") return false;
+      const { status } = resolveEffectiveStatus(rule, company, prefs);
+      if (status !== "on") return false;
+      const p = prefs[rule.id];
+      return !p?.inApp && !p?.email;
     });
     if (offenders.length > 0) {
       setValidationError(
@@ -116,14 +166,14 @@ const NotificationSettingsPage = ({
       );
       return;
     }
-    const saved = cloneCompanySettings(settings);
+    const saved = clonePersonalPreferences(prefs);
     setSavedSnapshot(saved);
-    onSaveNotificationSettings?.(saved);
-    showToast("Notification settings saved");
+    onSavePersonalPreferences?.(saved);
+    showToast("Notification preferences saved");
   };
 
   const handleCancel = () => {
-    setSettings(cloneCompanySettings(savedSnapshot));
+    setPrefs(clonePersonalPreferences(savedSnapshot));
     setValidationError("");
     showToast("Changes discarded");
   };
@@ -131,7 +181,9 @@ const NotificationSettingsPage = ({
   const chipTabs = DEFAULT_NOTIFICATION_SETTINGS.map((section) => ({
     id: section.id,
     label: section.title,
-    count: buildDisplayUnits(section.items).length,
+    count: buildDisplayUnits(
+      section.items.filter((item) => canAccess(item.permission))
+    ).length,
   }));
 
   const activeSection = useMemo(
@@ -143,26 +195,14 @@ const NotificationSettingsPage = ({
 
   const renderToggle = (unit, channel) => {
     const primaryId = unit.memberIds[0];
-    const state = settings[primaryId] || {
-      enabled: false,
-      inApp: false,
-      email: false,
-    };
-    const isRequired = unit.kind === "rule" && unit.rule.type === "required";
-
-    if (channel === "enabled") {
-      return (
-        <ToggleSwitch
-          checked={isRequired ? true : state.enabled}
-          disabled={isRequired}
-          onChange={(next) => patchRules(unit.memberIds, { enabled: next })}
-        />
-      );
-    }
-    const channelsDisabled = isRequired || !state.enabled;
+    const rule = ruleById[primaryId] || unit.rule;
+    const pref = prefs[primaryId] || { inApp: false, email: false };
+    const { status } = resolveEffectiveStatus(rule, company, prefs);
+    const isRequired = rule.type === "required";
+    const channelsDisabled = isRequired || status !== "on";
     return (
       <ToggleSwitch
-        checked={isRequired ? true : state[channel]}
+        checked={isRequired ? true : pref[channel]}
         disabled={channelsDisabled}
         onChange={(next) => patchRules(unit.memberIds, { [channel]: next })}
       />
@@ -171,7 +211,9 @@ const NotificationSettingsPage = ({
 
   const rows = useMemo(
     () =>
-      buildDisplayUnits(activeSection.items).map((unit) => ({
+      buildDisplayUnits(
+        activeSection.items.filter((item) => canAccess(item.permission))
+      ).map((unit) => ({
         id: unit.key,
         unit,
         name: unit.rule.name,
@@ -187,7 +229,7 @@ const NotificationSettingsPage = ({
     {
       key: "name",
       header: "Notification",
-      width: 300,
+      width: 240,
       render: (_value, row) => {
         const isRequired =
           row.unit.kind === "rule" && row.unit.rule.type === "required";
@@ -200,17 +242,8 @@ const NotificationSettingsPage = ({
               padding: "12px 0",
             }}
           >
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-                flexWrap: "wrap",
-              }}
-            >
-              <span style={{ fontWeight: "var(--font-weight-bold)" }}>
-                {row.name}
-              </span>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+              <span style={{ fontWeight: "var(--font-weight-bold)" }}>{row.name}</span>
               <StatusBadge variant={isRequired ? "blue-light" : "grey-light"}>
                 {isRequired ? "Required" : "Configurable"}
               </StatusBadge>
@@ -231,13 +264,13 @@ const NotificationSettingsPage = ({
     {
       key: "recipient",
       header: "Recipient",
-      width: 240,
+      width: 200,
       render: (value) => <div style={cellPadStyle}>{value}</div>,
     },
     {
       key: "permission",
       header: "Permission",
-      width: 190,
+      width: 160,
       render: (value) => (
         <div style={cellPadStyle}>{value || "No permission mapping"}</div>
       ),
@@ -245,25 +278,96 @@ const NotificationSettingsPage = ({
     {
       key: "todo",
       header: "Todo",
-      width: 160,
+      width: 130,
       render: (value) => <div style={cellPadStyle}>{value || "No Todo"}</div>,
     },
     {
       key: "unit",
+      columnId: "preference",
+      header: "Preference",
+      width: 190,
+      render: (_value, row) => {
+        const rule = ruleById[row.unit.memberIds[0]] || row.unit.rule;
+        if (rule.type === "required") {
+          return (
+            <div style={cellPadStyle}>
+              <span
+                style={{
+                  fontSize: "12px",
+                  color: "var(--neutral-on-surface-secondary)",
+                }}
+              >
+                Required — always on
+              </span>
+            </div>
+          );
+        }
+        const pref = prefs[row.unit.memberIds[0]] || {
+          preference: PERSONAL_PREFERENCE_OPTIONS.useCompanyDefault,
+        };
+        return (
+          <div style={{ padding: "12px 0" }}>
+            <div
+              style={{
+                display: "flex",
+                gap: "4px",
+                padding: "3px",
+                borderRadius: "10px",
+                border: "1px solid var(--neutral-line-separator-1)",
+              }}
+            >
+              {PREFERENCE_CHOICES.map((choice) => (
+                <button
+                  key={choice.value}
+                  type="button"
+                  onClick={() =>
+                    patchRules(row.unit.memberIds, { preference: choice.value })
+                  }
+                  style={prefPillStyle(pref.preference === choice.value)}
+                >
+                  {choice.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        );
+      },
+    },
+    {
+      key: "unit",
       columnId: "status",
-      header: "Status",
-      align: "center",
-      width: 90,
-      render: (_value, row) => (
-        <div style={toggleCellStyle}>{renderToggle(row.unit, "enabled")}</div>
-      ),
+      header: "Current status",
+      width: 130,
+      render: (_value, row) => {
+        const rule = ruleById[row.unit.memberIds[0]] || row.unit.rule;
+        const { status, source } = resolveEffectiveStatus(rule, company, prefs);
+        const on = status === "on";
+        return (
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: "4px",
+              alignItems: "flex-start",
+              padding: "12px 0",
+            }}
+          >
+            <StatusBadge variant={on ? "green-light" : "grey-light"}>
+              {on ? "On" : "Off"}
+            </StatusBadge>
+            <span style={{ fontSize: "11px", color: "var(--neutral-on-surface-secondary)" }}>
+              {effectiveSourceLabel(source)}
+            </span>
+          </div>
+        );
+      },
     },
     {
       key: "unit",
       columnId: "inapp",
       header: "In-app",
       align: "center",
-      width: 90,
+      width: 80,
       render: (_value, row) => (
         <div style={toggleCellStyle}>{renderToggle(row.unit, "inApp")}</div>
       ),
@@ -273,7 +377,7 @@ const NotificationSettingsPage = ({
       columnId: "email",
       header: "Email",
       align: "center",
-      width: 90,
+      width: 80,
       render: (_value, row) => (
         <div style={toggleCellStyle}>{renderToggle(row.unit, "email")}</div>
       ),
@@ -332,7 +436,7 @@ const NotificationSettingsPage = ({
           fontWeight: "var(--font-weight-bold)",
         }}
       >
-        Notification Settings
+        Notification Preferences
       </h1>
 
       {/* Module chip tabs — outside the content card, wrapping instead of scrolling */}
@@ -381,12 +485,7 @@ const NotificationSettingsPage = ({
             gap: "6px",
           }}
         >
-          <span
-            style={{
-              fontSize: "16px",
-              fontWeight: "var(--font-weight-bold)",
-            }}
-          >
+          <span style={{ fontSize: "16px", fontWeight: "var(--font-weight-bold)" }}>
             {activeSection.title}
           </span>
           <span
@@ -438,4 +537,4 @@ const NotificationSettingsPage = ({
   );
 };
 
-export { NotificationSettingsPage };
+export { NotificationPreferencesPage };

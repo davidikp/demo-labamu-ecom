@@ -79,15 +79,6 @@ import {
   MAX_PROOF_UPLOAD_FILES,
   UPLOAD_MAX_FILE_SIZE_BYTES,
 } from "../../../constants/appConstants.js";
-import {
-  DEFAULT_NOTIFICATION_CENTER_PREFERENCES,
-  DEFAULT_NOTIFICATION_SETTINGS,
-  cloneNotificationSettings,
-} from "../../../data/notification/notificationDefaults.js";
-import {
-  NOTIFICATION_CATEGORY_OPTIONS,
-  NOTIFICATION_DELIVERY_OPTIONS,
-} from "../../../data/notification/notificationOptions.js";
 import { DEFAULT_SYSTEM_NOTIFICATIONS } from "../../../data/notification/systemNotifications.js";
 import { MOCK_COMPANY } from "../../../data/company.js";
 import { MOCK_VENDORS } from "../../../data/vendors.js";
@@ -145,7 +136,6 @@ import {
   normalizeProofDocuments,
   validateUploadFile,
 } from "../../../utils/upload/uploadUtils.js";
-import { getEnabledNotificationRuleIds } from "../../../utils/notification/notificationUtils.js";
 import {
   applyDomLocalization,
   getTranslation,

@@ -6,6 +6,7 @@ const TopHeader = ({
   t,
   isSidebarCollapsed,
   onOpenNotificationSettings,
+  onOpenNotificationPreferences,
 }) => {
   const settingsButtonRef = useRef(null);
   const quickMenuRef = useRef(null);
@@ -156,6 +157,27 @@ const TopHeader = ({
             }}
           >
             Notification Settings
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setIsQuickMenuOpen(false);
+              onOpenNotificationPreferences?.();
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = "var(--neutral-surface-grey-lighter)")}
+            onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+            style={{
+              width: "100%",
+              padding: "14px 20px",
+              border: "none",
+              background: "transparent",
+              textAlign: "left",
+              fontSize: "var(--text-title-3)",
+              color: "var(--neutral-on-surface-primary)",
+              cursor: "pointer",
+            }}
+          >
+            Notification Preferences
           </button>
         </div>
       ) : null}
