@@ -55,6 +55,15 @@ const resolveRecipients = (rule, ctx, approvers, currentUser) => {
       const w = asUser(ctx.woCreatorUser) || me;
       return { inApp: [w], emailTo: [], emailCc: [] };
     }
+    case "eligible_users": {
+      // Broadcast operational alert to whichever users hold access to the
+      // related module; the demo defaults to the current user so every
+      // seeded event is visible without extra wiring.
+      const list = Array.isArray(ctx.eligibleUsers) && ctx.eligibleUsers.length
+        ? ctx.eligibleUsers
+        : [me];
+      return { inApp: list, emailTo: toContacts(list), emailCc: [] };
+    }
     case "customer_email": {
       const email = ctx.customerEmail || "customer@example.com";
       const name = ctx.customerPicName || "Customer";

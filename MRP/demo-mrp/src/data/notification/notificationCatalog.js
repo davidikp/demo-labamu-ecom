@@ -464,5 +464,706 @@ export const NOTIFICATION_CATALOG = {
   },
 };
 
+// ---------------------------------------------------------------------------
+// Operational notifications (PRD "Expansion & Preferences") — deadlines,
+// stock/expiry thresholds, status transitions, new-record pings, and payment
+// events. None of these create a Todo item (per PRD §4.5): they are bell
+// and/or email only. Recipients broadcast to "eligible_users" (defaults to
+// the current user in this demo).
+// ---------------------------------------------------------------------------
+
+NOTIFICATION_CATALOG.inventory = {
+  material_running_low: {
+    recipientRule: "eligible_users",
+    channels: { inApp: true, email: true },
+    todo: null,
+    inApp: (c) => ({
+      title: {
+        en: `Material ${c.materialName} is running low`,
+        id: `Stok Material ${c.materialName} menipis`,
+      },
+      body: {
+        en: `Available stock is ${c.qty} ${c.uom}, at or below the minimum level.`,
+        id: `Stok tersedia adalah ${c.qty} ${c.uom}, sama dengan atau di bawah batas minimum.`,
+      },
+      cta: { en: "See Detail", id: "Lihat Detail" },
+    }),
+    email: (c) => ({
+      subject: {
+        en: `Material ${c.materialName} is running low`,
+        id: `Stok Material ${c.materialName} menipis`,
+      },
+      body: {
+        en: `Available stock is ${c.qty} ${c.uom}, at or below the minimum level.`,
+        id: `Stok tersedia adalah ${c.qty} ${c.uom}, sama dengan atau di bawah batas minimum.`,
+      },
+      cta: { en: "See Detail", id: "Lihat Detail" },
+    }),
+  },
+  material_out_of_stock: {
+    recipientRule: "eligible_users",
+    channels: { inApp: true, email: true },
+    todo: null,
+    inApp: (c) => ({
+      title: {
+        en: `Material ${c.materialName} is out of stock`,
+        id: `Material ${c.materialName} habis`,
+      },
+      body: {
+        en: `Available stock has reached 0 ${c.uom}.`,
+        id: `Stok tersedia telah mencapai 0 ${c.uom}.`,
+      },
+      cta: { en: "See Detail", id: "Lihat Detail" },
+    }),
+    email: (c) => ({
+      subject: {
+        en: `Material ${c.materialName} is out of stock`,
+        id: `Material ${c.materialName} habis`,
+      },
+      body: {
+        en: `Material ${c.materialName} has reached zero available stock. Please review the material and replenishment plan.`,
+        id: `Material ${c.materialName} telah mencapai stok 0. Mohon tinjau material dan rencana pengisian ulang.`,
+      },
+      cta: { en: "See Detail", id: "Lihat Detail" },
+    }),
+  },
+  material_expiring_soon: {
+    recipientRule: "eligible_users",
+    channels: { inApp: true, email: true },
+    todo: null,
+    inApp: (c) => ({
+      title: {
+        en: `Batch ${c.batchNumber} is expiring soon`,
+        id: `Batch ${c.batchNumber} akan segera kedaluwarsa`,
+      },
+      body: {
+        en: `Batch ${c.batchNumber} for ${c.materialName} will expire on ${c.expiryDate}.`,
+        id: `Batch ${c.batchNumber} untuk ${c.materialName} akan kedaluwarsa pada ${c.expiryDate}.`,
+      },
+      cta: { en: "See Detail", id: "Lihat Detail" },
+    }),
+    email: (c) => ({
+      subject: {
+        en: `Batch ${c.batchNumber} is expiring soon`,
+        id: `Batch ${c.batchNumber} akan segera kedaluwarsa`,
+      },
+      body: {
+        en: `Batch ${c.batchNumber} for ${c.materialName} will expire on ${c.expiryDate}.`,
+        id: `Batch ${c.batchNumber} untuk ${c.materialName} akan kedaluwarsa pada ${c.expiryDate}.`,
+      },
+      cta: { en: "See Detail", id: "Lihat Detail" },
+    }),
+  },
+  material_expired: {
+    recipientRule: "eligible_users",
+    channels: { inApp: true, email: true },
+    todo: null,
+    inApp: (c) => ({
+      title: {
+        en: `Batch ${c.batchNumber} has expired`,
+        id: `Batch ${c.batchNumber} telah kedaluwarsa`,
+      },
+      body: {
+        en: `Batch ${c.batchNumber} for ${c.materialName} expired on ${c.expiryDate}.`,
+        id: `Batch ${c.batchNumber} untuk ${c.materialName} kedaluwarsa pada ${c.expiryDate}.`,
+      },
+      cta: { en: "See Detail", id: "Lihat Detail" },
+    }),
+    email: (c) => ({
+      subject: {
+        en: `Batch ${c.batchNumber} has expired`,
+        id: `Batch ${c.batchNumber} telah kedaluwarsa`,
+      },
+      body: {
+        en: `Batch ${c.batchNumber} for ${c.materialName} expired on ${c.expiryDate}. Please review the remaining quantity and take the required action.`,
+        id: `Batch ${c.batchNumber} untuk ${c.materialName} kedaluwarsa pada ${c.expiryDate}. Mohon tinjau sisa jumlah dan ambil tindakan yang diperlukan.`,
+      },
+      cta: { en: "See Detail", id: "Lihat Detail" },
+    }),
+  },
+};
+
+NOTIFICATION_CATALOG.material_request.new_material_request = {
+  recipientRule: "eligible_users",
+  channels: { inApp: true, email: true },
+  todo: null,
+  inApp: (c) => ({
+    title: {
+      en: `New Material Request ${c.number}`,
+      id: `Material Request baru ${c.number}`,
+    },
+    body: {
+      en: `${c.requesterName} created a new Material Request for ${c.workOrderNo}.`,
+      id: `${c.requesterName} membuat Material Request baru untuk ${c.workOrderNo}.`,
+    },
+    cta: { en: "See Detail", id: "Lihat Detail" },
+  }),
+  email: (c) => ({
+    subject: {
+      en: `New Material Request ${c.number}`,
+      id: `Material Request baru ${c.number}`,
+    },
+    body: {
+      en: `${c.requesterName} created a new Material Request for ${c.workOrderNo}.`,
+      id: `${c.requesterName} membuat Material Request baru untuk ${c.workOrderNo}.`,
+    },
+    cta: { en: "See Detail", id: "Lihat Detail" },
+  }),
+};
+
+NOTIFICATION_CATALOG.custom_product_request.new_request = {
+  recipientRule: "eligible_users",
+  channels: { inApp: true, email: true },
+  todo: null,
+  inApp: (c) => ({
+    title: {
+      en: `New Custom Product Request ${c.number}`,
+      id: `Custom Product Request baru ${c.number}`,
+    },
+    body: {
+      en: `Created by ${c.requesterName} for ${c.customerCompany}.`,
+      id: `Dibuat oleh ${c.requesterName} untuk ${c.customerCompany}.`,
+    },
+    cta: { en: "See Detail", id: "Lihat Detail" },
+  }),
+  email: (c) => ({
+    subject: {
+      en: `New Custom Product Request ${c.number}`,
+      id: `Custom Product Request baru ${c.number}`,
+    },
+    body: {
+      en: `Created by ${c.requesterName} for ${c.customerCompany}.`,
+      id: `Dibuat oleh ${c.requesterName} untuk ${c.customerCompany}.`,
+    },
+    cta: { en: "See Detail", id: "Lihat Detail" },
+  }),
+};
+
+NOTIFICATION_CATALOG.quote.valid_until_reminder = {
+  recipientRule: "eligible_users",
+  channels: { inApp: true, email: true },
+  todo: null,
+  inApp: (c) => ({
+    title: {
+      en: `Quote ${c.number} is approaching its validity date`,
+      id: `Quote ${c.number} mendekati tanggal berakhir`,
+    },
+    body: {
+      en: `The Quote is valid until ${c.validUntilDate}.`,
+      id: `Quote berlaku sampai ${c.validUntilDate}.`,
+    },
+    cta: { en: "See Detail", id: "Lihat Detail" },
+  }),
+  email: (c) => ({
+    subject: {
+      en: `Quote ${c.number} is approaching its validity date`,
+      id: `Quote ${c.number} mendekati tanggal berakhir`,
+    },
+    body: {
+      en: `Quote ${c.number} is valid until ${c.validUntilDate}. Please review and follow up before it expires.`,
+      id: `Quote ${c.number} berlaku sampai ${c.validUntilDate}. Mohon tinjau dan tindak lanjuti sebelum berakhir.`,
+    },
+    cta: { en: "See Detail", id: "Lihat Detail" },
+  }),
+};
+
+NOTIFICATION_CATALOG.work_order = {
+  deadline_approaching: {
+    recipientRule: "eligible_users",
+    channels: { inApp: true, email: true },
+    todo: null,
+    inApp: (c) => ({
+      title: {
+        en: `Work Order ${c.number} is approaching its deadline`,
+        id: `Work Order ${c.number} mendekati batas waktu`,
+      },
+      body: {
+        en: `The deadline is ${c.deadlineDate}. Current status: ${c.status}.`,
+        id: `Batas waktunya adalah ${c.deadlineDate}. Status saat ini: ${c.status}.`,
+      },
+      cta: { en: "See Detail", id: "Lihat Detail" },
+    }),
+    email: (c) => ({
+      subject: {
+        en: `Work Order ${c.number} is approaching its deadline`,
+        id: `Work Order ${c.number} mendekati batas waktu`,
+      },
+      body: {
+        en: `Work Order ${c.number} is approaching its deadline on ${c.deadlineDate}. Current status: ${c.status}.`,
+        id: `Work Order ${c.number} mendekati batas waktu pada ${c.deadlineDate}. Status saat ini: ${c.status}.`,
+      },
+      cta: { en: "See Detail", id: "Lihat Detail" },
+    }),
+  },
+  changed_to_completed: {
+    recipientRule: "eligible_users",
+    channels: { inApp: true, email: true },
+    todo: null,
+    inApp: (c) => ({
+      title: {
+        en: `Work Order ${c.number} has been completed`,
+        id: `Work Order ${c.number} telah selesai`,
+      },
+      body: {
+        en: `The Work Order status changed to Completed.`,
+        id: `Status Work Order berubah menjadi Completed.`,
+      },
+      cta: { en: "See Detail", id: "Lihat Detail" },
+    }),
+    email: (c) => ({
+      subject: {
+        en: `Work Order ${c.number} has been completed`,
+        id: `Work Order ${c.number} telah selesai`,
+      },
+      body: {
+        en: `The Work Order status changed to Completed.`,
+        id: `Status Work Order berubah menjadi Completed.`,
+      },
+      cta: { en: "See Detail", id: "Lihat Detail" },
+    }),
+  },
+  changed_to_cancelled: {
+    recipientRule: "eligible_users",
+    channels: { inApp: true, email: true },
+    todo: null,
+    inApp: (c) => ({
+      title: {
+        en: `Work Order ${c.number} was cancelled`,
+        id: `Work Order ${c.number} dibatalkan`,
+      },
+      body: {
+        en: `The Work Order status changed to Cancelled by ${c.updatedBy}.`,
+        id: `Status Work Order berubah menjadi Cancelled oleh ${c.updatedBy}.`,
+      },
+      cta: { en: "See Detail", id: "Lihat Detail" },
+    }),
+    email: (c) => ({
+      subject: {
+        en: `Work Order ${c.number} was cancelled`,
+        id: `Work Order ${c.number} dibatalkan`,
+      },
+      body: {
+        en: `The Work Order status changed to Cancelled by ${c.updatedBy}.`,
+        id: `Status Work Order berubah menjadi Cancelled oleh ${c.updatedBy}.`,
+      },
+      cta: { en: "See Detail", id: "Lihat Detail" },
+    }),
+  },
+  new_work_order: {
+    recipientRule: "eligible_users",
+    channels: { inApp: true, email: true },
+    todo: null,
+    inApp: (c) => ({
+      title: {
+        en: `New Work Order ${c.number}`,
+        id: `Work Order baru ${c.number}`,
+      },
+      body: {
+        en: `A new Work Order was created for ${c.productOrOrder} and is currently Not Started.`,
+        id: `Work Order baru dibuat untuk ${c.productOrOrder} dan saat ini berstatus Not Started.`,
+      },
+      cta: { en: "See Detail", id: "Lihat Detail" },
+    }),
+    email: (c) => ({
+      subject: {
+        en: `New Work Order ${c.number}`,
+        id: `Work Order baru ${c.number}`,
+      },
+      body: {
+        en: `A new Work Order was created for ${c.productOrOrder} and is currently Not Started.`,
+        id: `Work Order baru dibuat untuk ${c.productOrOrder} dan saat ini berstatus Not Started.`,
+      },
+      cta: { en: "See Detail", id: "Lihat Detail" },
+    }),
+  },
+  outsource_po_issued: {
+    recipientRule: "eligible_users",
+    channels: { inApp: true, email: true },
+    todo: null,
+    inApp: (c) => ({
+      title: {
+        en: `Purchase Order ${c.poNumber} for Work Order ${c.number} has been issued`,
+        id: `Purchase Order ${c.poNumber} untuk Work Order ${c.number} telah diterbitkan`,
+      },
+      body: {
+        en: `The Purchase Order for outsourced Work Order ${c.number} has been issued to ${c.vendorName}.`,
+        id: `Purchase Order untuk Work Order outsource ${c.number} telah diterbitkan kepada ${c.vendorName}.`,
+      },
+      cta: { en: "See Detail", id: "Lihat Detail" },
+    }),
+    email: (c) => ({
+      subject: {
+        en: `Purchase Order ${c.poNumber} for Work Order ${c.number} has been issued`,
+        id: `Purchase Order ${c.poNumber} untuk Work Order ${c.number} telah diterbitkan`,
+      },
+      body: {
+        en: `The Purchase Order for outsourced Work Order ${c.number} has been issued to ${c.vendorName}.`,
+        id: `Purchase Order untuk Work Order outsource ${c.number} telah diterbitkan kepada ${c.vendorName}.`,
+      },
+      cta: { en: "See Detail", id: "Lihat Detail" },
+    }),
+  },
+  outsource_po_receipt_recorded: {
+    recipientRule: "eligible_users",
+    channels: { inApp: true, email: true },
+    todo: null,
+    inApp: (c) => ({
+      title: {
+        en: `Receipt recorded for Work Order ${c.number}`,
+        id: `Penerimaan dicatat untuk Work Order ${c.number}`,
+      },
+      body: {
+        en: `${c.receivedQty} was received under Purchase Order ${c.poNumber}. Total received for this Work Order: ${c.cumulativeQty} of ${c.orderedQty}.`,
+        id: `${c.receivedQty} diterima melalui Purchase Order ${c.poNumber}. Total diterima untuk Work Order ini: ${c.cumulativeQty} dari ${c.orderedQty}.`,
+      },
+      cta: { en: "See Detail", id: "Lihat Detail" },
+    }),
+    email: (c) => ({
+      subject: {
+        en: `Receipt recorded for Work Order ${c.number}`,
+        id: `Penerimaan dicatat untuk Work Order ${c.number}`,
+      },
+      body: {
+        en: `${c.receivedQty} was received under Purchase Order ${c.poNumber}. Total received: ${c.cumulativeQty} of ${c.orderedQty}.`,
+        id: `${c.receivedQty} diterima melalui Purchase Order ${c.poNumber}. Total diterima: ${c.cumulativeQty} dari ${c.orderedQty}.`,
+      },
+      cta: { en: "See Detail", id: "Lihat Detail" },
+    }),
+  },
+  outsource_po_fully_received: {
+    recipientRule: "eligible_users",
+    channels: { inApp: true, email: true },
+    todo: null,
+    inApp: (c) => ({
+      title: {
+        en: `Work Order ${c.number} has been fully received`,
+        id: `Work Order ${c.number} telah diterima seluruhnya`,
+      },
+      body: {
+        en: `All outsourced items for Work Order ${c.number} under Purchase Order ${c.poNumber} have been received.`,
+        id: `Seluruh item outsource untuk Work Order ${c.number} melalui Purchase Order ${c.poNumber} telah diterima.`,
+      },
+      cta: { en: "See Detail", id: "Lihat Detail" },
+    }),
+    email: (c) => ({
+      subject: {
+        en: `Work Order ${c.number} has been fully received`,
+        id: `Work Order ${c.number} telah diterima seluruhnya`,
+      },
+      body: {
+        en: `All outsourced items for Work Order ${c.number} under Purchase Order ${c.poNumber} have been received.`,
+        id: `Seluruh item outsource untuk Work Order ${c.number} melalui Purchase Order ${c.poNumber} telah diterima.`,
+      },
+      cta: { en: "See Detail", id: "Lihat Detail" },
+    }),
+  },
+};
+
+Object.assign(NOTIFICATION_CATALOG.order, {
+  deadline_approaching: {
+    recipientRule: "eligible_users",
+    channels: { inApp: true, email: true },
+    todo: null,
+    inApp: (c) => ({
+      title: {
+        en: `Order ${c.number} is approaching its deadline`,
+        id: `Order ${c.number} mendekati batas waktu`,
+      },
+      body: {
+        en: `The deadline is ${c.deadlineDate}. Current status: ${c.status}.`,
+        id: `Batas waktunya adalah ${c.deadlineDate}. Status saat ini: ${c.status}.`,
+      },
+      cta: { en: "See Detail", id: "Lihat Detail" },
+    }),
+    email: (c) => ({
+      subject: {
+        en: `Order ${c.number} is approaching its deadline`,
+        id: `Order ${c.number} mendekati batas waktu`,
+      },
+      body: {
+        en: `Order ${c.number} is approaching its deadline on ${c.deadlineDate}. Current status: ${c.status}.`,
+        id: `Order ${c.number} mendekati batas waktu pada ${c.deadlineDate}. Status saat ini: ${c.status}.`,
+      },
+      cta: { en: "See Detail", id: "Lihat Detail" },
+    }),
+  },
+  deadline_overdue: {
+    recipientRule: "eligible_users",
+    channels: { inApp: true, email: true },
+    todo: null,
+    inApp: (c) => ({
+      title: {
+        en: `Order ${c.number} is overdue`,
+        id: `Order ${c.number} terlambat`,
+      },
+      body: {
+        en: `The deadline was ${c.deadlineDate}. Current status: ${c.status}.`,
+        id: `Batas waktunya adalah ${c.deadlineDate}. Status saat ini: ${c.status}.`,
+      },
+      cta: { en: "See Detail", id: "Lihat Detail" },
+    }),
+    email: (c) => ({
+      subject: {
+        en: `Order ${c.number} is overdue`,
+        id: `Order ${c.number} terlambat`,
+      },
+      body: {
+        en: `Order ${c.number} passed its deadline on ${c.deadlineDate} and remains ${c.status}.`,
+        id: `Order ${c.number} melewati batas waktu pada ${c.deadlineDate} dan tetap berstatus ${c.status}.`,
+      },
+      cta: { en: "See Detail", id: "Lihat Detail" },
+    }),
+  },
+  changed_to_completed: {
+    recipientRule: "eligible_users",
+    channels: { inApp: true, email: true },
+    todo: null,
+    inApp: (c) => ({
+      title: {
+        en: `Order ${c.number} has been completed`,
+        id: `Order ${c.number} telah selesai`,
+      },
+      body: {
+        en: `The Order status changed to Completed.`,
+        id: `Status Order berubah menjadi Completed.`,
+      },
+      cta: { en: "See Detail", id: "Lihat Detail" },
+    }),
+    email: (c) => ({
+      subject: {
+        en: `Order ${c.number} has been completed`,
+        id: `Order ${c.number} telah selesai`,
+      },
+      body: {
+        en: `The Order status changed to Completed.`,
+        id: `Status Order berubah menjadi Completed.`,
+      },
+      cta: { en: "See Detail", id: "Lihat Detail" },
+    }),
+  },
+  changed_to_cancelled: {
+    recipientRule: "eligible_users",
+    channels: { inApp: true, email: true },
+    todo: null,
+    inApp: (c) => ({
+      title: {
+        en: `Order ${c.number} was cancelled`,
+        id: `Order ${c.number} dibatalkan`,
+      },
+      body: {
+        en: `The Order status changed to Cancelled by ${c.updatedBy}.`,
+        id: `Status Order berubah menjadi Cancelled oleh ${c.updatedBy}.`,
+      },
+      cta: { en: "See Detail", id: "Lihat Detail" },
+    }),
+    email: (c) => ({
+      subject: {
+        en: `Order ${c.number} was cancelled`,
+        id: `Order ${c.number} dibatalkan`,
+      },
+      body: {
+        en: `The Order status changed to Cancelled by ${c.updatedBy}.`,
+        id: `Status Order berubah menjadi Cancelled oleh ${c.updatedBy}.`,
+      },
+      cta: { en: "See Detail", id: "Lihat Detail" },
+    }),
+  },
+  new_order: {
+    recipientRule: "eligible_users",
+    channels: { inApp: true, email: true },
+    todo: null,
+    inApp: (c) => ({
+      title: {
+        en: `New Order ${c.number}`,
+        id: `Order baru ${c.number}`,
+      },
+      body: {
+        en: `A new Order was created for ${c.customerCompany} and is currently Not Started.`,
+        id: `Order baru dibuat untuk ${c.customerCompany} dan saat ini berstatus Not Started.`,
+      },
+      cta: { en: "See Detail", id: "Lihat Detail" },
+    }),
+    email: (c) => ({
+      subject: {
+        en: `New Order ${c.number}`,
+        id: `Order baru ${c.number}`,
+      },
+      body: {
+        en: `A new Order was created for ${c.customerCompany} and is currently Not Started.`,
+        id: `Order baru dibuat untuk ${c.customerCompany} dan saat ini berstatus Not Started.`,
+      },
+      cta: { en: "See Detail", id: "Lihat Detail" },
+    }),
+  },
+  invoice_paid: {
+    recipientRule: "eligible_users",
+    channels: { inApp: true, email: true },
+    todo: null,
+    inApp: (c) => ({
+      title: {
+        en: `Invoice ${c.invoiceNumber} for Order ${c.number} has been paid`,
+        id: `Invoice ${c.invoiceNumber} untuk Order ${c.number} telah dibayar`,
+      },
+      body: {
+        en: `The invoice payment has been completed. Paid amount: ${c.paidAmount}.`,
+        id: `Pembayaran invoice telah selesai. Jumlah dibayar: ${c.paidAmount}.`,
+      },
+      cta: { en: "See Detail", id: "Lihat Detail" },
+    }),
+    email: (c) => ({
+      subject: {
+        en: `Invoice ${c.invoiceNumber} for Order ${c.number} has been paid`,
+        id: `Invoice ${c.invoiceNumber} untuk Order ${c.number} telah dibayar`,
+      },
+      body: {
+        en: `Invoice ${c.invoiceNumber} linked to Order ${c.number} has been paid. Paid amount: ${c.paidAmount}.`,
+        id: `Invoice ${c.invoiceNumber} yang terkait dengan Order ${c.number} telah dibayar. Jumlah dibayar: ${c.paidAmount}.`,
+      },
+      cta: { en: "See Detail", id: "Lihat Detail" },
+    }),
+  },
+});
+
+Object.assign(NOTIFICATION_CATALOG.invoice, {
+  due_date_approaching: {
+    recipientRule: "eligible_users",
+    channels: { inApp: true, email: true },
+    todo: null,
+    inApp: (c) => ({
+      title: {
+        en: `Invoice ${c.number} is approaching its due date`,
+        id: `Invoice ${c.number} mendekati tanggal jatuh tempo`,
+      },
+      body: {
+        en: `The due date is ${c.dueDate}. Outstanding amount: ${c.amount} ${c.currency}.`,
+        id: `Tanggal jatuh tempo adalah ${c.dueDate}. Sisa tagihan: ${c.amount} ${c.currency}.`,
+      },
+      cta: { en: "See Detail", id: "Lihat Detail" },
+    }),
+    email: (c) => ({
+      subject: {
+        en: `Invoice ${c.number} is approaching its due date`,
+        id: `Invoice ${c.number} mendekati tanggal jatuh tempo`,
+      },
+      body: {
+        en: `Invoice ${c.number} is approaching its due date on ${c.dueDate}. Outstanding amount: ${c.amount} ${c.currency}.`,
+        id: `Invoice ${c.number} mendekati tanggal jatuh tempo pada ${c.dueDate}. Sisa tagihan: ${c.amount} ${c.currency}.`,
+      },
+      cta: { en: "See Detail", id: "Lihat Detail" },
+    }),
+  },
+  overdue: {
+    recipientRule: "eligible_users",
+    channels: { inApp: true, email: true },
+    todo: null,
+    inApp: (c) => ({
+      title: {
+        en: `Invoice ${c.number} is overdue`,
+        id: `Invoice ${c.number} terlambat`,
+      },
+      body: {
+        en: `The invoice was due on ${c.dueDate}. Outstanding amount: ${c.amount} ${c.currency}.`,
+        id: `Invoice jatuh tempo pada ${c.dueDate}. Sisa tagihan: ${c.amount} ${c.currency}.`,
+      },
+      cta: { en: "See Detail", id: "Lihat Detail" },
+    }),
+    email: (c) => ({
+      subject: {
+        en: `Invoice ${c.number} is overdue`,
+        id: `Invoice ${c.number} terlambat`,
+      },
+      body: {
+        en: `Invoice ${c.number} passed its due date on ${c.dueDate}. Outstanding amount: ${c.amount} ${c.currency}.`,
+        id: `Invoice ${c.number} melewati tanggal jatuh tempo pada ${c.dueDate}. Sisa tagihan: ${c.amount} ${c.currency}.`,
+      },
+      cta: { en: "See Detail", id: "Lihat Detail" },
+    }),
+  },
+});
+
+Object.assign(NOTIFICATION_CATALOG.purchase_order, {
+  payment_overdue: {
+    recipientRule: "eligible_users",
+    channels: { inApp: true, email: true },
+    todo: null,
+    inApp: (c) => ({
+      title: {
+        en: `Payment for Purchase Order ${c.number} is overdue`,
+        id: `Pembayaran Purchase Order ${c.number} terlambat`,
+      },
+      body: {
+        en: `The payment due date was ${c.dueDate}. Outstanding amount: ${c.amount} ${c.currency}.`,
+        id: `Tanggal jatuh tempo pembayaran adalah ${c.dueDate}. Sisa pembayaran: ${c.amount} ${c.currency}.`,
+      },
+      cta: { en: "See Detail", id: "Lihat Detail" },
+    }),
+    email: (c) => ({
+      subject: {
+        en: `Payment for Purchase Order ${c.number} is overdue`,
+        id: `Pembayaran Purchase Order ${c.number} terlambat`,
+      },
+      body: {
+        en: `Payment for Purchase Order ${c.number} passed its due date on ${c.dueDate}. Outstanding amount: ${c.amount} ${c.currency}.`,
+        id: `Pembayaran Purchase Order ${c.number} melewati tanggal jatuh tempo pada ${c.dueDate}. Sisa pembayaran: ${c.amount} ${c.currency}.`,
+      },
+      cta: { en: "See Detail", id: "Lihat Detail" },
+    }),
+  },
+  expected_end_date_approaching: {
+    recipientRule: "eligible_users",
+    channels: { inApp: true, email: true },
+    todo: null,
+    inApp: (c) => ({
+      title: {
+        en: `Purchase Order ${c.number} is approaching its expected end date`,
+        id: `Purchase Order ${c.number} mendekati tanggal selesai yang diperkirakan`,
+      },
+      body: {
+        en: `The expected end date is ${c.expectedEndDate}. Current status: ${c.status}.`,
+        id: `Tanggal selesai yang diperkirakan adalah ${c.expectedEndDate}. Status saat ini: ${c.status}.`,
+      },
+      cta: { en: "See Detail", id: "Lihat Detail" },
+    }),
+    email: (c) => ({
+      subject: {
+        en: `Purchase Order ${c.number} is approaching its expected end date`,
+        id: `Purchase Order ${c.number} mendekati tanggal selesai yang diperkirakan`,
+      },
+      body: {
+        en: `Purchase Order ${c.number} is approaching its expected end date on ${c.expectedEndDate}. Current status: ${c.status}.`,
+        id: `Purchase Order ${c.number} mendekati tanggal selesai yang diperkirakan pada ${c.expectedEndDate}. Status saat ini: ${c.status}.`,
+      },
+      cta: { en: "See Detail", id: "Lihat Detail" },
+    }),
+  },
+  expected_end_date_overdue: {
+    recipientRule: "eligible_users",
+    channels: { inApp: true, email: true },
+    todo: null,
+    inApp: (c) => ({
+      title: {
+        en: `Purchase Order ${c.number} is overdue against its expected end date`,
+        id: `Purchase Order ${c.number} melewati tanggal selesai yang diharapkan`,
+      },
+      body: {
+        en: `The expected end date was ${c.expectedEndDate}. Current status: ${c.status}.`,
+        id: `Tanggal selesai yang diharapkan adalah ${c.expectedEndDate}. Status saat ini: ${c.status}.`,
+      },
+      cta: { en: "See Detail", id: "Lihat Detail" },
+    }),
+    email: (c) => ({
+      subject: {
+        en: `Purchase Order ${c.number} is overdue against its expected end date`,
+        id: `Purchase Order ${c.number} melewati tanggal selesai yang diharapkan`,
+      },
+      body: {
+        en: `Purchase Order ${c.number} passed its expected end date on ${c.expectedEndDate} and remains ${c.status}.`,
+        id: `Purchase Order ${c.number} melewati tanggal selesai yang diharapkan pada ${c.expectedEndDate} dan tetap berstatus ${c.status}.`,
+      },
+      cta: { en: "See Detail", id: "Lihat Detail" },
+    }),
+  },
+});
+
 export const getCatalogEntry = (moduleKey, triggerKey) =>
   NOTIFICATION_CATALOG[moduleKey]?.[triggerKey] || null;

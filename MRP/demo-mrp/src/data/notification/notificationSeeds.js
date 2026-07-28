@@ -66,4 +66,43 @@ export const SEED_NOTIFICATION_EVENTS = [
   { module: "material_request", trigger: "receipt_confirmed", ctx: { entityId: "MR-202606-002", requesterName: "Joko" } },
   { module: "material_request", trigger: "receipt_rejected", ctx: { entityId: "MR-202606-003", requesterName: "Joko", reason: "Quantity received is short by 5 units" } },
   { module: "material_request", trigger: "cancelled_by_preparer", ctx: { entityId: "MR-202606-004", preparerName: "Joko" } },
+  { module: "material_request", trigger: "new_material_request", ctx: { entityId: "MR-202606-006", number: "MR-202606-006", requesterName: "Budi Santoso", workOrderNo: "WO-202606-0002" } },
+
+  // ---- Inventory ----
+  { module: "inventory", trigger: "material_running_low", ctx: { entityId: "MAT-0012", materialName: "Kain Katun Combed 30s", qty: 18, uom: "kg" } },
+  { module: "inventory", trigger: "material_out_of_stock", ctx: { entityId: "MAT-0027", materialName: "Benang Jahit Polyester", uom: "roll" } },
+  { module: "inventory", trigger: "material_expiring_soon", ctx: { entityId: "BATCH-0091", batchNumber: "BATCH-0091", materialName: "Lem Kain Khusus", expiryDate: "12 Jul 2026" } },
+  { module: "inventory", trigger: "material_expired", ctx: { entityId: "BATCH-0088", batchNumber: "BATCH-0088", materialName: "Pewarna Kain", expiryDate: "20 Jun 2026" } },
+
+  // ---- Work Order ----
+  { module: "work_order", trigger: "deadline_approaching", ctx: { entityId: "WO-202606-0003", number: "WO-202606-0003", deadlineDate: "5 Aug 2026", status: "In Progress" } },
+  { module: "work_order", trigger: "changed_to_completed", ctx: { entityId: "WO-202606-0004", number: "WO-202606-0004" } },
+  { module: "work_order", trigger: "changed_to_cancelled", ctx: { entityId: "WO-202606-0005", number: "WO-202606-0005", updatedBy: "Budi Santoso" } },
+  { module: "work_order", trigger: "new_work_order", ctx: { entityId: "WO-202606-0006", number: "WO-202606-0006", productOrOrder: "ORD-202606-006" } },
+  { module: "work_order", trigger: "outsource_po_issued", ctx: { entityId: "WO-202606-0007", number: "WO-202606-0007", poNumber: "PO-202606-007", vendorName: "CV Mitra Jahit" } },
+  { module: "work_order", trigger: "outsource_po_receipt_recorded", ctx: { entityId: "WO-202606-0007", number: "WO-202606-0007", poNumber: "PO-202606-007", receivedQty: "40 pcs", cumulativeQty: "40 pcs", orderedQty: "100 pcs" } },
+  { module: "work_order", trigger: "outsource_po_fully_received", ctx: { entityId: "WO-202606-0008", number: "WO-202606-0008", poNumber: "PO-202606-008" } },
+
+  // ---- Custom Product Request (new request) ----
+  { module: "custom_product_request", trigger: "new_request", ctx: { entityId: "CPR-202606-006", number: "CPR-202606-006", requesterName: "Sarah Johnson", customerCompany: "PT Global Tech" } },
+
+  // ---- Quote (valid-until reminder) ----
+  { module: "quote", trigger: "valid_until_reminder", ctx: { entityId: "QUO-202606-013", validUntilDate: "10 Aug 2026" } },
+
+  // ---- Order (operational) ----
+  { module: "order", trigger: "deadline_approaching", ctx: { entityId: "ORD-202606-006", deadlineDate: "3 Aug 2026", status: "In Production" } },
+  { module: "order", trigger: "deadline_overdue", ctx: { entityId: "ORD-202606-007", deadlineDate: "25 Jul 2026", status: "In Production" } },
+  { module: "order", trigger: "changed_to_completed", ctx: { entityId: "ORD-202606-008" } },
+  { module: "order", trigger: "changed_to_cancelled", ctx: { entityId: "ORD-202606-009", updatedBy: "Joko" } },
+  { module: "order", trigger: "new_order", ctx: { entityId: "ORD-202606-010", customerCompany: "PT Global Tech" } },
+  { module: "order", trigger: "invoice_paid", ctx: { entityId: "ORD-202606-003", invoiceNumber: "INV-202606-006", paidAmount: "Rp 45.000.000" } },
+
+  // ---- Invoice (operational) ----
+  { module: "invoice", trigger: "due_date_approaching", ctx: { entityId: "INV-202606-007", dueDate: "8 Aug 2026", amount: "12.500.000", currency: "IDR" } },
+  { module: "invoice", trigger: "overdue", ctx: { entityId: "INV-202606-008", dueDate: "20 Jul 2026", amount: "8.750.000", currency: "IDR" } },
+
+  // ---- Purchase Order (operational) ----
+  { module: "purchase_order", trigger: "payment_overdue", ctx: { entityId: "PO-202606-009", dueDate: "22 Jul 2026", amount: "30.000.000", currency: "IDR" } },
+  { module: "purchase_order", trigger: "expected_end_date_approaching", ctx: { entityId: "PO-202606-010", expectedEndDate: "6 Aug 2026", status: "Issued" } },
+  { module: "purchase_order", trigger: "expected_end_date_overdue", ctx: { entityId: "PO-202606-011", expectedEndDate: "26 Jul 2026", status: "Issued" } },
 ];

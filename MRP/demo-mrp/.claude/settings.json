@@ -10,7 +10,10 @@
       "Bash(echo \"exit: $?\")",
       "Bash(echo \"App exit: $?\")",
       "Bash(node --input-type=module -e ' *)",
-      "Bash(echo \"exit $?\")"
+      "Bash(echo \"exit $?\")",
+      "Bash(node /tmp/smoke.mjs)",
+      "Bash(npx vite-node *)",
+      "Bash(node --experimental-vm-modules ./smoke.mjs)"
     ]
   }
 }
