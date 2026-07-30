@@ -547,7 +547,7 @@ const PoReceiptsTab = ({
                                 marginTop: "4px",
                               }}
                             >
-                              Avail to receive: {availToReceive} pcs
+                              Ready to receive: {availToReceive} pcs
                             </span>
                           ) : null}
                         </div>

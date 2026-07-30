@@ -50,6 +50,8 @@ export const Dropdown: React.FC<{
   hasMore?: boolean
   /** Called when the user scrolls to the bottom of the list and `hasMore` is true. Use to fetch the next page and append items to `options`. */
   onLoadMore?: () => void
+  /** Custom content pinned below the scrollable option list (e.g. an "Add new" action) — does not scroll with the options. */
+  footer?: React.ReactNode
 }> = ({
   options,
   value,
@@ -82,6 +84,7 @@ export const Dropdown: React.FC<{
   loading = false,
   hasMore = false,
   onLoadMore,
+  footer,
 }) => {
   const locale = useLocale()
   const resolvedPlaceholder = placeholder ?? locale.dropdown.placeholder
@@ -183,6 +186,16 @@ export const Dropdown: React.FC<{
     : options.find((o) => o.value === value)?.label || ""
 
   const isSearchable = searchable || customValueEnabled || !!onSearch
+
+  // Typing directly into the trigger (single-select searchable) filters the
+  // list live; each time the popover opens, start from a blank query so the
+  // full option list is visible again rather than re-filtering on the last pick.
+  React.useEffect(() => {
+    if (!isSearchable || multi) return
+    if (open) setSearch("")
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open])
+
   const filtered = isSearchable && !onSearch
     ? options.filter((o) => o.label.toLowerCase().includes(search.toLowerCase()))
     : options
@@ -219,6 +232,11 @@ export const Dropdown: React.FC<{
   const handleClearAll = (e: React.MouseEvent) => {
     e.stopPropagation()
     onChange?.([])
+  }
+
+  const handleClearSingle = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    onChange?.("")
   }
 
   const handleOpenAddNewPopup = () => {
@@ -267,10 +285,13 @@ export const Dropdown: React.FC<{
         )}
         <div className="relative">
           <div
-            onClick={() => !disabled && setOpen(!open)}
+            onClick={() => { if (disabled || (isSearchable && !multi)) return; setOpen(!open) }}
             role="button"
-            tabIndex={disabled ? -1 : 0}
-            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); !disabled && setOpen(!open) } }}
+            tabIndex={disabled || (isSearchable && !multi) ? -1 : 0}
+            onKeyDown={(e) => {
+              if (disabled || (isSearchable && !multi)) return
+              if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setOpen(!open) }
+            }}
             className={cn(
               "w-full border text-left rounded-lb-sm font-lb",
               multi ? "min-h-10 px-3 py-2 pr-16 flex flex-wrap gap-1.5 items-center" : `flex items-center ${triggerSize}`,
@@ -290,7 +311,7 @@ export const Dropdown: React.FC<{
                 !open &&
                 appearance === "default" &&
                 "border-lb-line-1 bg-lb-surface text-lb-on-surface hover:border-lb-line-2",
-              (!displayValue && !multi) && "text-lb-on-surface-3"
+              (!displayValue && !multi && !isSearchable) && "text-lb-on-surface-3"
             )}
           >
             {multi ? (
@@ -321,6 +342,20 @@ export const Dropdown: React.FC<{
                   )
                 })
               )
+            ) : isSearchable ? (
+              <input
+                value={open ? search : displayValue}
+                onFocus={() => { if (!disabled) setOpen(true) }}
+                onChange={(e) => {
+                  if (disabled) return
+                  if (!open) setOpen(true)
+                  setSearch(e.target.value)
+                  onSearch?.(e.target.value)
+                }}
+                placeholder={resolvedPlaceholder}
+                disabled={disabled}
+                className="block w-full min-w-0 bg-transparent outline-none border-none p-0 m-0 font-lb text-lb-on-surface placeholder:text-lb-on-surface-3 disabled:text-lb-on-surface-3 disabled:cursor-not-allowed"
+              />
             ) : (
               <span className="block w-full min-w-0 overflow-hidden whitespace-nowrap text-ellipsis">
                 {displayValue || resolvedPlaceholder}
@@ -336,6 +371,18 @@ export const Dropdown: React.FC<{
                   onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); const ev = e as unknown as React.MouseEvent; handleClearAll(ev) } }}
                   className="pointer-events-auto flex items-center justify-center w-4 h-4 rounded-full hover:bg-lb-surface-grey transition-colors cursor-pointer text-lb-on-surface-3 hover:text-lb-on-surface"
                   aria-label="Clear all"
+                >
+                  <X size={10} strokeWidth={2} aria-hidden="true" />
+                </span>
+              )}
+              {!multi && !!displayValue && !disabled && (
+                <span
+                  role="button"
+                  tabIndex={0}
+                  onClick={handleClearSingle}
+                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); const ev = e as unknown as React.MouseEvent; handleClearSingle(ev) } }}
+                  className="pointer-events-auto flex items-center justify-center w-4 h-4 rounded-full hover:bg-lb-surface-grey transition-colors cursor-pointer text-lb-on-surface-3 hover:text-lb-on-surface"
+                  aria-label="Clear"
                 >
                   <X size={10} strokeWidth={2} aria-hidden="true" />
                 </span>
@@ -364,7 +411,7 @@ export const Dropdown: React.FC<{
                   : { top: menuRect.top }),
               }}
             >
-              {isSearchable && (
+              {isSearchable && multi && (
                 <div className="p-1 pb-0 flex-shrink-0">
                   <div className="relative mb-1">
                     <input
@@ -382,19 +429,6 @@ export const Dropdown: React.FC<{
                 ref={listRef}
                 className="p-1 max-h-[300px] overflow-y-auto"
               >
-              {showCustomValueRow && (
-                <button
-                  type="button"
-                  onClick={handleAddCustomValue}
-                  className="w-full flex items-center gap-1.5 px-3 py-2.5 mb-1 text-left font-lb text-[14px] text-lb-brand hover:bg-lb-brand-light rounded-lb-sm border-none cursor-pointer"
-                >
-                  <span className="font-lb-bold">+</span>
-                  <span>
-                    Add <span className="font-lb-bold">"{search.trim()}"</span>
-                    {customValueLabel ? ` as ${customValueLabel}` : ""}
-                  </span>
-                </button>
-              )}
               {loading && options.length === 0 ? (
                 <p className="text-center text-[12px] text-lb-on-surface-3 py-3 font-lb">{locale.loading.label}</p>
               ) : !loading && filtered.length === 0 && !showCustomValueRow ? (
@@ -437,18 +471,42 @@ export const Dropdown: React.FC<{
               {loading && options.length > 0 && (
                 <p className="text-center text-[12px] text-lb-on-surface-3 py-2 font-lb">{locale.loading.label}</p>
               )}
-              {addNewOptionEnabled && (
-                <div className="mt-1 pt-1 border-t border-lb-line-1">
-                  <button
-                    type="button"
-                    onClick={handleOpenAddNewPopup}
-                    className="w-full px-3 py-2.5 text-left font-lb text-[14px] text-lb-brand hover:bg-lb-brand-light rounded-lb-sm border-none cursor-pointer"
-                  >
-                    + {resolvedAddNewLabel}
-                  </button>
+              </div>
+              {showCustomValueRow && (
+                <div className="flex-shrink-0 p-1 pt-0">
+                  <div className="pt-1 border-t border-lb-line-1">
+                    <button
+                      type="button"
+                      onClick={handleAddCustomValue}
+                      className="w-full flex items-center gap-1.5 px-3 py-2.5 text-left font-lb text-[14px] text-lb-brand hover:bg-lb-brand-light rounded-lb-sm border-none cursor-pointer"
+                    >
+                      <span className="font-lb-bold">+</span>
+                      <span>
+                        Add <span className="font-lb-bold">"{search.trim()}"</span>
+                        {customValueLabel ? ` as ${customValueLabel}` : ""}
+                      </span>
+                    </button>
+                  </div>
                 </div>
               )}
-              </div>
+              {addNewOptionEnabled && (
+                <div className="flex-shrink-0 p-1 pt-0">
+                  <div className="pt-1 border-t border-lb-line-1">
+                    <button
+                      type="button"
+                      onClick={handleOpenAddNewPopup}
+                      className="w-full px-3 py-2.5 text-left font-lb text-[14px] text-lb-brand hover:bg-lb-brand-light rounded-lb-sm border-none cursor-pointer"
+                    >
+                      + {resolvedAddNewLabel}
+                    </button>
+                  </div>
+                </div>
+              )}
+              {footer && (
+                <div className="flex-shrink-0 p-1 pt-0" onClick={() => setOpen(false)}>
+                  <div className="pt-1 border-t border-lb-line-1">{footer}</div>
+                </div>
+              )}
             </div>,
             document.body
           )}

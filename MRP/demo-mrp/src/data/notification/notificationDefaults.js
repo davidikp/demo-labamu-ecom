@@ -33,7 +33,8 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
       {
         id: "approval_submission",
         name: "Approval Submission",
-        description: "Notify the approver when a record is submitted for their approval.",
+        description:
+          "Notifies all assigned approvers when an RFQ, Quote, Order, Purchase Order, or Custom Product Request is submitted for approval.",
         trigger: "Submitted for approval",
         type: "required",
         recipient: "Configured approver",
@@ -56,7 +57,8 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
       {
         id: "approval_progress_update",
         name: "Approval Progress Update",
-        description: "Update the submitter as each approver approves the record.",
+        description:
+          "Notifies the latest submitter when an approver completes their review while other approvals are still pending.",
         trigger: "One approver approves",
         type: "required",
         recipient: "Latest submitter",
@@ -79,7 +81,8 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
       {
         id: "final_approval",
         name: "Final Approval",
-        description: "Confirm to the submitter when all required approvals are complete.",
+        description:
+          "Notifies the latest submitter when all required approvers have approved the record.",
         trigger: "All approvers approve",
         type: "required",
         recipient: "Latest submitter",
@@ -102,7 +105,7 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
       {
         id: "approval_rejected",
         name: "Approval Rejected",
-        description: "Alert the submitter when an approver rejects the record.",
+        description: "Notifies the latest submitter when an approver rejects the record.",
         trigger: "Rejected",
         type: "required",
         recipient: "Latest submitter",
@@ -125,7 +128,8 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
       {
         id: "revision_requested",
         name: "Revision Requested",
-        description: "Alert the submitter when an approver requests changes.",
+        description:
+          "Notifies the latest submitter when an approver requests changes before the record can continue through approval.",
         trigger: "Needs revision",
         type: "required",
         recipient: "Latest submitter",
@@ -156,7 +160,8 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
       {
         id: "material_running_low",
         name: "Material Running Low",
-        description: "Warn when a material's available stock reaches its minimum level.",
+        description:
+          "Notifies eligible users with Materials access when the available quantity reaches or falls below the configured minimum stock level.",
         trigger: "Stock reaches minimum",
         type: "configurable",
         recipient: "Eligible users with Inventory access",
@@ -179,7 +184,8 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
       {
         id: "material_out_of_stock",
         name: "Material Out of Stock",
-        description: "Alert when a material's available stock reaches zero.",
+        description:
+          "Notifies eligible users with Materials access when the available quantity reaches zero.",
         trigger: "Stock reaches zero",
         type: "configurable",
         recipient: "Eligible users with Inventory access",
@@ -202,7 +208,8 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
       {
         id: "material_expiring_soon",
         name: "Material Expiring Soon",
-        description: "Remind ahead of a material batch's expiry date.",
+        description:
+          "Notifies eligible users with Batches access before a material batch reaches its expiry date, based on the configured reminder timing.",
         trigger: "Configured number of days before the batch expiry date",
         type: "configurable",
         recipient: "Eligible users with Inventory access",
@@ -226,7 +233,8 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
       {
         id: "material_expired",
         name: "Material Expired",
-        description: "Notify when a material batch has expired.",
+        description:
+          "Notifies eligible users with Batches access when a material batch reaches its expiry date.",
         trigger: "Batch expires",
         type: "configurable",
         recipient: "Eligible users with Inventory access",
@@ -257,7 +265,8 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
       {
         id: "mr_transfer_started",
         name: "Transfer Started",
-        description: "Ask the requester to confirm receipt once the transfer starts.",
+        description:
+          "Notifies the requester or material receiver when the requested materials have been transferred and are ready for receipt confirmation.",
         trigger: "Transfer started",
         type: "required",
         recipient: "Requester / material receiver",
@@ -280,7 +289,8 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
       {
         id: "mr_receipt_confirmed",
         name: "Receipt Confirmed",
-        description: "Tell the preparer when the requester confirms receipt.",
+        description:
+          "Notifies the material preparer when the requester or receiver confirms that the materials were received successfully.",
         trigger: "Receipt confirmed",
         type: "required",
         recipient: "Material preparer",
@@ -303,7 +313,8 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
       {
         id: "mr_receipt_rejected",
         name: "Receipt Rejected",
-        description: "Ask the preparer to resolve a rejected material receipt.",
+        description:
+          "Notifies the material preparer when the requester or receiver reports an issue with the received materials.",
         trigger: "Receipt rejected",
         type: "required",
         recipient: "Material preparer",
@@ -326,7 +337,8 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
       {
         id: "mr_cancelled_by_preparer",
         name: "Material Request Cancelled by Preparer",
-        description: "Notify the requester when the preparer cancels the request.",
+        description:
+          "Notifies the requester or material receiver when the material preparer cancels the Material Request.",
         trigger: "Cancelled by preparer",
         type: "required",
         recipient: "Requester / material receiver",
@@ -349,7 +361,8 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
       {
         id: "mr_new_material_request",
         name: "New Material Request",
-        description: "Announce a newly created material request to preparers.",
+        description:
+          "Notifies eligible material preparers with access when a new Material Request is created and requires preparation.",
         trigger: "New Material Request is created",
         type: "configurable",
         recipient: "Eligible material preparers with access",
@@ -381,7 +394,8 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
       {
         id: "wo_deadline_approaching",
         name: "Deadline Approaching",
-        description: "Remind ahead of a work order's deadline.",
+        description:
+          "Reminds eligible users with access to the related Work Order before its deadline, based on the configured reminder timing.",
         trigger: "Configured reminder date before deadline",
         type: "configurable",
         recipient: "Eligible users with Work Orders access",
@@ -405,7 +419,8 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
       {
         id: "wo_deadline_overdue",
         name: "Deadline Overdue",
-        description: "Alert when a work order passes its deadline unresolved.",
+        description:
+          "Notifies eligible users with access to the related Work Order when it has passed its deadline and remains unresolved.",
         trigger: "Deadline passed",
         type: "configurable",
         recipient: "Eligible users with Work Orders access",
@@ -428,7 +443,8 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
       {
         id: "wo_changed_to_completed",
         name: "Changed to Completed",
-        description: "Notify when a work order is marked completed.",
+        description:
+          "Notifies eligible users with access to the related Work Order when its status changes to Completed.",
         trigger: "Status changes to Completed",
         type: "configurable",
         recipient: "Eligible users with Work Orders access",
@@ -451,7 +467,8 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
       {
         id: "wo_changed_to_cancelled",
         name: "Changed to Cancelled",
-        description: "Notify when a work order is cancelled.",
+        description:
+          "Notifies eligible users with access to the related Work Order when its status changes to Cancelled.",
         trigger: "Status changes to Cancelled",
         type: "configurable",
         recipient: "Eligible users with Work Orders access",
@@ -474,7 +491,8 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
       {
         id: "wo_new_work_order",
         name: "New Work Order",
-        description: "Announce a newly created work order.",
+        description:
+          "Notifies eligible users with Work Orders access when a new Work Order is created in Not Started status.",
         trigger: "Work Order is created with status Not Started",
         type: "configurable",
         recipient: "Eligible users with Work Orders access",
@@ -498,7 +516,8 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
       {
         id: "wo_outsource_po_issued",
         name: "Outsource Purchase Order Issued",
-        description: "Notify when a purchase order for an outsourced work order is issued.",
+        description:
+          "Notifies eligible users with access to the related Work Order when a linked Purchase Order is issued to the vendor. A separate notification is generated for each linked Work Order.",
         trigger:
           "A Purchase Order containing one or more outsourced Work Orders changes to Issued (one notification per linked Work Order)",
         type: "configurable",
@@ -522,7 +541,8 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
       {
         id: "wo_outsource_po_receipt_recorded",
         name: "Outsource Purchase Order Receipt Recorded",
-        description: "Notify when a partial receipt is recorded for an outsourced work order.",
+        description:
+          "Notifies eligible users with access to the related Work Order when items are received and the Work Order remains partially received. A separate notification is generated for each affected Work Order.",
         trigger:
           "A receipt transaction is recorded for an outsourced Work Order that remains partially received",
         type: "configurable",
@@ -543,7 +563,8 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
       {
         id: "wo_outsource_po_fully_received",
         name: "Outsource Purchase Order Fully Received",
-        description: "Notify when an outsourced work order is fully received.",
+        description:
+          "Notifies eligible users with access to the related Work Order when all outsourced items have been received. A separate notification is generated for each completed Work Order.",
         trigger:
           "A receipt transaction brings an outsourced Work Order to its total ordered quantity",
         type: "configurable",
@@ -571,7 +592,8 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
       {
         id: "cpr_new_request",
         name: "New Request",
-        description: "Announce a newly created custom product request.",
+        description:
+          "Notifies eligible users with Custom Product Requests access when a new Custom Product Request is created and is ready for review or processing.",
         trigger: "New request",
         type: "configurable",
         recipient: "Subscribed users with CPR access",
@@ -603,7 +625,8 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
       {
         id: "quote_valid_until_reminder",
         name: "Quote Valid Until Reminder",
-        description: "Remind ahead of a quote's validity expiry.",
+        description:
+          "Reminds eligible users with Quotes access before an issued Quote reaches its validity date, based on the configured reminder timing.",
         trigger: "Configured reminder date before valid-until date",
         type: "configurable",
         recipient: "Subscribed users with Quote access",
@@ -627,7 +650,8 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
       {
         id: "quote_approved_by_customer",
         name: "Quote Approved by Customer",
-        description: "Notify when a customer approves a quote in the portal.",
+        description:
+          "Notifies the user who shared the Customer Portal when the customer approves the Quote.",
         trigger: "Customer approves Quote through Customer Portal",
         type: "required",
         recipient: "Customer Portal sender",
@@ -650,7 +674,8 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
       {
         id: "quote_rejected_by_customer",
         name: "Quote Rejected by Customer",
-        description: "Notify when a customer rejects a quote in the portal.",
+        description:
+          "Notifies the user who shared the Customer Portal when the customer rejects the Quote.",
         trigger: "Customer rejects Quote through Customer Portal",
         type: "required",
         recipient: "Customer Portal sender",
@@ -673,7 +698,8 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
       {
         id: "quote_revision_requested_by_customer",
         name: "Quote Revision Requested by Customer",
-        description: "Notify when a customer requests quote changes in the portal.",
+        description:
+          "Notifies the user who shared the Customer Portal when the customer requests changes to the Quote.",
         trigger: "Customer requests changes through Customer Portal",
         type: "required",
         recipient: "Customer Portal sender",
@@ -704,7 +730,8 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
       {
         id: "order_deadline_approaching",
         name: "Order Deadline Approaching",
-        description: "Remind ahead of an order's deadline.",
+        description:
+          "Reminds eligible users with access to the related Order before its deadline, based on the configured reminder timing.",
         trigger: "Configured reminder date before deadline",
         type: "configurable",
         recipient: "Eligible users with Orders access",
@@ -728,7 +755,8 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
       {
         id: "order_deadline_overdue",
         name: "Order Deadline Overdue",
-        description: "Alert when an order passes its deadline unresolved.",
+        description:
+          "Notifies eligible users with access to the related Order when it has passed its deadline and remains unresolved.",
         trigger: "Deadline passed",
         type: "configurable",
         recipient: "Eligible users with Orders access",
@@ -751,7 +779,8 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
       {
         id: "order_changed_to_completed",
         name: "Changed to Completed",
-        description: "Notify when an order is marked completed.",
+        description:
+          "Notifies eligible users with access to the related Order when its status changes to Completed.",
         trigger: "Status changes to Completed",
         type: "configurable",
         recipient: "Eligible users with Orders access",
@@ -774,7 +803,8 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
       {
         id: "order_changed_to_cancelled",
         name: "Changed to Cancelled",
-        description: "Notify when an order is cancelled.",
+        description:
+          "Notifies eligible users with access to the related Order when its status changes to Cancelled.",
         trigger: "Status changes to Cancelled",
         type: "configurable",
         recipient: "Eligible users with Orders access",
@@ -797,7 +827,8 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
       {
         id: "order_new_order",
         name: "New Order",
-        description: "Announce a newly created order.",
+        description:
+          "Notifies eligible users with Orders access when a new Order is created in Not Started status.",
         trigger: "Order is created with status Not Started",
         type: "configurable",
         recipient: "Eligible users with Orders access",
@@ -821,7 +852,8 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
       {
         id: "order_invoice_paid",
         name: "Order Invoice Paid",
-        description: "Notify when an invoice linked to an order is fully paid.",
+        description:
+          "Notifies eligible users with access to the related Order when a linked Invoice is fully paid. Partial payments do not trigger this notification.",
         trigger: "An Invoice linked to an Order changes to Paid",
         type: "configurable",
         recipient: "Eligible users with access to the related Order",
@@ -852,7 +884,8 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
       {
         id: "invoice_due_date_approaching",
         name: "Due Date Approaching",
-        description: "Remind ahead of an invoice's due date.",
+        description:
+          "Reminds eligible users with Invoices access before an unpaid Invoice reaches its due date, based on the configured reminder timing.",
         trigger: "Configured reminder date before due date",
         type: "configurable",
         recipient: "Subscribed users with Invoice access",
@@ -876,7 +909,8 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
       {
         id: "invoice_overdue",
         name: "Invoice Overdue",
-        description: "Alert when an invoice passes its due date unpaid.",
+        description:
+          "Notifies eligible users with Invoices access when an unpaid Invoice has passed its due date.",
         trigger: "Due date passed and unpaid",
         type: "configurable",
         recipient: "Subscribed users with Invoice access",
@@ -899,7 +933,8 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
       {
         id: "invoice_approved_by_customer",
         name: "Invoice Approved by Customer",
-        description: "Notify when a customer approves an invoice in the portal.",
+        description:
+          "Notifies the Invoice owner or Customer Portal sender when the customer approves the Invoice.",
         trigger: "Customer approves Invoice through Customer Portal",
         type: "required",
         recipient: "Invoice owner or Customer Portal sender",
@@ -922,7 +957,8 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
       {
         id: "invoice_rejected_by_customer",
         name: "Invoice Rejected by Customer",
-        description: "Notify when a customer rejects an invoice in the portal.",
+        description:
+          "Notifies the Invoice owner or Customer Portal sender when the customer rejects the Invoice.",
         trigger: "Customer rejects Invoice through Customer Portal",
         type: "required",
         recipient: "Invoice owner or Customer Portal sender",
@@ -945,7 +981,8 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
       {
         id: "invoice_revision_requested_by_customer",
         name: "Invoice Revision Requested by Customer",
-        description: "Notify when a customer requests invoice changes in the portal.",
+        description:
+          "Notifies the Invoice owner or Customer Portal sender when the customer requests changes to the Invoice.",
         trigger: "Customer requests changes through Customer Portal",
         type: "required",
         recipient: "Invoice owner or Customer Portal sender",
@@ -968,7 +1005,8 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
       {
         id: "invoice_payment_proof_submitted",
         name: "Payment Proof Submitted",
-        description: "Ask the owner to review customer-submitted payment proof.",
+        description:
+          "Notifies the Invoice owner or responsible reviewer when a customer uploads payment proof through the Customer Portal.",
         trigger: "Payment proof submitted through portal",
         type: "required",
         recipient: "Invoice owner or portal sender",
@@ -991,7 +1029,8 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
       {
         id: "invoice_payment_proof_rejected",
         name: "Payment Proof Rejected",
-        description: "Notify the customer when their payment proof is rejected.",
+        description:
+          "Notifies the customer when their payment proof is rejected and must be uploaded again.",
         trigger: "Internal reviewer rejects customer payment proof",
         type: "required",
         recipient: "Customer",
@@ -1022,7 +1061,8 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
       {
         id: "po_payment_overdue",
         name: "Payment Overdue",
-        description: "Alert when a purchase order payment passes its due date.",
+        description:
+          "Notifies eligible users with Purchase Orders access when a Purchase Order remains unpaid after its payment due date.",
         trigger: "Payment due date passed",
         type: "configurable",
         recipient: "Subscribed users with Purchase Order access",
@@ -1045,7 +1085,8 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
       {
         id: "po_expected_end_date_approaching",
         name: "Expected End Date Approaching",
-        description: "Remind ahead of a purchase order's expected end date.",
+        description:
+          "Reminds eligible users with Purchase Orders access before a Purchase Order reaches its expected end date, based on the configured reminder timing.",
         trigger: "Configured reminder date before expected end date",
         type: "configurable",
         recipient: "Subscribed users with Purchase Order access",
@@ -1069,7 +1110,8 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
       {
         id: "po_expected_end_date_overdue",
         name: "Expected End Date Overdue",
-        description: "Alert when a purchase order passes its expected end date.",
+        description:
+          "Notifies eligible users with Purchase Orders access when a Purchase Order remains incomplete after its expected end date.",
         trigger: "Expected end date passed",
         type: "configurable",
         recipient: "Subscribed users with Purchase Order access",

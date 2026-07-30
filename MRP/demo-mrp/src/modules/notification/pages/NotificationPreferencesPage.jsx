@@ -107,7 +107,6 @@ const NotificationPreferencesPage = ({
     clonePersonalPreferences(personalPreferences || buildDefaultPersonalPreferences())
   );
   const [toastMessage, setToastMessage] = useState("");
-  const [validationError, setValidationError] = useState("");
   const toastTimerRef = useRef(null);
 
   useEffect(() => {
@@ -132,7 +131,6 @@ const NotificationPreferencesPage = ({
   };
 
   const patchRules = (ids, patch) => {
-    setValidationError("");
     setPrefs((prev) => {
       const next = { ...prev };
       ids.forEach((id) => {
@@ -152,21 +150,6 @@ const NotificationPreferencesPage = ({
   );
 
   const handleSave = () => {
-    const offenders = ALL_NOTIFICATION_RULES.filter((rule) => {
-      if (rule.type === "required") return false;
-      const { status } = resolveEffectiveStatus(rule, company, prefs);
-      if (status !== "on") return false;
-      const p = prefs[rule.id];
-      return !p?.inApp && !p?.email;
-    });
-    if (offenders.length > 0) {
-      setValidationError(
-        `Enable at least one delivery channel (In-app or Email) for: ${offenders
-          .map((r) => r.name)
-          .join(", ")}.`
-      );
-      return;
-    }
     const saved = clonePersonalPreferences(prefs);
     setSavedSnapshot(saved);
     onSavePersonalPreferences?.(saved);
@@ -175,7 +158,6 @@ const NotificationPreferencesPage = ({
 
   const handleCancel = () => {
     setPrefs(clonePersonalPreferences(savedSnapshot));
-    setValidationError("");
     showToast("Changes discarded");
   };
 
@@ -469,21 +451,6 @@ const NotificationPreferencesPage = ({
         onChange={setActiveModule}
         className="flex-wrap"
       />
-
-      {validationError ? (
-        <div
-          style={{
-            padding: "12px 16px",
-            borderRadius: "12px",
-            border: "1px solid var(--status-red-primary)",
-            background: "var(--status-red-container, #FEF2F2)",
-            color: "var(--status-red-primary)",
-            fontSize: "var(--text-title-3)",
-          }}
-        >
-          {validationError}
-        </div>
-      ) : null}
 
       {/* Content card — no accent bar, no divider between header and table.
           The scoped rule aligns the ce-ui table cells (default px-4) to the

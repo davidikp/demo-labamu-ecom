@@ -34,7 +34,7 @@ const breakdownEmptyStateStyle = {
   minHeight: "80px",
 };
 
-export const CostFieldAccordion = ({ icon: Icon, title, description, isNew, field, onChange, readOnly = false, onAddItem, invalidLineIds }) => {
+export const CostFieldAccordion = ({ icon: Icon, title, description, isNew, field, onChange, readOnly = false, disabled = false, onAddItem, invalidLineIds }) => {
   const [expanded, setExpanded] = useState(true);
   const [breakdownVisible, setBreakdownVisible] = useState(false);
   const total = fieldTotal(field);
@@ -89,7 +89,7 @@ export const CostFieldAccordion = ({ icon: Icon, title, description, isNew, fiel
             </span>
           ) : (
             <div style={{ width: "200px" }}>
-              <InputField type="number" prefix="IDR" value={field.amount} onChange={(e) => setAmount(e.target.value)} />
+              <InputField type="number" prefix="IDR" value={field.amount} onChange={(e) => setAmount(e.target.value)} disabled={disabled} />
             </div>
           )}
         </div>
@@ -185,6 +185,7 @@ export const CostFieldAccordion = ({ icon: Icon, title, description, isNew, fiel
                         value={l.label}
                         onChange={(e) => updateLine(idx, { label: e.target.value })}
                         errorState={!!lineError}
+                        disabled={disabled}
                       />
                       {lineError ? (
                         <div
@@ -208,6 +209,7 @@ export const CostFieldAccordion = ({ icon: Icon, title, description, isNew, fiel
                         prefix="IDR"
                         value={l.amount}
                         onChange={(e) => updateLine(idx, { amount: Number(e.target.value) || 0 })}
+                        disabled={disabled}
                       />
                     </div>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -215,16 +217,17 @@ export const CostFieldAccordion = ({ icon: Icon, title, description, isNew, fiel
                         variant="outlined"
                         size="small"
                         onClick={() => removeLine(idx)}
-                        style={{ borderColor: "var(--status-red-primary)" }}
+                        disabled={disabled}
+                        style={disabled ? undefined : { borderColor: "var(--status-red-primary)" }}
                       >
-                        <DeleteIcon size={16} color="var(--status-red-primary)" />
+                        <DeleteIcon size={16} color={disabled ? undefined : "var(--status-red-primary)"} />
                       </Button>
                     </div>
                   </div>
                 );
               })}
               <div style={{ display: "flex", flexDirection: "column", gap: "4px", alignItems: "flex-start" }}>
-                <Button variant="outlined" size="small" leftIcon={AddIcon} onClick={addLine} disabled={atMax} style={{ alignSelf: "flex-start" }}>
+                <Button variant="outlined" size="small" leftIcon={AddIcon} onClick={addLine} disabled={disabled || atMax} style={{ alignSelf: "flex-start" }}>
                   Add Cost Item
                 </Button>
                 {atMax ? (

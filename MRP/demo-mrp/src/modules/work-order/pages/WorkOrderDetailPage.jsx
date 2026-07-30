@@ -3,6 +3,7 @@ import { Send, Truck } from "lucide-react";
 import { AddIcon, Box, Building2, CheckIcon, ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon, ChevronUpIcon, CircleDollarSign, CloseIcon, DeleteIcon, DocumentIcon, DownloadIcon, EditIcon, FileText, Info, Minus, Plus, Upload, Users } from "../../../components/icons/Icons.jsx";
 import { Button } from "../../../components/common/Button.jsx";
 import { Checkbox } from "../../../components/common/Checkbox.jsx";
+import { ClampedDescriptionText } from "../../../components/common/ClampedDescriptionText.jsx";
 import { DropdownSelect } from "../../../components/common/DropdownSelect.jsx";
 import { FilterMenu } from "../../../components/molecules/FilterMenu.jsx";
 import { ChipTabBar } from "../../../components/molecules/ChipTabBar.jsx";
@@ -207,8 +208,26 @@ const ONGOING_REQUEST_HISTORY = [
   { id: "REQ0129027", date: "08/02/2025; 15:00", by: "Zoe Adams", status: "Cancelled" },
 ];
 
-const initialRequestHistory = (woId) =>
-  woId === ONGOING_REQUEST_WO ? ONGOING_REQUEST_HISTORY : [];
+// Completed work order with a fulfilled material request, used to demo the Actual COGS material breakdown.
+const COMPLETED_REQUEST_WO = "WO-2024-08-012-00001";
+const COMPLETED_REQUEST_HISTORY = [
+  { id: "REQ0129020", date: "20/12/2025; 09:30", by: "Naomi", status: "Completed" },
+];
+
+// In-progress work order with a partially fulfilled material request, used to demo the Actual COGS
+// material breakdown while a request is still being transferred.
+const IN_PROGRESS_REQUEST_WO = "WO-202604-007";
+const IN_PROGRESS_REQUEST_HISTORY = [
+  { id: "REQ0129022", date: "27/04/2026; 09:00", by: "John Doe", status: "Transferring" },
+  { id: "REQ0129021", date: "26/04/2026; 10:15", by: "John Doe", status: "Completed" },
+];
+
+const initialRequestHistory = (woId) => {
+  if (woId === ONGOING_REQUEST_WO) return ONGOING_REQUEST_HISTORY;
+  if (woId === COMPLETED_REQUEST_WO) return COMPLETED_REQUEST_HISTORY;
+  if (woId === IN_PROGRESS_REQUEST_WO) return IN_PROGRESS_REQUEST_HISTORY;
+  return [];
+};
 
 const REQUEST_STATUS_VARIANT = {
   "New Request": "blue",
@@ -4473,7 +4492,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
             </div>
             {woStatus !== "not_started" && !isCancelled ? (
               <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                {hasSubmittedRequest ? (
+                {hasSubmittedRequest && woStatus !== "completed" ? (
                   <Button
                     variant="tertiary"
                     onClick={() => setIsHistoryModalOpen(true)}
@@ -5847,7 +5866,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
 
         {activeTab === "cogs" && (() => {
           const linkedBom = actualCogsBomId ? getBom(actualCogsBomId) : null;
-          const materialCost = computeMaterialCost(linkedBom?.materials || []);
+          const materialCost = requestHistory.length > 0 ? computeMaterialCost(linkedBom?.materials || []) : 0;
 
           const outsourcingVendors = (vendors || []).filter((v) => v.name !== "Internal" && v.assignedSteps?.length);
           const hasOutsourcing = outsourceSteps?.length > 0 && outsourcingVendors.length > 0;
@@ -5857,9 +5876,20 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
               linkedPo?.lines?.find((l) => l.woRef === initialData?.wo) || linkedPo?.lines?.[0] || null;
             const unitCost = matchedLine?.price || 0;
             const assignedQty = Number(v.output) || 0;
-            const includedSteps = (v.assignedSteps || [])
-              .map((step) => routingStages.find((s) => s.step === step)?.route || routingStages.find((s) => s.step === step)?.op || `Step ${step}`)
-              .join(", ");
+            const normalizedIncludedSteps = Array.from(
+              new Set((v.assignedSteps || []).filter((s) => Number.isFinite(s)))
+            ).sort((a, b) => a - b);
+            const includedSteps = normalizedIncludedSteps
+              .map((step) => {
+                const matchedStage = (routingStages || []).find((s) => Number(s.step) === step);
+                const routingName = matchedStage?.route;
+                const operationName = matchedStage?.op || matchedStage?.operation;
+                if (routingName && operationName) return `Step ${step}: ${routingName} - ${operationName}`;
+                if (routingName || operationName) return `Step ${step}: ${routingName || operationName}`;
+                return `Step ${step}`;
+              })
+              .map((label) => `• ${label}`)
+              .join("\n");
             return {
               id: v.id ?? v.assignmentId ?? v.name,
               vendor: v.name,
@@ -6152,7 +6182,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                   </div>
                 </div>
 
-                {linkedBom?.materials?.length ? (
+                {linkedBom?.materials?.length && requestHistory.length > 0 ? (
                   <div style={{ paddingLeft: "24px" }}>
                     <Button
                       variant="tertiary"
@@ -6186,7 +6216,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                   </div>
                 )}
 
-                {showActualMaterialBreakdown && linkedBom?.materials?.length ? (
+                {showActualMaterialBreakdown && linkedBom?.materials?.length && requestHistory.length > 0 ? (
                   <div style={{ paddingLeft: "32px" }}>
                     <div style={{ width: "100%", display: "flex", flexDirection: "column" }}>
                       <div style={detailTableHeaderRowStyle(MATERIAL_ACTUAL_COST_GRID_COLUMNS)}>
@@ -6200,7 +6230,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                       {linkedBom.materials.map((line, idx) => {
                         const option = resolveMaterialOption(line.materialId);
                         const unitPrice = option?.averageCost || 0;
-                        const qty = Number(line.quantity || 0);
+                        const qty = getLiveMaterialRequestTotals(line.sku).receivedQty;
                         const rowTotal = unitPrice * qty;
                         const perUnit = TOTAL_QTY > 0 ? rowTotal / TOTAL_QTY : 0;
                         const batches = getStockBatchesForSku(line.sku) || [];
@@ -6251,7 +6281,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                                   {qty} {line.unit || ""}
                                 </span>
                                 <span style={{ fontSize: "var(--text-title-3)", color: "var(--neutral-on-surface-primary)" }}>
-                                  {formatIDR(unitPrice)}
+                                  -
                                 </span>
                                 <span style={{ fontSize: "var(--text-title-3)" }}>{formatIDR(perUnit)}</span>
                                 <span style={{ fontSize: "var(--text-title-3)", textAlign: "right" }}>{formatIDR(rowTotal)}</span>
@@ -6306,7 +6336,9 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                           <div key={row.id} style={detailTableRowStyle(OUTSOURCING_COST_GRID_COLUMNS, idx === outsourcingRows.length - 1)}>
                             <span style={{ fontSize: "var(--text-title-3)" }}>{row.vendor}</span>
                             <span style={{ fontSize: "var(--text-title-3)" }}>{row.assignmentId}</span>
-                            <span style={{ fontSize: "var(--text-title-3)" }}>{row.includedSteps}</span>
+                            <div style={{ padding: "12px 0" }}>
+                              <ClampedDescriptionText text={row.includedSteps} />
+                            </div>
                             {row.poNumber !== "-" ? (
                               <span
                                 onClick={() => {

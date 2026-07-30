@@ -13,7 +13,8 @@
       "Bash(echo \"exit $?\")",
       "Bash(node /tmp/smoke.mjs)",
       "Bash(npx vite-node *)",
-      "Bash(node --experimental-vm-modules ./smoke.mjs)"
+      "Bash(node --experimental-vm-modules ./smoke.mjs)",
+      "Bash(grep -rniE \"add.{0,3}category|category name\" /Users/davidikp/Documents/MRP/demo-mrp/src)"
     ]
   }
 }

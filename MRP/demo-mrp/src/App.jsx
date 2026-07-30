@@ -25,6 +25,10 @@ import { BomCreatePage } from "./modules/bill-of-materials/pages/BomCreatePage.j
 import { OrderListPage } from "./modules/orders/pages/OrderListPage.jsx";
 import { OrderDetailPage } from "./modules/orders/pages/OrderDetailPage.jsx";
 import { OrderSettingsPage } from "./modules/orders/pages/OrderSettingsPage.jsx";
+import { CustomProductRequestListPage } from "./modules/custom-product-request/pages/CustomProductRequestListPage.jsx";
+import { CustomProductRequestDetailPage } from "./modules/custom-product-request/pages/CustomProductRequestDetailPage.jsx";
+import { CustomProductRequestCreatePage } from "./modules/custom-product-request/pages/CustomProductRequestCreatePage.jsx";
+import { CustomProductRequestSettingsPage } from "./modules/custom-product-request/pages/CustomProductRequestSettingsPage.jsx";
 import { UserManagementPage } from "./modules/administration/pages/UserManagementPage.jsx";
 import { NotificationSettingsPage } from "./modules/administration/pages/NotificationSettingsPage.jsx";
 import { NotificationPreferencesPage } from "./modules/notification/pages/NotificationPreferencesPage.jsx";
@@ -213,6 +217,7 @@ const MODULE_TO_ROUTE = {
   purchase_order: "purchase-order",
   bill_of_materials: "bill-of-materials",
   orders: "orders",
+  custom_product_request: "custom-product-request",
   materials: "materials",
   material_request: "material-request",
   analytics: "analytics",
@@ -872,6 +877,33 @@ const ModuleRenderer = ({
       );
     }
   }
+
+  if (activeModule === "custom_product_request") {
+    if (viewState.view === "list") {
+      return <CustomProductRequestListPage onNavigate={onNavigate} />;
+    }
+    if (viewState.view === "settings") {
+      return <CustomProductRequestSettingsPage onNavigate={onNavigate} isSidebarCollapsed={isSidebarCollapsed} />;
+    }
+    if (viewState.view === "detail") {
+      return (
+        <CustomProductRequestDetailPage
+          onNavigate={onNavigate}
+          isSidebarCollapsed={isSidebarCollapsed}
+          initialData={viewState.data}
+        />
+      );
+    }
+    if (viewState.view === "create") {
+      return (
+        <CustomProductRequestCreatePage
+          onNavigate={onNavigate}
+          isSidebarCollapsed={isSidebarCollapsed}
+          initialData={viewState.data}
+        />
+      );
+    }
+  }
   if (activeModule === "user_management" || (activeModule === "administration" && viewState.view === "user_management")) {
     return (
       <UserManagementPage
@@ -1124,14 +1156,19 @@ export default function App() {
         } else if (data?.ord && typeof data.ord === "string" && data.ord.startsWith("ORD-")) {
           id = data.ord;
           targetModule = "orders";
+        } else if (data?.cprNumber && typeof data.cprNumber === "string" && data.cprNumber.startsWith("CPR-")) {
+          id = data.cprNumber;
+          targetModule = "custom-product-request";
         } else {
-          id = (data?.orderNo || data?.sku || data?.poNumber || data?.wo || data?.id || "detail");
+          id = (data?.orderNo || data?.sku || data?.poNumber || data?.wo || data?.cprNumber || data?.id || "detail");
           if (typeof id === "string" && id.startsWith("PO-")) {
             targetModule = "purchase-order";
           } else if (typeof id === "string" && id.startsWith("ORD-")) {
             targetModule = "orders";
           } else if (typeof id === "string" && id.startsWith("WO-")) {
             targetModule = "work-order";
+          } else if (typeof id === "string" && id.startsWith("CPR-")) {
+            targetModule = "custom-product-request";
           }
         }
         

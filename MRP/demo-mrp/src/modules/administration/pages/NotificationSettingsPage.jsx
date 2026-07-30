@@ -84,8 +84,6 @@ const NotificationSettingsPage = ({
     cloneCompanySettings(notificationSettings || buildDefaultCompanySettings())
   );
   const [toastMessage, setToastMessage] = useState("");
-  // Which toggle tripped the "at least one channel" guard: { id, channel } | null.
-  const [channelError, setChannelError] = useState(null);
   // Pending navigation awaiting discard confirmation: null | {type:"cancel"}
   const [pendingAction, setPendingAction] = useState(null);
   const toastTimerRef = useRef(null);
@@ -143,19 +141,7 @@ const NotificationSettingsPage = ({
     });
   };
 
-  // Channel change with the "at least one channel" guard (AC #9), shown inline
-  // in the offending row.
   const setChannel = (unit, channel, nextValue) => {
-    const primaryId = unit.memberIds[0];
-    const state = settings[primaryId] || {};
-    if (!nextValue) {
-      const other = channel === "inApp" ? "email" : "inApp";
-      if (!state[other]) {
-        setChannelError({ id: primaryId, channel });
-        return;
-      }
-    }
-    if (channelError?.id === primaryId) setChannelError(null);
     patchRules(unit.memberIds, { [channel]: nextValue });
   };
 
@@ -166,23 +152,16 @@ const NotificationSettingsPage = ({
   };
 
   const handleSave = () => {
-    // Both-channels-off is blocked at toggle time; reminder validity is shown
-    // inline per input. Block the save if anything is still invalid.
-    const hasChannelOffender = ALL_NOTIFICATION_RULES.filter(
-      (rule) => rule.type !== "required"
-    ).some((rule) => {
-      const s = settings[rule.id];
-      return !s?.inApp && !s?.email;
-    });
+    // Reminder validity is shown inline per input; block the save if anything
+    // is still invalid.
     const hasReminderOffender = ALL_NOTIFICATION_RULES.filter((rule) =>
       REMINDER_SUPPORTED_RULE_IDS.has(rule.id)
     ).some((rule) => remindBeforeInvalid(settings[rule.id]?.remindBefore));
-    if (hasChannelOffender || hasReminderOffender) return;
+    if (hasReminderOffender) return;
 
     const saved = cloneCompanySettings(settings);
     setSavedSnapshot(saved);
     onSaveNotificationSettings?.(saved);
-    setChannelError(null);
     showToast("Notification settings saved");
   };
 
@@ -192,7 +171,6 @@ const NotificationSettingsPage = ({
     if (id === activeModule) return;
     setActiveModule(id);
     setSearchQuery("");
-    setChannelError(null);
   };
 
   const requestCancel = () => {
@@ -203,7 +181,6 @@ const NotificationSettingsPage = ({
   const confirmDiscard = () => {
     const action = pendingAction;
     setSettings(cloneCompanySettings(savedSnapshot));
-    setChannelError(null);
     setPendingAction(null);
     if (action?.type === "leave") {
       // Allow the deferred navigation to proceed (component will unmount).
@@ -236,27 +213,11 @@ const NotificationSettingsPage = ({
         <ToggleSwitch checked disabled className={LOCKED_ON_TOGGLE_CLASS} onChange={() => {}} />
       );
     }
-    const showError =
-      channelError?.id === primaryId && channelError?.channel === channel;
     return (
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "4px" }}>
-        <ToggleSwitch
-          checked={state[channel]}
-          onChange={(next) => setChannel(unit, channel, next)}
-        />
-        {showError ? (
-          <span
-            style={{
-              fontSize: "11px",
-              lineHeight: "14px",
-              color: "var(--status-red-primary)",
-              textAlign: "center",
-            }}
-          >
-            At least one channel must stay on.
-          </span>
-        ) : null}
-      </div>
+      <ToggleSwitch
+        checked={state[channel]}
+        onChange={(next) => setChannel(unit, channel, next)}
+      />
     );
   };
 
