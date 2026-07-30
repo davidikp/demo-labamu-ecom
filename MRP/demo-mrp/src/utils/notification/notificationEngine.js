@@ -53,7 +53,7 @@ const resolveRecipients = (rule, ctx, approvers, currentUser) => {
     }
     case "wo_creator": {
       const w = asUser(ctx.woCreatorUser) || me;
-      return { inApp: [w], emailTo: [], emailCc: [] };
+      return { inApp: [w], emailTo: toContacts([w]), emailCc: [] };
     }
     case "eligible_users": {
       // Broadcast operational alert to whichever users hold access to the

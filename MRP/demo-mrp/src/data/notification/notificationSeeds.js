@@ -43,7 +43,7 @@ export const SEED_NOTIFICATION_EVENTS = [
   { module: "purchase_order", trigger: "submitted", ctx: { entityId: "PO-202606-001", submitterName: "Budi Santoso" } },
   { module: "purchase_order", trigger: "one_approved", ctx: { entityId: "PO-202606-002", approverName: "Joko" } },
   { module: "purchase_order", trigger: "all_approved", ctx: { entityId: "PO-202606-003" } },
-  { module: "purchase_order", trigger: "wo_cross_module", ctx: { entityId: "PO-202606-003", workOrderNo: "WO-202606-0001" } },
+  { module: "purchase_order", trigger: "wo_cross_module", ctx: { entityId: "PO-202606-003", workOrderNo: "WO-202606-0001", vendorName: "CV Mitra Jahit" } },
   { module: "purchase_order", trigger: "rejected", ctx: { entityId: "PO-202606-004", approverName: "Joko", reason: "Vendor quotation has expired" } },
   { module: "purchase_order", trigger: "need_revision", ctx: { entityId: "PO-202606-005", approverName: "Joko", note: "Re-check unit prices against the latest RFQ" } },
 

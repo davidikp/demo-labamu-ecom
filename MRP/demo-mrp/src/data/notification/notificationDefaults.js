@@ -551,13 +551,17 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
         todo: null,
         // Grouped admin toggle: "Receipt Status Updates" (PRD §6.9).
         groupId: "wo_receipt_status",
-        defaults: { inApp: true, email: false },
+        defaults: { inApp: true, email: true },
         content: {
           inApp: {
             en: "Receipt recorded for Work Order [WO Number]\n[Received Qty] was received under Purchase Order [PO Number]. Total received for this Work Order: [Cumulative WO Received Qty] of [WO Ordered Qty].\nCTA: See Detail",
             id: "Penerimaan dicatat untuk Work Order [WO Number]\n[Received Qty] diterima melalui Purchase Order [PO Number]. Total diterima untuk Work Order ini: [Cumulative WO Received Qty] dari [WO Ordered Qty].\nCTA: Lihat Detail",
           },
-          email: null,
+          email: {
+            subject: "Receipt recorded for Work Order [WO Number]",
+            body: "[Received Qty] was received under Purchase Order [PO Number]. Total received: [Cumulative WO Received Qty] of [WO Ordered Qty].",
+            cta: SEE_DETAIL,
+          },
         },
       },
       {
@@ -572,13 +576,17 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
         permission: "Work Orders",
         todo: null,
         groupId: "wo_receipt_status",
-        defaults: { inApp: true, email: false },
+        defaults: { inApp: true, email: true },
         content: {
           inApp: {
             en: "Work Order [WO Number] has been fully received\nAll outsourced items for Work Order [WO Number] under Purchase Order [PO Number] have been received.\nCTA: See Detail",
             id: "Work Order [WO Number] telah diterima seluruhnya\nSeluruh item outsource untuk Work Order [WO Number] melalui Purchase Order [PO Number] telah diterima.\nCTA: Lihat Detail",
           },
-          email: null,
+          email: {
+            subject: "Work Order [WO Number] has been fully received",
+            body: "All outsourced items for Work Order [WO Number] under Purchase Order [PO Number] have been received.",
+            cta: SEE_DETAIL,
+          },
         },
       },
     ],

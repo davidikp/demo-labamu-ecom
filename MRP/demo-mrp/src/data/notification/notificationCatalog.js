@@ -41,24 +41,18 @@ const makeApprovalLifecycle = (noun, approvedStatus) => ({
     email: (c) => {
       const names = c.approverNames || [];
       const multi = names.length > 1;
-      const listLine = multi
-        ? ` All listed approvers must approve: ${names.join(", ")}.`
-        : "";
-      const listLineId = multi
-        ? ` Semua approver berikut harus menyetujui: ${names.join(", ")}.`
-        : "";
-      // Group email to every approver — greet them collectively when there is
-      // more than one, otherwise greet the single configured approver.
-      const greetEn = multi ? "Hi Approvers" : names[0] ? `Hi ${names[0]}` : "Hi";
-      const greetId = multi ? "Halo Approvers" : names[0] ? `Halo ${names[0]}` : "Halo";
+      const listLine = multi ? " All listed approvers must approve." : "";
+      const listLineId = multi ? " Semua approver berikut harus menyetujui." : "";
+      // One group email addressed to every approver in the To field — greeting
+      // stays a consistent "Hi Approvers" regardless of approver count.
       return {
         subject: {
           en: `${noun.en} ${c.number} needs your approval`,
           id: `${noun.id} ${c.number} memerlukan persetujuan Anda`,
         },
         body: {
-          en: `${greetEn}, ${c.submitterName} submitted ${c.number} for approval.${listLine}`,
-          id: `${greetId}, ${c.submitterName} mengajukan ${c.number} untuk disetujui.${listLineId}`,
+          en: `Hi Approvers, ${c.submitterName} submitted ${c.number} for approval.${listLine}`,
+          id: `Halo Approvers, ${c.submitterName} mengajukan ${c.number} untuk disetujui.${listLineId}`,
         },
         cta: { en: `Review ${noun.en}`, id: `Tinjau ${noun.id}` },
       };
@@ -291,22 +285,35 @@ export const NOTIFICATION_CATALOG = {
   purchase_order: {
     ...makeApprovalLifecycle(NOUNS.purchase_order, { en: "Issued", id: "Issued" }),
     // Cross-module: on PO issued, also notify the linked Work Order creator.
+    // Wording follows the Work Order "Outsource Purchase Order Issued" catalog
+    // entry (PRD §6.4) since this is the same notification fired from the PO
+    // approval flow for the linked Work Order's creator.
     wo_cross_module: {
       recipientRule: "wo_creator",
-      channels: { inApp: true, email: false },
+      channels: { inApp: true, email: true },
       todo: null,
       inApp: (c) => ({
         title: {
-          en: `Purchase Order ${c.number} issued for ${c.workOrderNo}`,
-          id: `Purchase Order ${c.number} diterbitkan untuk ${c.workOrderNo}`,
+          en: `Purchase Order ${c.number} for Work Order ${c.workOrderNo} has been issued`,
+          id: `Purchase Order ${c.number} untuk Work Order ${c.workOrderNo} telah diterbitkan`,
         },
         body: {
-          en: `The Purchase Order linked to your Work Order ${c.workOrderNo} has been approved and issued.`,
-          id: `Purchase Order yang terkait dengan Work Order ${c.workOrderNo} Anda telah disetujui dan diterbitkan.`,
+          en: `The Purchase Order for outsourced Work Order ${c.workOrderNo} has been issued to ${c.vendorName || "the vendor"}.`,
+          id: `Purchase Order untuk Work Order outsource ${c.workOrderNo} telah diterbitkan kepada ${c.vendorName || "vendor"}.`,
         },
-        cta: { en: "View Purchase Order", id: "Lihat Purchase Order" },
+        cta: { en: "See Detail", id: "Lihat Detail" },
       }),
-      email: null,
+      email: (c) => ({
+        subject: {
+          en: `Purchase Order ${c.number} for Work Order ${c.workOrderNo} has been issued`,
+          id: `Purchase Order ${c.number} untuk Work Order ${c.workOrderNo} telah diterbitkan`,
+        },
+        body: {
+          en: `The Purchase Order for outsourced Work Order ${c.workOrderNo} has been issued to ${c.vendorName || "the vendor"}.`,
+          id: `Purchase Order untuk Work Order outsource ${c.workOrderNo} telah diterbitkan kepada ${c.vendorName || "vendor"}.`,
+        },
+        cta: { en: "See Detail", id: "Lihat Detail" },
+      }),
     },
   },
   custom_product_request: makeApprovalLifecycle(NOUNS.custom_product_request, {
@@ -402,7 +409,7 @@ export const NOTIFICATION_CATALOG = {
     },
     receipt_confirmed: {
       recipientRule: "preparer",
-      channels: { inApp: true, email: false },
+      channels: { inApp: true, email: true },
       todo: null,
       inApp: (c) => ({
         title: {
@@ -415,7 +422,17 @@ export const NOTIFICATION_CATALOG = {
         },
         cta: { en: "View Request", id: "Lihat Permintaan" },
       }),
-      email: null,
+      email: (c) => ({
+        subject: {
+          en: `Material Request ${c.requestId} receipt confirmed`,
+          id: `Penerimaan Material Request ${c.requestId} dikonfirmasi`,
+        },
+        body: {
+          en: `Hi ${c.preparerName}, ${c.requesterName} confirmed receipt of materials for ${c.requestId}. The request is now Completed.`,
+          id: `Halo ${c.preparerName}, ${c.requesterName} mengonfirmasi penerimaan material untuk ${c.requestId}. Permintaan sekarang berstatus Completed.`,
+        },
+        cta: { en: "View Request", id: "Lihat Permintaan" },
+      }),
     },
     receipt_rejected: {
       recipientRule: "preparer",
@@ -446,7 +463,7 @@ export const NOTIFICATION_CATALOG = {
     },
     cancelled_by_preparer: {
       recipientRule: "requester",
-      channels: { inApp: true, email: false },
+      channels: { inApp: true, email: true },
       todo: null,
       inApp: (c) => ({
         title: {
@@ -459,7 +476,17 @@ export const NOTIFICATION_CATALOG = {
         },
         cta: { en: "View Request", id: "Lihat Permintaan" },
       }),
-      email: null,
+      email: (c) => ({
+        subject: {
+          en: `Material Request ${c.requestId} has been cancelled`,
+          id: `Material Request ${c.requestId} telah dibatalkan`,
+        },
+        body: {
+          en: `Hi ${c.requesterName}, ${c.preparerName} has cancelled your material request ${c.requestId}. The request has been closed.`,
+          id: `Halo ${c.requesterName}, ${c.preparerName} telah membatalkan permintaan material Anda ${c.requestId}. Permintaan telah ditutup.`,
+        },
+        cta: { en: "View Request", id: "Lihat Permintaan" },
+      }),
     },
   },
 };
@@ -1153,8 +1180,8 @@ Object.assign(NOTIFICATION_CATALOG.purchase_order, {
     }),
     email: (c) => ({
       subject: {
-        en: `Purchase Order ${c.number} is overdue against its expected end date`,
-        id: `Purchase Order ${c.number} melewati tanggal selesai yang diharapkan`,
+        en: `Purchase Order ${c.number} is overdue`,
+        id: `Purchase Order ${c.number} terlambat`,
       },
       body: {
         en: `Purchase Order ${c.number} passed its expected end date on ${c.expectedEndDate} and remains ${c.status}.`,
