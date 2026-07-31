@@ -18,6 +18,7 @@ import {
   REMINDER_SUPPORTED_RULE_IDS,
   buildDefaultCompanySettings,
   cloneCompanySettings,
+  pickLocalized,
 } from "../../../data/notification/notificationDefaults.js";
 
 const cellPadStyle = { padding: "12px 0", lineHeight: "20px" };
@@ -38,7 +39,7 @@ const remindBeforeInvalid = (value) =>
   value > MAX_REMIND_BEFORE_DAYS;
 
 // Collapse grouped admin toggles (e.g. "Receipt Status Updates") into one row.
-const buildDisplayUnits = (items) => {
+const buildDisplayUnits = (items, language) => {
   const units = [];
   const seenGroups = new Set();
   items.forEach((rule) => {
@@ -56,8 +57,11 @@ const buildDisplayUnits = (items) => {
       memberIds,
       rule: {
         id: rule.groupId,
-        name: group?.label || rule.name,
-        description: "Outsourced receipt recorded and fully received updates.",
+        name: group?.label ? pickLocalized(group.label, language) : rule.name,
+        description: group?.description || {
+          en: "Outsourced receipt recorded and fully received updates.",
+          id: "Pembaruan saat penerimaan outsource dicatat dan telah diterima sepenuhnya.",
+        },
         type: "configurable",
         recipient: rule.recipient,
         permission: rule.permission,
@@ -72,6 +76,7 @@ const NotificationSettingsPage = ({
   isSidebarCollapsed, // preserved for API compatibility with the shell
   notificationSettings,
   onSaveNotificationSettings,
+  language = "en",
 }) => {
   const [activeModule, setActiveModule] = useState(
     DEFAULT_NOTIFICATION_SETTINGS[0]?.id
@@ -193,8 +198,8 @@ const NotificationSettingsPage = ({
 
   const chipTabs = DEFAULT_NOTIFICATION_SETTINGS.map((section) => ({
     id: section.id,
-    label: section.title,
-    count: buildDisplayUnits(section.items).length,
+    label: pickLocalized(section.title, language),
+    count: buildDisplayUnits(section.items, language).length,
   }));
 
   const activeSection = useMemo(
@@ -223,14 +228,15 @@ const NotificationSettingsPage = ({
 
   const renderRemindBefore = (unit) => {
     const primaryId = unit.memberIds[0];
-    if (!REMINDER_SUPPORTED_RULE_IDS.has(primaryId)) {
-      return <span style={{ color: "var(--neutral-on-surface-secondary)" }}>—</span>;
-    }
+    if (!REMINDER_SUPPORTED_RULE_IDS.has(primaryId)) return null;
     const value = settings[primaryId]?.remindBefore;
     const invalid = remindBeforeInvalid(value);
     return (
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "4px" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <span style={{ fontSize: "12px", color: "var(--neutral-on-surface-secondary)" }}>
+            Remind
+          </span>
           <input
             type="number"
             min={MIN_REMIND_BEFORE_DAYS}
@@ -238,6 +244,7 @@ const NotificationSettingsPage = ({
             step={1}
             value={value ?? ""}
             onChange={(event) => setRemind(unit, event.target.value)}
+            onClick={(event) => event.stopPropagation()}
             style={{
               width: "56px",
               height: "34px",
@@ -252,7 +259,7 @@ const NotificationSettingsPage = ({
             }}
           />
           <span style={{ fontSize: "12px", color: "var(--neutral-on-surface-secondary)" }}>
-            days
+            days before
           </span>
         </div>
         {invalid ? (
@@ -261,10 +268,9 @@ const NotificationSettingsPage = ({
               fontSize: "11px",
               lineHeight: "14px",
               color: "var(--status-red-primary)",
-              textAlign: "center",
             }}
           >
-            Remind Day must be between {MIN_REMIND_BEFORE_DAYS}-{MAX_REMIND_BEFORE_DAYS} days
+            {`Remind Day must be between ${MIN_REMIND_BEFORE_DAYS}-${MAX_REMIND_BEFORE_DAYS} days`}
           </span>
         ) : null}
       </div>
@@ -273,14 +279,14 @@ const NotificationSettingsPage = ({
 
   const filteredUnits = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
-    return buildDisplayUnits(activeSection.items).filter((unit) => {
+    return buildDisplayUnits(activeSection.items, language).filter((unit) => {
       if (!q) return true;
       const r = unit.rule;
-      return `${r.name} ${r.description} ${r.permission || "No permission mapping"}`
+      return `${r.name} ${pickLocalized(r.description, language)} ${r.permission || "No permission mapping"}`
         .toLowerCase()
         .includes(q);
     });
-  }, [activeSection, searchQuery]);
+  }, [activeSection, searchQuery, language]);
 
   const rows = filteredUnits.map((unit) => ({
     id: unit.key,
@@ -301,9 +307,9 @@ const NotificationSettingsPage = ({
           <div style={{ display: "flex", flexDirection: "column", gap: "6px", padding: "12px 0" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
               <span style={{ fontWeight: "var(--font-weight-bold)" }}>{row.name}</span>
-              <StatusBadge variant={isRequired ? "blue-light" : "grey-light"}>
-                {isRequired ? "Required" : "Configurable"}
-              </StatusBadge>
+              {isRequired ? (
+                <StatusBadge variant="blue-light">Required</StatusBadge>
+              ) : null}
             </div>
             <span
               style={{
@@ -312,8 +318,9 @@ const NotificationSettingsPage = ({
                 color: "var(--neutral-on-surface-secondary)",
               }}
             >
-              {row.unit.rule.description}
+              {pickLocalized(row.unit.rule.description, language)}
             </span>
+            {renderRemindBefore(row.unit)}
           </div>
         );
       },
@@ -324,16 +331,6 @@ const NotificationSettingsPage = ({
       width: 220,
       render: (value) => (
         <div style={cellPadStyle}>{value || "No permission mapping"}</div>
-      ),
-    },
-    {
-      key: "unit",
-      columnId: "remind",
-      header: "Remind Before",
-      align: "center",
-      width: 170,
-      render: (_value, row) => (
-        <div style={toggleCellStyle}>{renderRemindBefore(row.unit)}</div>
       ),
     },
     {
@@ -447,7 +444,7 @@ const NotificationSettingsPage = ({
         >
           <div style={{ display: "flex", flexDirection: "column", gap: "6px", minWidth: 0 }}>
             <span style={{ fontSize: "16px", fontWeight: "var(--font-weight-bold)" }}>
-              {activeSection.title}
+              {pickLocalized(activeSection.title, language)}
             </span>
             <span
               style={{
@@ -456,7 +453,7 @@ const NotificationSettingsPage = ({
                 color: "var(--neutral-on-surface-secondary)",
               }}
             >
-              {activeSection.description}
+              {pickLocalized(activeSection.description, language)}
             </span>
           </div>
           <TableSearchField
@@ -472,6 +469,7 @@ const NotificationSettingsPage = ({
           totalRows={rows.length}
           showPagination={false}
           className="!h-auto"
+          selectedRowId={null}
         />
       </div>
 

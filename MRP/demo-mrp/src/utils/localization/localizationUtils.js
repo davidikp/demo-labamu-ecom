@@ -1047,6 +1047,28 @@ const INDONESIAN_EXACT_TEXT = {
   "Other Cost Item Added": "Item Biaya Lainnya Ditambahkan",
   "Other Cost Item Edited": "Item Biaya Lainnya Diubah",
   "Other Cost Item Deleted": "Item Biaya Lainnya Dihapus",
+
+  // --- Notification Settings & Notification Preferences pages ---
+  "Notification Preferences": "Preferensi Notifikasi",
+  "Search notification, description, or permission":
+    "Cari notifikasi, deskripsi, atau izin akses",
+  Permission: "Izin Akses",
+  "In-app": "Dalam Aplikasi",
+  Required: "Wajib",
+  "No permission mapping": "Tidak ada pemetaan izin akses",
+  Remind: "Ingatkan",
+  "days before": "hari sebelum",
+  "Receipt Status Updates": "Pembaruan Status Penerimaan",
+  "Outsourced receipt recorded and fully received updates.":
+    "Pembaruan saat penerimaan outsource dicatat dan telah diterima sepenuhnya.",
+  "Notification settings saved": "Pengaturan notifikasi berhasil disimpan",
+  "Notification preferences saved": "Preferensi notifikasi berhasil disimpan",
+  "Changes discarded": "Perubahan dibatalkan",
+  Okay: "Oke",
+  "Discard changes?": "Batalkan perubahan?",
+  "Yes, Discard": "Ya, Batalkan",
+  "Keep Editing": "Lanjutkan Mengedit",
+  "Set to company default": "Gunakan pengaturan default perusahaan",
 };
 
 const INDONESIAN_FRAGMENT_REPLACEMENTS = [
@@ -1090,6 +1112,14 @@ const INDONESIAN_FRAGMENT_REPLACEMENTS = [
 ];
 
 const INDONESIAN_DYNAMIC_TEXT = [
+  {
+    pattern: /^Remind Day must be between (\d+)-(\d+) days$/i,
+    replacer: (_, min, max) => `Hari pengingat harus di antara ${min}-${max} hari`,
+  },
+  {
+    pattern: /^Reminder: (\d+) days? before$/i,
+    replacer: (_, days) => `Pengingat: ${days} hari sebelumnya`,
+  },
   {
     pattern: /^Revised to Version (\d+)\.0$/i,
     replacer: (_, num) => `Direvisi ke Versi ${num}.0`,

@@ -421,6 +421,7 @@ const ModuleRenderer = ({
   setMaterialPlanningSettings,
   personalNotificationPreferences,
   setPersonalNotificationPreferences,
+  language,
 }) => {
   const { module: moduleRoute, id, subview } = useParams();
   const activeModule = ROUTE_TO_MODULE[moduleRoute] || moduleRoute?.replace(/-/g, '_');
@@ -919,6 +920,7 @@ const ModuleRenderer = ({
         onSaveNotificationSettings={(settings) =>
           setNotificationSettings(settings)
         }
+        language={language}
       />
     );
   }
@@ -931,6 +933,7 @@ const ModuleRenderer = ({
         onSavePersonalPreferences={(prefs) =>
           setPersonalNotificationPreferences(prefs)
         }
+        language={language}
       />
     );
   }
@@ -1358,6 +1361,7 @@ export default function App() {
                 setMaterialPlanningSettings={setMaterialPlanningSettings}
                 personalNotificationPreferences={personalNotificationPreferences}
                 setPersonalNotificationPreferences={setPersonalNotificationPreferences}
+                language={language}
               />
             } />
             <Route path="/:module/:id" element={
@@ -1380,6 +1384,7 @@ export default function App() {
                 setMaterialPlanningSettings={setMaterialPlanningSettings}
                 personalNotificationPreferences={personalNotificationPreferences}
                 setPersonalNotificationPreferences={setPersonalNotificationPreferences}
+                language={language}
               />
             } />
             <Route path="/:module/:id/:subview" element={
@@ -1402,6 +1407,7 @@ export default function App() {
                 setMaterialPlanningSettings={setMaterialPlanningSettings}
                 personalNotificationPreferences={personalNotificationPreferences}
                 setPersonalNotificationPreferences={setPersonalNotificationPreferences}
+                language={language}
               />
             } />
             <Route path="*" element={

@@ -12,11 +12,10 @@ import {
   buildDefaultCompanySettings,
   buildDefaultPersonalPreferences,
   clonePersonalPreferences,
+  pickLocalized,
 } from "../../../data/notification/notificationDefaults.js";
-import {
-  effectiveSourceLabel,
-  resolveEffectiveStatus,
-} from "../../../utils/notification/notificationUtils.js";
+import { resolveEffectiveStatus } from "../../../utils/notification/notificationUtils.js";
+import { Info } from "lucide-react";
 
 // The demo user (Owner) can access every module, so no rows are hidden. In a
 // real build this set would come from the user's sub-resource permissions and
@@ -31,30 +30,8 @@ const toggleCellStyle = {
   alignItems: "center",
 };
 
-const PREFERENCE_CHOICES = [
-  { value: PERSONAL_PREFERENCE_OPTIONS.useCompanyDefault, label: "Default" },
-  { value: PERSONAL_PREFERENCE_OPTIONS.on, label: "On" },
-  { value: PERSONAL_PREFERENCE_OPTIONS.off, label: "Off" },
-];
-
-const prefPillStyle = (isActive) => ({
-  flex: 1,
-  height: "28px",
-  padding: "0 10px",
-  borderRadius: "8px",
-  border: "none",
-  background: isActive ? "var(--feature-brand-primary)" : "transparent",
-  color: isActive
-    ? "var(--feature-brand-on-primary, #FFFFFF)"
-    : "var(--neutral-on-surface-secondary)",
-  fontSize: "12px",
-  fontWeight: isActive ? "var(--font-weight-bold)" : "var(--font-weight-regular)",
-  cursor: "pointer",
-  whiteSpace: "nowrap",
-});
-
 // Collapse grouped admin toggles (e.g. "Receipt Status Updates") into one row.
-const buildDisplayUnits = (items) => {
+const buildDisplayUnits = (items, language) => {
   const units = [];
   const seenGroups = new Set();
   items.forEach((rule) => {
@@ -72,7 +49,11 @@ const buildDisplayUnits = (items) => {
       memberIds,
       rule: {
         id: rule.groupId,
-        name: group?.label || rule.name,
+        name: group?.label ? pickLocalized(group.label, language) : rule.name,
+        description: group?.description || {
+          en: "Outsourced receipt recorded and fully received updates.",
+          id: "Pembaruan saat penerimaan outsource dicatat dan telah diterima sepenuhnya.",
+        },
         trigger: "Outsource receipt recorded / fully received",
         type: "configurable",
         recipient: rule.recipient,
@@ -94,6 +75,7 @@ const NotificationPreferencesPage = ({
   companySettings,
   personalPreferences,
   onSavePersonalPreferences,
+  language = "en",
 }) => {
   const company = companySettings || buildDefaultCompanySettings();
 
@@ -140,6 +122,23 @@ const NotificationPreferencesPage = ({
     });
   };
 
+  // Clears the personal override for every rule in the unit, reverting each
+  // channel to mirror the current company default (PRD "Use Company Default").
+  const resetToCompanyDefault = (unit) => {
+    setPrefs((prev) => {
+      const next = { ...prev };
+      unit.memberIds.forEach((id) => {
+        const companyEntry = company[id] || { inApp: false, email: false };
+        next[id] = {
+          preference: PERSONAL_PREFERENCE_OPTIONS.useCompanyDefault,
+          inApp: companyEntry.inApp,
+          email: companyEntry.email,
+        };
+      });
+      return next;
+    });
+  };
+
   const ruleById = useMemo(
     () =>
       ALL_NOTIFICATION_RULES.reduce((acc, r) => {
@@ -163,9 +162,10 @@ const NotificationPreferencesPage = ({
 
   const chipTabs = DEFAULT_NOTIFICATION_SETTINGS.map((section) => ({
     id: section.id,
-    label: section.title,
+    label: pickLocalized(section.title, language),
     count: buildDisplayUnits(
-      section.items.filter((item) => canAccess(item.permission))
+      section.items.filter((item) => canAccess(item.permission)),
+      language
     ).length,
   }));
 
@@ -176,7 +176,7 @@ const NotificationPreferencesPage = ({
     [activeModule]
   );
 
-  const renderToggle = (unit, channel) => {
+  const renderToggle = (unit, channel, { showReset = false } = {}) => {
     const primaryId = unit.memberIds[0];
     const rule = ruleById[primaryId] || unit.rule;
     const pref = prefs[primaryId] || { inApp: false, email: false };
@@ -184,38 +184,58 @@ const NotificationPreferencesPage = ({
     const isRequired = rule.type === "required";
     const channelsDisabled = isRequired || status !== "on";
     return (
-      <ToggleSwitch
-        checked={isRequired ? true : pref[channel]}
-        disabled={channelsDisabled}
-        onChange={(next) => patchRules(unit.memberIds, { [channel]: next })}
-      />
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: "4px",
+        }}
+      >
+        <ToggleSwitch
+          checked={isRequired ? true : pref[channel]}
+          disabled={channelsDisabled}
+          onChange={(next) => patchRules(unit.memberIds, { [channel]: next })}
+        />
+        {showReset && !isRequired ? (
+          <Button
+            variant="tertiary"
+            size="small"
+            onClick={() => resetToCompanyDefault(unit)}
+          >
+            Set to company default
+          </Button>
+        ) : null}
+      </div>
     );
   };
 
   const rows = useMemo(
     () =>
       buildDisplayUnits(
-        activeSection.items.filter((item) => canAccess(item.permission))
+        activeSection.items.filter((item) => canAccess(item.permission)),
+        language
       ).map((unit) => ({
         id: unit.key,
         unit,
         name: unit.rule.name,
-        recipient: unit.rule.recipient,
         permission: unit.rule.permission,
-        todo: unit.rule.todo,
       })),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [activeSection]
+    [activeSection, language]
   );
 
   const columns = [
     {
       key: "name",
       header: "Notification",
-      width: 240,
+      width: 340,
       render: (_value, row) => {
         const isRequired =
           row.unit.kind === "rule" && row.unit.rule.type === "required";
+        const primaryId = row.unit.memberIds[0];
+        const showsReminder = REMINDER_SUPPORTED_RULE_IDS.has(primaryId);
+        const days = company[primaryId]?.remindBefore;
         return (
           <div
             style={{
@@ -227,9 +247,9 @@ const NotificationPreferencesPage = ({
           >
             <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
               <span style={{ fontWeight: "var(--font-weight-bold)" }}>{row.name}</span>
-              <StatusBadge variant={isRequired ? "blue-light" : "grey-light"}>
-                {isRequired ? "Required" : "Configurable"}
-              </StatusBadge>
+              {isRequired ? (
+                <StatusBadge variant="blue-light">Required</StatusBadge>
+              ) : null}
             </div>
             <span
               style={{
@@ -238,17 +258,25 @@ const NotificationPreferencesPage = ({
                 color: "var(--neutral-on-surface-secondary)",
               }}
             >
-              {row.unit.rule.description}
+              {pickLocalized(row.unit.rule.description, language)}
             </span>
+            {showsReminder ? (
+              <span
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  fontSize: "12px",
+                  color: "var(--neutral-on-surface-secondary)",
+                }}
+              >
+                <Info size={14} />
+                {`Reminder: ${days} ${days === 1 ? "day" : "days"} before`}
+              </span>
+            ) : null}
           </div>
         );
       },
-    },
-    {
-      key: "recipient",
-      header: "Recipient",
-      width: 200,
-      render: (value) => <div style={cellPadStyle}>{value}</div>,
     },
     {
       key: "permission",
@@ -259,122 +287,15 @@ const NotificationPreferencesPage = ({
       ),
     },
     {
-      key: "todo",
-      header: "Todo",
-      width: 130,
-      render: (value) => <div style={cellPadStyle}>{value || "No Todo"}</div>,
-    },
-    {
-      key: "unit",
-      columnId: "remind",
-      header: "Remind Before",
-      width: 150,
-      render: (_value, row) => {
-        const primaryId = row.unit.memberIds[0];
-        if (!REMINDER_SUPPORTED_RULE_IDS.has(primaryId)) {
-          return (
-            <div style={{ ...cellPadStyle, color: "var(--neutral-on-surface-secondary)" }}>
-              —
-            </div>
-          );
-        }
-        const days = company[primaryId]?.remindBefore;
-        return (
-          <div style={{ ...cellPadStyle, color: "var(--neutral-on-surface-secondary)" }}>
-            Company reminder: {days} {days === 1 ? "day" : "days"} before
-          </div>
-        );
-      },
-    },
-    {
-      key: "unit",
-      columnId: "preference",
-      header: "Preference",
-      width: 190,
-      render: (_value, row) => {
-        const rule = ruleById[row.unit.memberIds[0]] || row.unit.rule;
-        if (rule.type === "required") {
-          return (
-            <div style={cellPadStyle}>
-              <span
-                style={{
-                  fontSize: "12px",
-                  color: "var(--neutral-on-surface-secondary)",
-                }}
-              >
-                Required — always on
-              </span>
-            </div>
-          );
-        }
-        const pref = prefs[row.unit.memberIds[0]] || {
-          preference: PERSONAL_PREFERENCE_OPTIONS.useCompanyDefault,
-        };
-        return (
-          <div style={{ padding: "12px 0" }}>
-            <div
-              style={{
-                display: "flex",
-                gap: "4px",
-                padding: "3px",
-                borderRadius: "10px",
-                border: "1px solid var(--neutral-line-separator-1)",
-              }}
-            >
-              {PREFERENCE_CHOICES.map((choice) => (
-                <button
-                  key={choice.value}
-                  type="button"
-                  onClick={() =>
-                    patchRules(row.unit.memberIds, { preference: choice.value })
-                  }
-                  style={prefPillStyle(pref.preference === choice.value)}
-                >
-                  {choice.label}
-                </button>
-              ))}
-            </div>
-          </div>
-        );
-      },
-    },
-    {
-      key: "unit",
-      columnId: "status",
-      header: "Current status",
-      width: 130,
-      render: (_value, row) => {
-        const rule = ruleById[row.unit.memberIds[0]] || row.unit.rule;
-        const { status, source } = resolveEffectiveStatus(rule, company, prefs);
-        const on = status === "on";
-        return (
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: "4px",
-              alignItems: "flex-start",
-              padding: "12px 0",
-            }}
-          >
-            <StatusBadge variant={on ? "green-light" : "grey-light"}>
-              {on ? "On" : "Off"}
-            </StatusBadge>
-            <span style={{ fontSize: "11px", color: "var(--neutral-on-surface-secondary)" }}>
-              {effectiveSourceLabel(source)}
-            </span>
-          </div>
-        );
-      },
-    },
-    {
       key: "unit",
       columnId: "inapp",
       header: "In-app",
       align: "center",
       width: 80,
       render: (_value, row) => (
-        <div style={toggleCellStyle}>{renderToggle(row.unit, "inApp")}</div>
+        <div style={toggleCellStyle}>
+          {renderToggle(row.unit, "inApp", { showReset: true })}
+        </div>
       ),
     },
     {
@@ -455,7 +376,8 @@ const NotificationPreferencesPage = ({
       {/* Content card — no accent bar, no divider between header and table.
           The scoped rule aligns the ce-ui table cells (default px-4) to the
           20px header padding. */}
-      <style>{`.notif-card table th, .notif-card table td { padding-left: 20px; padding-right: 20px; }`}</style>
+      <style>{`.notif-card table th, .notif-card table td { padding-left: 20px; padding-right: 20px; }
+        .notif-card table td { vertical-align: top; }`}</style>
       <div
         className="notif-card"
         style={{
@@ -476,7 +398,7 @@ const NotificationPreferencesPage = ({
           }}
         >
           <span style={{ fontSize: "16px", fontWeight: "var(--font-weight-bold)" }}>
-            {activeSection.title}
+            {pickLocalized(activeSection.title, language)}
           </span>
           <span
             style={{
@@ -485,7 +407,7 @@ const NotificationPreferencesPage = ({
               color: "var(--neutral-on-surface-secondary)",
             }}
           >
-            {activeSection.description}
+            {pickLocalized(activeSection.description, language)}
           </span>
         </div>
         <Table
@@ -494,6 +416,7 @@ const NotificationPreferencesPage = ({
           totalRows={rows.length}
           showPagination={false}
           className="!h-auto"
+          selectedRowId={null}
         />
       </div>
 
