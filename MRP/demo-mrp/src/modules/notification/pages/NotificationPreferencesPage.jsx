@@ -2,7 +2,8 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "../../../components/common/Button.jsx";
 import { StatusBadge } from "../../../components/common/StatusBadge.jsx";
 import { ToggleSwitch } from "../../../components/common/ToggleSwitch.jsx";
-import { ChipTabs, Table } from "../../../ce-ui";
+import { TableSearchField } from "../../../components/table/TableSearchField.jsx";
+import { ChipTabs } from "../../../ce-ui";
 import {
   ALL_NOTIFICATION_RULES,
   DEFAULT_NOTIFICATION_SETTINGS,
@@ -22,13 +23,27 @@ import { Info } from "lucide-react";
 // gate visibility per PRD AC #9.
 const ACCESSIBLE_PERMISSIONS = null; // null = all accessible
 
-const cellPadStyle = { padding: "12px 0", lineHeight: "20px" };
-const toggleCellStyle = {
-  padding: "12px 0",
+const cardStyle = {
+  border: "1px solid var(--neutral-line-separator-1)",
+  borderRadius: "12px",
+  padding: "16px 20px",
   display: "flex",
-  justifyContent: "center",
-  alignItems: "center",
+  justifyContent: "space-between",
+  alignItems: "flex-start",
+  gap: "20px",
+  flexWrap: "wrap",
 };
+// Shared label style for small uppercase meta labels (Permission, In-app, Email).
+const metaLabelStyle = {
+  fontSize: "12px",
+  color: "var(--neutral-on-surface-secondary)",
+  textTransform: "uppercase",
+  letterSpacing: "0.02em",
+};
+
+// Darker grey for a locked (disabled + on) toggle so it reads as "on but
+// locked" — matches the treatment in NotificationSettingsPage.
+const LOCKED_ON_TOGGLE_CLASS = "!bg-[#9AA0A6]";
 
 // Collapse grouped admin toggles (e.g. "Receipt Status Updates") into one row.
 const buildDisplayUnits = (items, language) => {
@@ -82,6 +97,7 @@ const NotificationPreferencesPage = ({
   const [activeModule, setActiveModule] = useState(
     DEFAULT_NOTIFICATION_SETTINGS[0]?.id
   );
+  const [searchQuery, setSearchQuery] = useState("");
   const [prefs, setPrefs] = useState(() =>
     clonePersonalPreferences(personalPreferences || buildDefaultPersonalPreferences())
   );
@@ -176,7 +192,13 @@ const NotificationPreferencesPage = ({
     [activeModule]
   );
 
-  const renderToggle = (unit, channel, { showReset = false } = {}) => {
+  const requestModule = (id) => {
+    if (id === activeModule) return;
+    setActiveModule(id);
+    setSearchQuery("");
+  };
+
+  const renderToggle = (unit, channel) => {
     const primaryId = unit.memberIds[0];
     const rule = ruleById[primaryId] || unit.rule;
     const pref = prefs[primaryId] || { inApp: false, email: false };
@@ -184,20 +206,35 @@ const NotificationPreferencesPage = ({
     const isRequired = rule.type === "required";
     const channelsDisabled = isRequired || status !== "on";
     return (
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          gap: "4px",
-        }}
-      >
-        <ToggleSwitch
-          checked={isRequired ? true : pref[channel]}
-          disabled={channelsDisabled}
-          onChange={(next) => patchRules(unit.memberIds, { [channel]: next })}
-        />
-        {showReset && !isRequired ? (
+      <ToggleSwitch
+        checked={isRequired ? true : pref[channel]}
+        disabled={channelsDisabled}
+        className={isRequired ? LOCKED_ON_TOGGLE_CLASS : ""}
+        onChange={(next) => patchRules(unit.memberIds, { [channel]: next })}
+      />
+    );
+  };
+
+  // Merged In-app/Email cell: two toggles side by side with a single
+  // "Set to company default" link centered between them, so it's clear the
+  // reset applies to both channels at once.
+  const renderTogglePair = (unit) => {
+    const primaryId = unit.memberIds[0];
+    const rule = ruleById[primaryId] || unit.rule;
+    const isRequired = rule.type === "required";
+    return (
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "6px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "48px" }}>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "6px" }}>
+            <span style={metaLabelStyle}>In-app</span>
+            {renderToggle(unit, "inApp")}
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "6px" }}>
+            <span style={metaLabelStyle}>Email</span>
+            {renderToggle(unit, "email")}
+          </div>
+        </div>
+        {!isRequired ? (
           <Button
             variant="tertiary"
             size="small"
@@ -210,105 +247,28 @@ const NotificationPreferencesPage = ({
     );
   };
 
-  const rows = useMemo(
-    () =>
-      buildDisplayUnits(
-        activeSection.items.filter((item) => canAccess(item.permission)),
-        language
-      ).map((unit) => ({
+  const rows = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    return buildDisplayUnits(
+      activeSection.items.filter((item) => canAccess(item.permission)),
+      language
+    )
+      .filter((unit) => {
+        if (!q) return true;
+        const r = unit.rule;
+        return `${r.name} ${pickLocalized(r.description, language)} ${r.permission || "-"}`
+          .toLowerCase()
+          .includes(q);
+      })
+      .map((unit) => ({
         id: unit.key,
         unit,
         name: unit.rule.name,
         permission: unit.rule.permission,
-      })),
+      }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [activeSection, language]
-  );
+  }, [activeSection, searchQuery, language]);
 
-  const columns = [
-    {
-      key: "name",
-      header: "Notification",
-      width: 340,
-      render: (_value, row) => {
-        const isRequired =
-          row.unit.kind === "rule" && row.unit.rule.type === "required";
-        const primaryId = row.unit.memberIds[0];
-        const showsReminder = REMINDER_SUPPORTED_RULE_IDS.has(primaryId);
-        const days = company[primaryId]?.remindBefore;
-        return (
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: "6px",
-              padding: "12px 0",
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-              <span style={{ fontWeight: "var(--font-weight-bold)" }}>{row.name}</span>
-              {isRequired ? (
-                <StatusBadge variant="blue-light">Required</StatusBadge>
-              ) : null}
-            </div>
-            <span
-              style={{
-                fontSize: "12px",
-                lineHeight: "16px",
-                color: "var(--neutral-on-surface-secondary)",
-              }}
-            >
-              {pickLocalized(row.unit.rule.description, language)}
-            </span>
-            {showsReminder ? (
-              <span
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  fontSize: "12px",
-                  color: "var(--neutral-on-surface-secondary)",
-                }}
-              >
-                <Info size={14} />
-                {`Reminder: ${days} ${days === 1 ? "day" : "days"} before`}
-              </span>
-            ) : null}
-          </div>
-        );
-      },
-    },
-    {
-      key: "permission",
-      header: "Permission",
-      width: 160,
-      render: (value) => (
-        <div style={cellPadStyle}>{value || "No permission mapping"}</div>
-      ),
-    },
-    {
-      key: "unit",
-      columnId: "inapp",
-      header: "In-app",
-      align: "center",
-      width: 80,
-      render: (_value, row) => (
-        <div style={toggleCellStyle}>
-          {renderToggle(row.unit, "inApp", { showReset: true })}
-        </div>
-      ),
-    },
-    {
-      key: "unit",
-      columnId: "email",
-      header: "Email",
-      align: "center",
-      width: 80,
-      render: (_value, row) => (
-        <div style={toggleCellStyle}>{renderToggle(row.unit, "email")}</div>
-      ),
-    },
-  ];
 
   return (
     <div
@@ -369,55 +329,109 @@ const NotificationPreferencesPage = ({
       <ChipTabs
         tabs={chipTabs}
         activeTab={activeModule}
-        onChange={setActiveModule}
+        onChange={requestModule}
         className="flex-wrap"
       />
 
-      {/* Content card — no accent bar, no divider between header and table.
-          The scoped rule aligns the ce-ui table cells (default px-4) to the
-          20px header padding. */}
-      <style>{`.notif-card table th, .notif-card table td { padding-left: 20px; padding-right: 20px; }
-        .notif-card table td { vertical-align: top; }`}</style>
+      {/* Content card — one card per notification instead of a table row,
+          so each item's fields (name, permission, reminder, toggles) sit
+          together without needing custom table-column plumbing. */}
       <div
         className="notif-card"
         style={{
           background: "var(--neutral-surface-primary)",
           borderRadius: "16px",
           border: "1px solid var(--neutral-line-separator-1)",
-          overflow: "hidden",
           display: "flex",
           flexDirection: "column",
         }}
       >
         <div
           style={{
-            padding: "20px 20px 4px",
+            padding: "20px 20px 12px",
             display: "flex",
-            flexDirection: "column",
-            gap: "6px",
+            justifyContent: "space-between",
+            alignItems: "center",
+            gap: "16px",
           }}
         >
           <span style={{ fontSize: "16px", fontWeight: "var(--font-weight-bold)" }}>
             {pickLocalized(activeSection.title, language)}
           </span>
-          <span
-            style={{
-              fontSize: "var(--text-title-3)",
-              lineHeight: "20px",
-              color: "var(--neutral-on-surface-secondary)",
-            }}
-          >
-            {pickLocalized(activeSection.description, language)}
-          </span>
+          <TableSearchField
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+            placeholder="Search notification, description, or permission"
+            width="360px"
+          />
         </div>
-        <Table
-          columns={columns}
-          data={rows}
-          totalRows={rows.length}
-          showPagination={false}
-          className="!h-auto"
-          selectedRowId={null}
-        />
+        <div style={{ display: "flex", flexDirection: "column", gap: "12px", padding: "0 20px 20px" }}>
+          {rows.map((row) => {
+            const isRequired =
+              row.unit.kind === "rule" && row.unit.rule.type === "required";
+            const primaryId = row.unit.memberIds[0];
+            const showsReminder = REMINDER_SUPPORTED_RULE_IDS.has(primaryId);
+            const days = company[primaryId]?.remindBefore;
+            return (
+              <div key={row.id} style={cardStyle}>
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px", flex: "1 1 320px", minWidth: 0 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                    <span style={{ fontSize: "14px", fontWeight: "var(--font-weight-bold)" }}>
+                      {row.name}
+                    </span>
+                    {isRequired ? (
+                      <StatusBadge variant="blue-light">Required</StatusBadge>
+                    ) : null}
+                  </div>
+                  <span
+                    style={{
+                      fontSize: "14px",
+                      lineHeight: "18px",
+                      color: "var(--neutral-on-surface-secondary)",
+                    }}
+                  >
+                    {pickLocalized(row.unit.rule.description, language)}
+                  </span>
+                  {showsReminder ? (
+                    <span
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "6px",
+                        fontSize: "14px",
+                        color: "var(--neutral-on-surface-secondary)",
+                      }}
+                    >
+                      <Info size={14} />
+                      {`Reminder: ${days} ${days === 1 ? "day" : "days"} before`}
+                    </span>
+                  ) : null}
+                </div>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: "4px", minWidth: "140px" }}>
+                  <span style={metaLabelStyle}>Permission</span>
+                  <span style={{ fontSize: "var(--text-title-3)" }}>
+                    {row.permission || "-"}
+                  </span>
+                </div>
+
+                {renderTogglePair(row.unit)}
+              </div>
+            );
+          })}
+          {rows.length === 0 ? (
+            <div
+              style={{
+                padding: "32px 0",
+                textAlign: "center",
+                color: "var(--neutral-on-surface-secondary)",
+                fontSize: "var(--text-title-3)",
+              }}
+            >
+              No notifications match this module.
+            </div>
+          ) : null}
+        </div>
       </div>
 
       {/* Footer action bar */}

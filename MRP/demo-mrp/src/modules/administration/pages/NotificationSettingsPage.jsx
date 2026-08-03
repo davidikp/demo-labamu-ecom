@@ -4,7 +4,7 @@ import { StatusBadge } from "../../../components/common/StatusBadge.jsx";
 import { ToggleSwitch } from "../../../components/common/ToggleSwitch.jsx";
 import { TableSearchField } from "../../../components/table/TableSearchField.jsx";
 import { GeneralModal } from "../../../components/modal/GeneralModal.jsx";
-import { ChipTabs, Table } from "../../../ce-ui";
+import { ChipTabs } from "../../../ce-ui";
 import {
   clearNavigationGuard,
   setNavigationGuard,
@@ -21,12 +21,34 @@ import {
   pickLocalized,
 } from "../../../data/notification/notificationDefaults.js";
 
-const cellPadStyle = { padding: "12px 0", lineHeight: "20px" };
-const toggleCellStyle = {
-  padding: "12px 0",
+const cardOuterStyle = {
+  border: "1px solid var(--neutral-line-separator-1)",
+  borderRadius: "12px",
+  padding: "16px 20px",
   display: "flex",
-  justifyContent: "center",
+  flexDirection: "column",
+  gap: "16px",
+};
+const cardTopRowStyle = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "flex-start",
+  gap: "20px",
+  flexWrap: "wrap",
+};
+const toggleColStyle = {
+  display: "flex",
+  flexDirection: "column",
   alignItems: "center",
+  gap: "6px",
+  minWidth: "64px",
+};
+// Shared label style for small uppercase meta labels (Permission, In-app, Email).
+const metaLabelStyle = {
+  fontSize: "12px",
+  color: "var(--neutral-on-surface-secondary)",
+  textTransform: "uppercase",
+  letterSpacing: "0.02em",
 };
 
 // Darker grey for a locked (disabled + on) toggle so it reads as "on but
@@ -232,47 +254,95 @@ const NotificationSettingsPage = ({
     const value = settings[primaryId]?.remindBefore;
     const invalid = remindBeforeInvalid(value);
     return (
-      <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-          <span style={{ fontSize: "12px", color: "var(--neutral-on-surface-secondary)" }}>
-            Remind
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "20px",
+          padding: "12px 16px",
+          borderRadius: "12px",
+          border: `1px solid ${
+            invalid ? "var(--status-red-primary)" : "var(--neutral-line-separator-1)"
+          }`,
+          background: "var(--neutral-surface-secondary)",
+          width: "100%",
+          boxSizing: "border-box",
+        }}
+      >
+        <div style={{ display: "flex", flexDirection: "column", gap: "2px", flex: "1 1 220px" }}>
+          <span style={{ fontSize: "14px", fontWeight: "var(--font-weight-bold)" }}>
+            Reminder timing
           </span>
-          <input
-            type="number"
-            min={MIN_REMIND_BEFORE_DAYS}
-            max={MAX_REMIND_BEFORE_DAYS}
-            step={1}
-            value={value ?? ""}
-            onChange={(event) => setRemind(unit, event.target.value)}
-            onClick={(event) => event.stopPropagation()}
-            style={{
-              width: "56px",
-              height: "34px",
-              padding: "0 8px",
-              borderRadius: "8px",
-              border: `1px solid ${
-                invalid ? "var(--status-red-primary)" : "var(--neutral-line-separator-1)"
-              }`,
-              fontSize: "var(--text-title-3)",
-              textAlign: "center",
-              boxSizing: "border-box",
-            }}
-          />
-          <span style={{ fontSize: "12px", color: "var(--neutral-on-surface-secondary)" }}>
-            days before
-          </span>
-        </div>
-        {invalid ? (
           <span
             style={{
-              fontSize: "11px",
-              lineHeight: "14px",
-              color: "var(--status-red-primary)",
+              fontSize: "14px",
+              lineHeight: "18px",
+              color: "var(--neutral-on-surface-secondary)",
             }}
           >
-            {`Remind Day must be between ${MIN_REMIND_BEFORE_DAYS}-${MAX_REMIND_BEFORE_DAYS} days`}
+            Define how long before expiry the notification should be sent.
           </span>
-        ) : null}
+        </div>
+        <div
+          style={{
+            width: "1px",
+            alignSelf: "stretch",
+            background: "var(--neutral-line-separator-1)",
+          }}
+        />
+        <div style={{ display: "flex", flexDirection: "column", gap: "4px", flex: "1 1 280px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <span style={{ fontSize: "12px", color: "var(--neutral-on-surface-secondary)" }}>
+              Send
+            </span>
+            <input
+              type="number"
+              min={MIN_REMIND_BEFORE_DAYS}
+              max={MAX_REMIND_BEFORE_DAYS}
+              step={1}
+              value={value ?? ""}
+              onChange={(event) => setRemind(unit, event.target.value)}
+              onClick={(event) => event.stopPropagation()}
+              style={{
+                width: "56px",
+                height: "34px",
+                padding: "0 8px",
+                borderRadius: "8px",
+                border: `1px solid ${
+                  invalid ? "var(--status-red-primary)" : "var(--neutral-line-separator-1)"
+                }`,
+                fontSize: "var(--text-title-3)",
+                textAlign: "center",
+                boxSizing: "border-box",
+                background: "var(--neutral-surface-primary)",
+              }}
+            />
+            <span style={{ fontSize: "12px", color: "var(--neutral-on-surface-secondary)" }}>
+              days before the expiry date
+            </span>
+          </div>
+          {invalid ? (
+            <span
+              style={{
+                fontSize: "12px",
+                lineHeight: "16px",
+                color: "var(--status-red-primary)",
+              }}
+            >
+              {`Remind Day must be between ${MIN_REMIND_BEFORE_DAYS}-${MAX_REMIND_BEFORE_DAYS} days`}
+            </span>
+          ) : (
+            <span
+              style={{
+                fontSize: "12px",
+                lineHeight: "16px",
+                color: "var(--neutral-on-surface-secondary)",
+              }}
+            >
+              {`The reminder will be sent ${value ?? MIN_REMIND_BEFORE_DAYS} days before the expiry date.`}
+            </span>
+          )}
+        </div>
       </div>
     );
   };
@@ -282,7 +352,7 @@ const NotificationSettingsPage = ({
     return buildDisplayUnits(activeSection.items, language).filter((unit) => {
       if (!q) return true;
       const r = unit.rule;
-      return `${r.name} ${pickLocalized(r.description, language)} ${r.permission || "No permission mapping"}`
+      return `${r.name} ${pickLocalized(r.description, language)} ${r.permission || "-"}`
         .toLowerCase()
         .includes(q);
     });
@@ -294,66 +364,6 @@ const NotificationSettingsPage = ({
     name: unit.rule.name,
     permission: unit.rule.permission,
   }));
-
-  const columns = [
-    {
-      key: "name",
-      header: "Notification",
-      width: 320,
-      render: (_value, row) => {
-        const isRequired =
-          row.unit.kind === "rule" && row.unit.rule.type === "required";
-        return (
-          <div style={{ display: "flex", flexDirection: "column", gap: "6px", padding: "12px 0" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-              <span style={{ fontWeight: "var(--font-weight-bold)" }}>{row.name}</span>
-              {isRequired ? (
-                <StatusBadge variant="blue-light">Required</StatusBadge>
-              ) : null}
-            </div>
-            <span
-              style={{
-                fontSize: "12px",
-                lineHeight: "16px",
-                color: "var(--neutral-on-surface-secondary)",
-              }}
-            >
-              {pickLocalized(row.unit.rule.description, language)}
-            </span>
-            {renderRemindBefore(row.unit)}
-          </div>
-        );
-      },
-    },
-    {
-      key: "permission",
-      header: "Permission",
-      width: 220,
-      render: (value) => (
-        <div style={cellPadStyle}>{value || "No permission mapping"}</div>
-      ),
-    },
-    {
-      key: "unit",
-      columnId: "inapp",
-      header: "In-app",
-      align: "center",
-      width: 100,
-      render: (_value, row) => (
-        <div style={toggleCellStyle}>{renderToggle(row.unit, "inApp")}</div>
-      ),
-    },
-    {
-      key: "unit",
-      columnId: "email",
-      header: "Email",
-      align: "center",
-      width: 100,
-      render: (_value, row) => (
-        <div style={toggleCellStyle}>{renderToggle(row.unit, "email")}</div>
-      ),
-    },
-  ];
 
   return (
     <div
@@ -418,17 +428,15 @@ const NotificationSettingsPage = ({
         className="flex-wrap"
       />
 
-      {/* Content card — no accent bar, no divider between header and table.
-          Scoped rule aligns the ce-ui table cells (default px-4) to 20px. */}
-      <style>{`.notif-card table th, .notif-card table td { padding-left: 20px; padding-right: 20px; }
-        .notif-card table td { vertical-align: top; }`}</style>
+      {/* Content card — one card per notification instead of a table row,
+          so each item's fields (name, permission, reminder, toggles) sit
+          together without needing custom table-column plumbing. */}
       <div
         className="notif-card"
         style={{
           background: "var(--neutral-surface-primary)",
           borderRadius: "16px",
           border: "1px solid var(--neutral-line-separator-1)",
-          overflow: "hidden",
           display: "flex",
           flexDirection: "column",
         }}
@@ -438,22 +446,13 @@ const NotificationSettingsPage = ({
             padding: "20px 20px 12px",
             display: "flex",
             justifyContent: "space-between",
-            alignItems: "flex-start",
+            alignItems: "center",
             gap: "16px",
           }}
         >
           <div style={{ display: "flex", flexDirection: "column", gap: "6px", minWidth: 0 }}>
             <span style={{ fontSize: "16px", fontWeight: "var(--font-weight-bold)" }}>
               {pickLocalized(activeSection.title, language)}
-            </span>
-            <span
-              style={{
-                fontSize: "var(--text-title-3)",
-                lineHeight: "20px",
-                color: "var(--neutral-on-surface-secondary)",
-              }}
-            >
-              {pickLocalized(activeSection.description, language)}
             </span>
           </div>
           <TableSearchField
@@ -463,14 +462,69 @@ const NotificationSettingsPage = ({
             width="360px"
           />
         </div>
-        <Table
-          columns={columns}
-          data={rows}
-          totalRows={rows.length}
-          showPagination={false}
-          className="!h-auto"
-          selectedRowId={null}
-        />
+        <div style={{ display: "flex", flexDirection: "column", gap: "12px", padding: "0 20px 20px" }}>
+          {rows.map((row) => {
+            const isRequired =
+              row.unit.kind === "rule" && row.unit.rule.type === "required";
+            return (
+              <div key={row.id} style={cardOuterStyle}>
+                <div style={cardTopRowStyle}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "6px", flex: "1 1 320px", minWidth: 0 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                      <span style={{ fontSize: "14px", fontWeight: "var(--font-weight-bold)" }}>
+                        {row.name}
+                      </span>
+                      {isRequired ? (
+                        <StatusBadge variant="blue-light">Required</StatusBadge>
+                      ) : null}
+                    </div>
+                    <span
+                      style={{
+                        fontSize: "14px",
+                        lineHeight: "18px",
+                        color: "var(--neutral-on-surface-secondary)",
+                      }}
+                    >
+                      {pickLocalized(row.unit.rule.description, language)}
+                    </span>
+                  </div>
+
+                  <div style={{ display: "flex", flexDirection: "column", gap: "4px", minWidth: "140px" }}>
+                    <span style={metaLabelStyle}>Permission</span>
+                    <span style={{ fontSize: "var(--text-title-3)" }}>
+                      {row.permission || "-"}
+                    </span>
+                  </div>
+
+                  <div style={{ display: "flex", alignItems: "center", gap: "24px" }}>
+                    <div style={toggleColStyle}>
+                      <span style={metaLabelStyle}>In-app</span>
+                      {renderToggle(row.unit, "inApp")}
+                    </div>
+                    <div style={toggleColStyle}>
+                      <span style={metaLabelStyle}>Email</span>
+                      {renderToggle(row.unit, "email")}
+                    </div>
+                  </div>
+                </div>
+
+                {renderRemindBefore(row.unit)}
+              </div>
+            );
+          })}
+          {rows.length === 0 ? (
+            <div
+              style={{
+                padding: "32px 0",
+                textAlign: "center",
+                color: "var(--neutral-on-surface-secondary)",
+                fontSize: "var(--text-title-3)",
+              }}
+            >
+              No notifications match your search.
+            </div>
+          ) : null}
+        </div>
       </div>
 
       {/* Footer action bar */}

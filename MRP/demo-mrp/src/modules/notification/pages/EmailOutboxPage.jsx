@@ -96,12 +96,15 @@ export const EmailOutboxPage = () => {
     id: { title: "Kotak Keluar Email", sub: "Email simulasi yang dikirim oleh sistem notifikasi (tidak benar-benar terkirim).", empty: "Belum ada email. Lakukan tindakan persetujuan atau gunakan Simulate Event.", to: "Kepada", cc: "CC", from: "Dari", subject: "Subjek", view: "Lihat", help: "Butuh bantuan? Silakan hubungi PIC Labamu Anda untuk bantuan.", summary: "Ringkasan", number: "Nomor", issued: "Tanggal Terbit", validUntil: "Berlaku Hingga", paymentTerm: "Termin Pembayaran", paymentTermValue: "30 Hari", notes: "Catatan", quoteNote: "Yth. Pembeli, kami mendorong Anda untuk menerima penawaran ini segera guna mendapatkan penawaran terbaik. Tanggapan tepat waktu Anda memastikan Anda tidak melewatkan kesempatan ini!" },
   }[language === "id" ? "id" : "en"];
 
-  // Body emails follow a "Hi {name}, {message}" shape — the greeting becomes
-  // the bold title and the remaining message becomes the Notes content.
+  // Bodies shaped "Hi {name}, {message}" keep using the greeting as the bold
+  // title and the remaining message as the paragraph. Everything else (no
+  // "Hi ..." greeting — including bodies with an incidental mid-sentence
+  // comma) falls back to subject-as-title, full body as the paragraph.
   const emailBody = selected ? t(selected.body) || "" : "";
   const commaIdx = emailBody.indexOf(",");
-  const greeting = commaIdx > -1 ? emailBody.slice(0, commaIdx).trim() : emailBody;
-  const notesText = commaIdx > -1 ? emailBody.slice(commaIdx + 1).trim() : "";
+  const hasGreeting = commaIdx > -1 && /^hi\b/i.test(emailBody);
+  const greeting = hasGreeting ? emailBody.slice(0, commaIdx).trim() : t(selected?.subject) || "";
+  const notesText = hasGreeting ? emailBody.slice(commaIdx + 1).trim() : emailBody;
 
   return (
     <div style={{ height: "calc(100vh - 64px)", background: "#F5F6FA", overflow: "hidden", display: "flex", flexDirection: "column" }}>
@@ -231,7 +234,12 @@ export const EmailOutboxPage = () => {
                               <p style={{ margin: 0 }}>{L.paymentTerm}: <span data-no-localize>{L.paymentTermValue}</span></p>
                             ) : null}
                           </div>
-                          {selected.module === "quote" || selected.module === "invoice" ? (
+                          {(selected.module === "quote" || selected.module === "invoice") &&
+                          !(
+                            (selected.module === "quote" && selected.triggerKey === "valid_until_reminder") ||
+                            (selected.module === "invoice" &&
+                              (selected.triggerKey === "due_date_approaching" || selected.triggerKey === "overdue"))
+                          ) ? (
                             <>
                               <div style={{ height: "1px", width: "100%", background: HAIRLINE }} />
                               <p style={{ fontSize: "16px", fontWeight: 700, lineHeight: "22px", letterSpacing: "0.11px", color: "#000", margin: 0 }}>
