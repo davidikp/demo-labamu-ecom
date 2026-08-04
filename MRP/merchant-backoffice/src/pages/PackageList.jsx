@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { fetchPackages, saveWebsiteVisibility } from '../services/catalogService';
 import { useSnackbar } from '../contexts/SnackbarContext';
 import { Dropdown as CeDropdown, SearchBar, Toggle, Pagination, Checkbox, Infobox, EmptyState } from '../ce-ui';
@@ -51,6 +52,7 @@ const TD = { padding: '16px 12px', borderBottom: '1px solid #E9E9E9', fontSize: 
 const TH = { padding: '16px 12px', textAlign: 'left', fontSize: '14px', fontWeight: 700, color: '#282828', background: '#FFFFFF', borderBottom: '1px solid #D4D4D4', whiteSpace: 'nowrap', fontFamily: "'Lato', sans-serif" };
 
 export default function PackageList() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { showSnackbar } = useSnackbar();
 
@@ -72,7 +74,7 @@ export default function PackageList() {
         const res = await fetchPackages();
         if (alive) setPackages(res.data || []);
       } catch (e) {
-        if (alive) setError(e.message || 'Failed to load packages');
+        if (alive) setError(e.message || t('catalog:packages.failedToLoad'));
       } finally {
         if (alive) setLoading(false);
       }
@@ -113,10 +115,10 @@ export default function PackageList() {
     setPackages(list => list.map(p => p.id === id ? { ...p, platform_status: newValue ? 'published' : 'draft' } : p));
     try {
       await saveWebsiteVisibility('package', id, newValue);
-      showSnackbar(newValue ? 'Package has been enabled to show on website' : 'Package has been disabled from website', 'grey');
+      showSnackbar(newValue ? t('catalog:packages.shown') : t('catalog:packages.hidden'), 'grey');
     } catch {
       setPackages(list => list.map(p => p.id === id ? { ...p, platform_status: prev } : p));
-      showSnackbar('Failed to change website visibility', 'red');
+      showSnackbar(t('catalog:common.failedChangeVisibility'), 'red');
     }
   }
   function openBulkEdit() {
@@ -129,12 +131,12 @@ export default function PackageList() {
       <style>{`@keyframes loading-dot { 0%,80%,100%{transform:scale(0.6);opacity:0.4;} 40%{transform:scale(1);opacity:1;} }`}</style>
 
       <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
-        <h1 style={{ margin: '0 0 20px', fontSize: '26px', fontWeight: 700, color: '#282828', flexShrink: 0 }}>Package</h1>
+        <h1 style={{ margin: '0 0 20px', fontSize: '26px', fontWeight: 700, color: '#282828', flexShrink: 0 }}>{t('catalog:packages.pageTitle')}</h1>
 
         {missingWeightOrVolume && (
           <div style={{ marginBottom: '20px', flexShrink: 0 }}>
-            <Infobox variant="info" title="Weight or Volume Required"
-              description="Some products are missing weight or volume information. Complete these details so delivery services can calculate shipping costs accurately." />
+            <Infobox variant="info" title={t('catalog:weightVolume.requiredTitle')}
+              description={t('catalog:weightVolume.requiredDesc')} />
           </div>
         )}
 
@@ -143,21 +145,21 @@ export default function PackageList() {
           {/* Filter bar */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '16px 20px', borderBottom: '1px solid #D4D4D4', flexShrink: 0 }}>
             <div style={{ width: '320px' }}>
-              <SearchBar value={draftKeyword} onChange={handleKeywordInput} placeholder="Search" />
+              <SearchBar value={draftKeyword} onChange={handleKeywordInput} placeholder={t('catalog:packages.searchPlaceholder')} />
             </div>
           </div>
 
           {/* Bulk selection bar */}
           {selectedCount > 0 && (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 20px', background: '#EFF6FF', borderBottom: '1px solid #D4D4D4', flexShrink: 0 }}>
-              <span style={{ fontSize: '14px', fontWeight: 700, color: '#282828' }}>{selectedCount} Package Selected</span>
-              <button onClick={openBulkEdit} style={{ background: '#006BFF', border: 'none', borderRadius: '8px', padding: '8px 16px', color: '#FFFFFF', fontSize: '14px', fontWeight: 700, fontFamily: "'Lato', sans-serif", cursor: 'pointer' }}>Bulk Edit</button>
+              <span style={{ fontSize: '14px', fontWeight: 700, color: '#282828' }}>{t('catalog:packages.selected', { count: selectedCount })}</span>
+              <button onClick={openBulkEdit} style={{ background: '#006BFF', border: 'none', borderRadius: '8px', padding: '8px 16px', color: '#FFFFFF', fontSize: '14px', fontWeight: 700, fontFamily: "'Lato', sans-serif", cursor: 'pointer' }}>{t('catalog:common.bulkEdit')}</button>
             </div>
           )}
 
           {error && !isLoading ? (
             <div style={{ padding: '40px', textAlign: 'center' }}>
-              <p style={{ fontSize: '15px', fontWeight: 600, color: '#EF4444', marginBottom: '8px' }}>Failed to load packages</p>
+              <p style={{ fontSize: '15px', fontWeight: 600, color: '#EF4444', marginBottom: '8px' }}>{t('catalog:packages.failedToLoad')}</p>
               <p style={{ fontSize: '13px', color: '#6B7280' }}>{error}</p>
             </div>
           ) : (
@@ -168,12 +170,12 @@ export default function PackageList() {
                     <th style={{ ...TH, width: '44px', padding: '16px 12px 16px 20px' }}>
                       <Checkbox checked={allSelected ? true : someSelected ? 'indeterminate' : false} onChange={toggleSelectAll} disabled={isLoading || pageRows.length === 0} />
                     </th>
-                    <th style={TH}>Image</th>
-                    <th style={TH}>Package Name</th>
-                    <th style={TH}>Weight</th>
-                    <th style={TH}>Volume</th>
-                    <th style={TH}>Selling Price</th>
-                    <th style={{ ...TH, textAlign: 'right' }}>Website Visibility</th>
+                    <th style={TH}>{t('catalog:common.image')}</th>
+                    <th style={TH}>{t('catalog:packages.columns.packageName')}</th>
+                    <th style={TH}>{t('catalog:common.weightLabel')}</th>
+                    <th style={TH}>{t('catalog:common.volumeLabel')}</th>
+                    <th style={TH}>{t('catalog:common.sellingPrice')}</th>
+                    <th style={{ ...TH, textAlign: 'right' }}>{t('catalog:common.websiteVisibility')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -186,8 +188,8 @@ export default function PackageList() {
                   ) : pageRows.length === 0 ? (
                     <tr><td colSpan={7} style={{ padding: 0, borderBottom: 'none' }}>
                       <EmptyState illustration={<EmptyIllustration />}
-                        title={keyword ? 'No Search Results Found' : 'No Packages Yet'}
-                        description={keyword ? 'Try searching with a different term, okay?' : 'We couldn’t find any packages from your connected store. Sync your store to import the latest packages.'} />
+                        title={keyword ? t('catalog:common.noSearchResultsTitle') : t('catalog:packages.emptyTitle')}
+                        description={keyword ? t('catalog:common.noSearchResultsSub') : t('catalog:packages.emptySub')} />
                     </td></tr>
                   ) : (
                     pageRows.map(p => (
@@ -223,7 +225,7 @@ export default function PackageList() {
               <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                 <RowsSelector size={size} onChange={val => { setSize(Number(val)); setPage(1); }} />
                 <span style={{ fontSize: '14px', color: '#282828', opacity: 0.5, whiteSpace: 'nowrap' }}>
-                  {isLoading ? 'Loading…' : total === 0 ? 'No results' : `from ${total} rows`}
+                  {isLoading ? t('catalog:common.loadingEllipsis') : total === 0 ? t('catalog:common.noResults') : t('catalog:common.fromRows', { count: total })}
                 </span>
               </div>
               <Pagination page={page} totalPages={totalPages} onPageChange={setPage} hideSinglePage />

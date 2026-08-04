@@ -57,7 +57,7 @@ export default function CompanyProfile() {
           <p style={{ fontSize: '16px', fontWeight: 600, marginBottom: '8px' }}>
             {t('dashboard:profile.errorTitle', 'Failed to load data')}
           </p>
-          <p style={{ fontSize: '14px', color: '#6B7280' }}>{error || 'Company data is unavailable.'}</p>
+          <p style={{ fontSize: '14px', color: '#6B7280' }}>{error || t('dashboard:profile.dataUnavailable')}</p>
         </div>
       </div>
     );
@@ -103,7 +103,7 @@ export default function CompanyProfile() {
                 background: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center',
                 overflow: 'hidden'
               }}>
-                <img src={companyData.logoUrl} alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <img src={companyData.logoUrl} alt={t('dashboard:profile.logoAlt')} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               </div>
             </div>
 

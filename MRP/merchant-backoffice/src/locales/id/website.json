@@ -209,7 +209,96 @@
       ],
       "followUs": "Ikuti Kami"
     },
-    "previewOnly": "Hanya Pratinjau Demo"
+    "previewOnly": "Hanya Pratinjau Demo",
+    "cart": {
+      "pageTitle": "Keranjang",
+      "empty": "Keranjangmu kosong.",
+      "added": "Berhasil ditambahkan ke keranjang",
+      "pickupOnly": "Ambil Sendiri",
+      "remove": "Hapus dari keranjang"
+    },
+    "checkout": {
+      "customer": {
+        "title": "Informasi Pelanggan",
+        "reset": "Atur Ulang",
+        "edit": "Ubah",
+        "add": "Tambah informasi pelanggan",
+        "notesLabel": "Catatan",
+        "modalTitle": "Informasi Pelanggan",
+        "modalSubtitle": "Silakan masukkan nomor telepon Anda untuk memproses pesanan.",
+        "continue": "Lanjutkan",
+        "phoneRequired": "Kolom tidak boleh kosong",
+        "phoneAlreadyRegistered": "Nomor telepon ini sudah terdaftar",
+        "detailTitle": "Tambah Informasi Pelanggan",
+        "editTitle": "Ubah Informasi Pelanggan",
+        "detailSubtitle": "Pastikan informasi yang dimasukkan valid untuk pemrosesan pesanan. Perubahan apapun harus diajukan melalui penjual.",
+        "firstTimeNotice": "Sepertinya ini kunjungan pertama Anda di sini. Silakan berikan data Anda untuk melanjutkan pesanan.",
+        "field": {
+          "name": "Nama",
+          "namePlaceholder": "Masukkan Nama",
+          "phone": "Telepon",
+          "email": "Email",
+          "emailPlaceholder": "Masukkan Email",
+          "country": "Negara",
+          "countryPlaceholder": "Pilih Negara",
+          "province": "Provinsi",
+          "provincePlaceholder": "Pilih Provinsi",
+          "city": "Kota",
+          "cityPlaceholder": "Pilih Kota",
+          "district": "Kecamatan",
+          "districtPlaceholder": "Pilih Kecamatan",
+          "region": "Kelurahan",
+          "regionPlaceholder": "Pilih Kelurahan",
+          "zip": "Kode Pos",
+          "zipLoading": "Memuat...",
+          "zipPlaceholder": "Contoh: 12345",
+          "address": "Alamat",
+          "addressPlaceholder": "Contoh: Jalan Mawar No.1",
+          "pinpoint": "Titik Lokasi Alamat",
+          "pinpointPlaceholder": "Nama jalan, gedung, nomor rumah",
+          "notes": "Catatan",
+          "notesPlaceholder": "Contoh: Silakan tinggalkan paket di resepsionis"
+        },
+        "pinTitle": "Lokasi yang ditandai",
+        "pinInstructionTitle": "Tandai titik yang tepat",
+        "pinInstructionSubtitle": "Kami akan mengirim ke alamat pada peta. Mohon periksa titik lokasi dan sesuaikan jika perlu.",
+        "pinnedLabel": "Titik Alamat",
+        "fieldRequired": "Kolom tidak boleh kosong",
+        "saveForNext": "Simpan data untuk pesanan berikutnya",
+        "back": "Kembali",
+        "save": "Simpan",
+        "saveChanges": "Simpan Perubahan",
+        "required": "Tambahkan informasi pelanggan terlebih dahulu"
+      },
+      "shipping": {
+        "title": "Opsi Pengiriman",
+        "delivery": "Pengiriman",
+        "pickup": "Ambil Sendiri",
+        "courierNeedsCustomer": "Tambahkan informasi pelanggan untuk melihat opsi kurir.",
+        "outOfCoverage": "Alamat Anda berada di luar area pengiriman yang tersedia. Mohon gunakan alamat pengiriman lain.",
+        "pickupLocationLabel": "Ambil Pembelian di Toko",
+        "pickupLocationDefault": "Alamat toko belum diatur",
+        "pickupLocationError": "Tidak dapat memuat lokasi pengambilan",
+        "reloadLocation": "Muat Ulang Lokasi",
+        "staleNotice": "Biaya pengiriman harus dihitung ulang karena isi keranjang belanja Anda telah berubah. Hitung ulang sebelum melakukan pemesanan.",
+        "recalculate": "Hitung Ulang Biaya Pengiriman"
+      },
+      "notes": {
+        "title": "Catatan Pesanan",
+        "placeholder": "Tambahkan catatan untuk pesanan ini"
+      },
+      "summary": {
+        "title": "Ringkasan Pesanan",
+        "subtotal": "Subtotal",
+        "tax": "PPN (11%)",
+        "shipping": "Biaya Pengiriman",
+        "total": "Total Belanja"
+      },
+      "purchase": {
+        "button": "Bayar",
+        "success": "Pesanan berhasil dibuat (hanya demo — tidak ada pesanan sungguhan yang dibuat)."
+      }
+    }
   },
   "studio": {
     "title": "Studio",
@@ -237,7 +326,8 @@
       "quoteDesc": "Minta penawaran untuk produk atau layanan.",
       "appointmentDesc": "Buat janji temu langsung di situs web Anda.",
       "locationDesc": "Tampilkan lokasi Anda dengan peta dan detail.",
-      "reviewsDesc": "Tampilkan testimoni dan ulasan pelanggan."
+      "reviewsDesc": "Tampilkan testimoni dan ulasan pelanggan.",
+      "fontPreviewSample": "Contoh Teks Pratinjau Font"
     },
     "configure": {
       "title": "Konfigurasi",
@@ -357,7 +447,128 @@
     },
     "common": {
       "uploadImage": "Unggah Gambar",
-      "uploadHint": "PNG, JPG maks 5mb"
+      "uploadHint": "PNG, JPG maks 5mb",
+      "email": "Email",
+      "phone": "Telepon"
+    },
+    "panelContent": {
+      "shared": {
+        "sectionTitle": "Judul Bagian",
+        "sectionSubtitle": "Subjudul Bagian",
+        "sectionDescriptionLabel": "Deskripsi Bagian"
+      },
+      "appointment": {
+        "titleLabel": "Judul Janji Temu",
+        "subtitleLabel": "Subjudul Janji Temu"
+      },
+      "business": {
+        "bannerItemLabel": "Banner {{index}}",
+        "footerTitle": "Footer",
+        "footerDesc": "Footer — tampil di bagian bawah situsmu",
+        "businessNameLabel": "Nama Usaha",
+        "businessNamePlaceholder": "cth. Toko Sejahtera",
+        "emailPlaceholder": "cth. nama@usaha.com",
+        "footerDescriptionLabel": "Deskripsi Footer"
+      },
+      "contact": {
+        "nameField": "Nama",
+        "messageField": "Pesan",
+        "alwaysRequired": "Selalu wajib diisi",
+        "generalTitle": "Umum",
+        "generalDesc": "pengaturan dasar bagian ini",
+        "headerImageLabel": "Gambar Header Bagian Kontak",
+        "requiredFieldsTitle": "Kolom Wajib Diisi",
+        "requiredFieldsDesc": "pilih kolom mana yang wajib diisi pengunjung",
+        "forwardTitle": "Teruskan Formulir Hubungi Kami",
+        "forwardDesc": "kirim pesan masuk ke email usahamu",
+        "businessEmailLabel": "Email Usaha",
+        "businessEmailPlaceholder": "cth. nama@usaha.com",
+        "confirmationMessageLabel": "Pesan Konfirmasi",
+        "confirmationMessagePlaceholder": "cth. Terima kasih telah menghubungi kami"
+      },
+      "location": {
+        "addressTitle": "Alamat Usaha",
+        "addressDesc": "alamat ini akan ditampilkan di situsmu",
+        "streetLabel": "Alamat Jalan",
+        "cityLabel": "Kota",
+        "provinceLabel": "Provinsi / Kecamatan",
+        "postalCodeLabel": "Kode Pos",
+        "countryLabel": "Negara"
+      },
+      "quote": {
+        "sectionTitle": "Bagian Permintaan Penawaran",
+        "sectionDesc": "biarkan pengunjung meminta penawaran harga",
+        "descPlaceholder": "Fill out the form below to get a customized quote for your project",
+        "bgImageLabel": "Gambar Latar",
+        "bgImageFallback": "If none is set, the default template image will be used."
+      },
+      "reviews": {
+        "titleLabel": "Judul Ulasan"
+      },
+      "shop": {
+        "sectionsTitle": "Bagian Halaman Utama",
+        "sectionsDesc": "atur urutan bagian di halaman utama situsmu",
+        "removeSection": "Hapus bagian",
+        "addSection": "Tambah bagian",
+        "emptyState": "Belum ada bagian, yuk tambahkan sekarang"
+      }
+    },
+    "editorComingSoon": "Editor Segera Hadir!",
+    "selectSection": "Pilih bagian yang ingin dikonfigurasi.",
+    "publishedMock": "Berhasil! Situs telah dipublikasikan (Mock)",
+    "sidebarToggle": {
+      "collapse": "Tutup Sidebar",
+      "expand": "Buka Sidebar"
+    },
+    "viewport": {
+      "desktop": "Desktop",
+      "mobile": "Seluler"
+    },
+    "customPage": {
+      "defaultTitle": "Halaman Kustom",
+      "defaultDesc": "Konten halaman kustom",
+      "defaultMenuLink": "Tautan kustom di menumu"
+    },
+    "previewModal": {
+      "title": "Pratinjau Gambar",
+      "subtitle": "Pastikan gambar terlihat penuh dan berada dalam area ya."
+    },
+    "domainConnectMock": "Koneksi domain telah dimulai (Mock)",
+    "search": {
+      "placeholder": "Cari...",
+      "noResults": "Tidak ada hasil"
+    },
+    "upload": {
+      "dragDrop": "Seret dan lepas atau klik untuk unggah gambar",
+      "acceptedFormats": "Format yang didukung: JPG, JPEG & PNG",
+      "maxSize": "(Maks 5MB)",
+      "uploadedSuffix": "Berhasil! {{label}} telah diunggah"
     }
+  },
+  "shop": {
+    "sort": {
+      "newest": "Terbaru ke Terlama",
+      "oldest": "Terlama ke Terbaru",
+      "priceAsc": "Harga: Rendah ke Tinggi",
+      "priceDesc": "Harga: Tinggi ke Rendah"
+    },
+    "allCategories": "Semua Kategori",
+    "all": "Semua",
+    "priceFilter": {
+      "label": "Filter Harga",
+      "lowest": "Harga Terendah",
+      "highest": "Harga Tertinggi"
+    },
+    "addToCart": "tambah ke keranjang",
+    "noProductsFound": "Produk tidak ditemukan",
+    "countSummary": "{{from}}-{{to}} dari {{total}} produk",
+    "category": "Kategori",
+    "sortBy": "Urutkan berdasarkan",
+    "catalogNotAvailable": "Katalog tidak tersedia",
+    "catalogNotAvailableDesc": "Penjual ini belum memiliki produk yang terdaftar saat ini.",
+    "noProductsFoundPeriod": "Produk tidak ditemukan.",
+    "salutation": "Sapaan",
+    "selectSalutation": "Pilih sapaan",
+    "qty": "Jml:"
   }
 }

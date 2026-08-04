@@ -260,3 +260,33 @@ body {
 .labamu-scrollbar::-webkit-scrollbar-thumb:hover {
   background-color: #9CA3AF;
 }
+
+/* ═══════════════════════════════════════════════════════════
+   SECTION BUILDER — on-canvas inline editing
+   ═══════════════════════════════════════════════════════════ */
+
+/* Editable text nodes in the builder canvas. Outline only appears on
+   hover/focus so the canvas still reads as the real storefront. */
+.sb-editable {
+  outline: none;
+  cursor: text;
+  border-radius: 3px;
+  transition: box-shadow 0.12s ease, background-color 0.12s ease;
+  /* Keep inline-edited text inside its container: wrap normally, and break
+     long unbroken strings (e.g. "aaaa…") instead of overflowing the width. */
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+.sb-editable:hover {
+  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.4);
+}
+.sb-editable:focus {
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.9);
+  background-color: rgba(59, 130, 246, 0.04);
+}
+.sb-editable:empty::before {
+  content: attr(data-sb-placeholder);
+  opacity: 0.5;
+}

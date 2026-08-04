@@ -1,17 +1,20 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useParams, useNavigate } from 'react-router-dom';
 import { fetchProductById, fetchProductModifiers } from '../services/catalogService';
 import { Breadcrumbs } from '../ce-ui';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-function formatOptionPrice(price) {
-  if (!price) return 'Free';
+function formatOptionPrice(price, t) {
+  if (!price) return t('dashboard:modifier.free');
   const n = new Intl.NumberFormat('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(price);
   return `+IDR ${n}`;
 }
 
-function ruleLabel(group) {
-  return group.required ? `Min 1, Max ${group.max}` : `Optional, Max ${group.max}`;
+function ruleLabel(group, t) {
+  return group.required
+    ? t('dashboard:modifier.connected.ruleRequired', { max: group.max })
+    : t('dashboard:modifier.connected.ruleOptional', { max: group.max });
 }
 
 // ─── Chevron ────────────────────────────────────────────────────────────────────
@@ -25,6 +28,7 @@ function Chevron({ up }) {
 
 // ─── Modifier group card ─────────────────────────────────────────────────────────
 function ModifierCard({ group }) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(true);
   return (
     <div style={{
@@ -39,13 +43,13 @@ function ModifierCard({ group }) {
             {group.name}
           </span>
           <span style={{ fontSize: '12px', color: '#7E7E7E', fontFamily: "'Lato', sans-serif", lineHeight: '18px', letterSpacing: '0.0825px', whiteSpace: 'nowrap' }}>
-            {ruleLabel(group)}
+            {ruleLabel(group, t)}
           </span>
         </div>
         <button
           onClick={() => setOpen(o => !o)}
           style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: 0, display: 'flex', flexShrink: 0 }}
-          aria-label={open ? 'Collapse' : 'Expand'}
+          aria-label={open ? t('dashboard:modifier.connected.collapse') : t('dashboard:modifier.connected.expand')}
           aria-expanded={open}
         >
           <Chevron up={open} />
@@ -63,7 +67,7 @@ function ModifierCard({ group }) {
                   {opt.name}
                 </span>
                 <span style={{ fontSize: '14px', color: '#282828', fontFamily: "'Lato', sans-serif", lineHeight: '20px', letterSpacing: '0.096px', whiteSpace: 'nowrap' }}>
-                  {formatOptionPrice(opt.price)}
+                  {formatOptionPrice(opt.price, t)}
                 </span>
               </div>
             </div>
@@ -76,6 +80,7 @@ function ModifierCard({ group }) {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 export default function ConnectedModifiers() {
+  const { t } = useTranslation();
   const { id } = useParams();
   const navigate = useNavigate();
 
@@ -92,7 +97,7 @@ export default function ConnectedModifiers() {
           fetchProductById(id),
           fetchProductModifiers(id),
         ]);
-        setProductName(prodRes.data?.name || 'Catalog Detail');
+        setProductName(prodRes.data?.name || t('dashboard:modifier.connected.catalogDetailFallback'));
         setGroups(modRes.data || []);
       } catch (e) {
         setError(e.message);
@@ -110,9 +115,9 @@ export default function ConnectedModifiers() {
       {/* ── Page header ──────────────────────────────────────────────────────── */}
       <div style={{ marginBottom: '20px' }}>
         <Breadcrumbs
-          title="Connected Modifier"
+          title={t('dashboard:modifier.connected.title')}
           breadcrumbs={[
-            { name: 'Catalog', onClick: () => navigate('/catalog') },
+            { name: t('dashboard:sidebar.catalog'), onClick: () => navigate('/catalog') },
             { name: loading ? '…' : productName, onClick: () => navigate(`/catalog/${id}`) },
           ]}
           onBack={() => navigate(`/catalog/${id}`)}
@@ -122,7 +127,7 @@ export default function ConnectedModifiers() {
       {/* ── Error ─────────────────────────────────────────────────────────────── */}
       {error && !loading && (
         <div style={{ background: '#FFFFFF', borderRadius: '12px', padding: '64px', textAlign: 'center' }}>
-          <p style={{ margin: '0 0 4px', fontSize: '16px', color: '#D0021B' }}>Failed to load modifiers</p>
+          <p style={{ margin: '0 0 4px', fontSize: '16px', color: '#D0021B' }}>{t('dashboard:modifier.loadError')}</p>
           <p style={{ margin: 0, fontSize: '13px', color: '#7E7E7E' }}>{error}</p>
         </div>
       )}
@@ -139,8 +144,8 @@ export default function ConnectedModifiers() {
       {/* ── Empty state ───────────────────────────────────────────────────────── */}
       {!loading && !error && groups.length === 0 && (
         <div style={{ background: '#FFFFFF', borderRadius: '12px', padding: '64px', textAlign: 'center' }}>
-          <p style={{ margin: '0 0 4px', fontSize: '16px', fontWeight: 700, color: '#282828' }}>No Connected Modifiers</p>
-          <p style={{ margin: 0, fontSize: '14px', color: '#7E7E7E' }}>This catalog doesn’t have any modifiers connected yet.</p>
+          <p style={{ margin: '0 0 4px', fontSize: '16px', fontWeight: 700, color: '#282828' }}>{t('dashboard:modifier.connected.emptyTitle')}</p>
+          <p style={{ margin: 0, fontSize: '14px', color: '#7E7E7E' }}>{t('dashboard:modifier.connected.emptyDescription')}</p>
         </div>
       )}
 

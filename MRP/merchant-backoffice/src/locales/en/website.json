@@ -209,7 +209,96 @@
       ],
       "followUs": "Follow Us"
     },
-    "previewOnly": "Demo Preview Only"
+    "previewOnly": "Demo Preview Only",
+    "cart": {
+      "pageTitle": "Cart",
+      "empty": "Your cart is empty.",
+      "added": "Added to cart",
+      "pickupOnly": "Pickup Only",
+      "remove": "Remove from cart"
+    },
+    "checkout": {
+      "customer": {
+        "title": "Customer Information",
+        "reset": "Reset",
+        "edit": "Edit",
+        "add": "Add Customer Information",
+        "notesLabel": "Notes",
+        "modalTitle": "Customer Information",
+        "modalSubtitle": "Please enter your phone number to process the order",
+        "continue": "Continue",
+        "phoneRequired": "Please enter your phone number",
+        "phoneAlreadyRegistered": "This phone number is already registered",
+        "detailTitle": "Add Customer Information",
+        "editTitle": "Edit Customer Information",
+        "detailSubtitle": "Make sure the information entered is valid for order processing.",
+        "firstTimeNotice": "It looks like this is your first time here. Please provide your name to continue your order",
+        "field": {
+          "name": "Name",
+          "namePlaceholder": "Input Name",
+          "phone": "Phone",
+          "email": "Email",
+          "emailPlaceholder": "Input Email",
+          "country": "Country",
+          "countryPlaceholder": "Select Country",
+          "province": "Province",
+          "provincePlaceholder": "Select Province",
+          "city": "City",
+          "cityPlaceholder": "Select City",
+          "district": "District",
+          "districtPlaceholder": "Select District",
+          "region": "Region",
+          "regionPlaceholder": "Select Region",
+          "zip": "ZIP/Postal Code",
+          "zipLoading": "Loading...",
+          "zipPlaceholder": "e.g. 12345",
+          "address": "Address",
+          "addressPlaceholder": "e.g. Jalan Mawar No.1",
+          "pinpoint": "Pinpoint Address",
+          "pinpointPlaceholder": "Street name, building, house number",
+          "notes": "Notes",
+          "notesPlaceholder": "e.g. Drop at receptionist"
+        },
+        "pinTitle": "Pinned location",
+        "pinInstructionTitle": "Pin the right point",
+        "pinInstructionSubtitle": "We'll deliver to the map address. Please verify the point and adjust if necessary.",
+        "pinnedLabel": "Pinpoint Address",
+        "fieldRequired": "Field cannot be empty",
+        "saveForNext": "Save data for the next order",
+        "back": "Back",
+        "save": "Save",
+        "saveChanges": "Save Changes",
+        "required": "Please add customer information first"
+      },
+      "shipping": {
+        "title": "Shipping Options",
+        "delivery": "Delivery",
+        "pickup": "Pick Up",
+        "courierNeedsCustomer": "Add customer information to see courier options.",
+        "outOfCoverage": "Your address is outside the merchant's delivery area. Please use a different delivery address.",
+        "pickupLocationLabel": "Pick Up Purchase in Store",
+        "pickupLocationDefault": "Store address not set",
+        "pickupLocationError": "Unable to load pickup location",
+        "reloadLocation": "Reload Location",
+        "staleNotice": "The shipping cost must be recalculated because your cart has changed. Recalculate it before placing your order.",
+        "recalculate": "Recalculate Shipping Cost"
+      },
+      "notes": {
+        "title": "Order Notes",
+        "placeholder": "Add a note for this order"
+      },
+      "summary": {
+        "title": "Order Summary",
+        "subtotal": "Subtotal",
+        "tax": "Tax (11%)",
+        "shipping": "Shipping Cost",
+        "total": "Total Shopping"
+      },
+      "purchase": {
+        "button": "Purchase",
+        "success": "Order placed (demo only — no real order was created)."
+      }
+    }
   },
   "studio": {
     "title": "Studio",
@@ -237,7 +326,8 @@
       "quoteDesc": "Request quotes for products or services.",
       "appointmentDesc": "Book appointments directly on your website.",
       "locationDesc": "Show your location with a map and details.",
-      "reviewsDesc": "Display customer testimonials and reviews."
+      "reviewsDesc": "Display customer testimonials and reviews.",
+      "fontPreviewSample": "The quick brown fox"
     },
     "configure": {
       "title": "Configure",
@@ -357,7 +447,128 @@
     },
     "common": {
       "uploadImage": "Upload Image",
-      "uploadHint": "PNG, JPG max 5mb"
+      "uploadHint": "PNG, JPG max 5mb",
+      "email": "Email",
+      "phone": "Phone"
+    },
+    "panelContent": {
+      "shared": {
+        "sectionTitle": "Section Title",
+        "sectionSubtitle": "Section Subtitle",
+        "sectionDescriptionLabel": "Section Description"
+      },
+      "appointment": {
+        "titleLabel": "Appointment Title",
+        "subtitleLabel": "Appointment Subtitle"
+      },
+      "business": {
+        "bannerItemLabel": "Banner {{index}}",
+        "footerTitle": "Footer",
+        "footerDesc": "Contact details and description displayed at the bottom of your website.",
+        "businessNameLabel": "Business Name",
+        "businessNamePlaceholder": "Your business name",
+        "emailPlaceholder": "email@yourbusiness.com",
+        "footerDescriptionLabel": "Footer Description"
+      },
+      "contact": {
+        "nameField": "Name",
+        "messageField": "Message",
+        "alwaysRequired": "Always required",
+        "generalTitle": "General",
+        "generalDesc": "Configure how user see this section.",
+        "headerImageLabel": "Contact Section Header Image",
+        "requiredFieldsTitle": "Required Fields",
+        "requiredFieldsDesc": "Select which fields customers must fill in to submit a message",
+        "forwardTitle": "Forward Contact Us Form",
+        "forwardDesc": "Contact form submission will be sent to these email or leave it empty if you don't want the email to be forwarded.",
+        "businessEmailLabel": "Business Email",
+        "businessEmailPlaceholder": "Input Business Email",
+        "confirmationMessageLabel": "Confirmation Message",
+        "confirmationMessagePlaceholder": "Input Confirmation Message"
+      },
+      "location": {
+        "addressTitle": "Business Address",
+        "addressDesc": "Shown on the map and in your website footer.",
+        "streetLabel": "Street Address",
+        "cityLabel": "City",
+        "provinceLabel": "Province / State",
+        "postalCodeLabel": "Postal Code",
+        "countryLabel": "Country"
+      },
+      "quote": {
+        "sectionTitle": "Quote Request Section",
+        "sectionDesc": "Configure how user see this section.",
+        "descPlaceholder": "Fill out the form below to get a customized quote for your project",
+        "bgImageLabel": "Background Image",
+        "bgImageFallback": "If none is set, the default template image will be used."
+      },
+      "reviews": {
+        "titleLabel": "Reviews Title"
+      },
+      "shop": {
+        "sectionsTitle": "Homepage Sections",
+        "sectionsDesc": "Select up to 2 categories to feature as product groups on the homepage.",
+        "removeSection": "Remove section",
+        "addSection": "Add section",
+        "emptyState": "No categories with published products. Publish products in your catalog to feature them here."
+      }
+    },
+    "editorComingSoon": "Editor Coming Soon!",
+    "selectSection": "Select a section to configure.",
+    "publishedMock": "Website published! (Mock)",
+    "sidebarToggle": {
+      "collapse": "Collapse Sidebar",
+      "expand": "Expand Sidebar"
+    },
+    "viewport": {
+      "desktop": "Desktop",
+      "mobile": "Mobile"
+    },
+    "customPage": {
+      "defaultTitle": "Custom Page",
+      "defaultDesc": "Custom page content",
+      "defaultMenuLink": "Custom link on your menu"
+    },
+    "previewModal": {
+      "title": "Preview Image",
+      "subtitle": "Make sure the image is fully visible and within the area."
+    },
+    "domainConnectMock": "Domain connection initiated (mock)",
+    "search": {
+      "placeholder": "Search...",
+      "noResults": "No results"
+    },
+    "upload": {
+      "dragDrop": "Drag and drop or click to upload image",
+      "acceptedFormats": "Accepted formats: JPG, JPEG & PNG",
+      "maxSize": "(Max 5MB)",
+      "uploadedSuffix": "{{label}} uploaded"
     }
+  },
+  "shop": {
+    "sort": {
+      "newest": "Newest to Oldest",
+      "oldest": "Oldest to Newest",
+      "priceAsc": "Price: Low to High",
+      "priceDesc": "Price: High to Low"
+    },
+    "allCategories": "All Categories",
+    "all": "All",
+    "priceFilter": {
+      "label": "Price Filter",
+      "lowest": "Lowest Price",
+      "highest": "Highest Price"
+    },
+    "addToCart": "Add to cart",
+    "noProductsFound": "No products found",
+    "countSummary": "{{from}}-{{to}} from {{total}} products",
+    "category": "Category",
+    "sortBy": "Sort by",
+    "catalogNotAvailable": "Catalog not available",
+    "catalogNotAvailableDesc": "This seller doesn't have any products listed at the moment.",
+    "noProductsFoundPeriod": "No products found.",
+    "salutation": "Salutation",
+    "selectSalutation": "Select salutation",
+    "qty": "Qty:"
   }
 }

@@ -1,14 +1,17 @@
 import { useState, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useSnackbar } from '../contexts/SnackbarContext';
 import Button from '../components/ui/Button';
 import { Dropdown as CeDropdown, Toggle, Checkbox, Breadcrumbs, Infobox, NumberField, Popup } from '../ce-ui';
 import { applyBulkEdits } from '../services/catalogService';
 
-const VISIBILITY_OPTIONS = [
-  { value: 'show', label: 'Show on Website' },
-  { value: 'hide', label: 'Hide from Website' },
-];
+function useVisibilityOptions(t) {
+  return [
+    { value: 'show', label: t('catalog:common.showOnWebsiteTitle') },
+    { value: 'hide', label: t('catalog:common.hideFromWebsite') },
+  ];
+}
 
 // ─── Number field with trailing unit (ce-ui NumberField) ─────────────────────
 function NumField({ value, onChange, placeholder, unit }) {
@@ -29,13 +32,15 @@ const TH = { padding: '16px 12px', textAlign: 'left', fontSize: '14px', fontWeig
 const TD = { padding: '12px', borderBottom: '1px solid #E9E9E9', fontSize: '14px', color: '#282828', fontFamily: "'Lato', sans-serif", verticalAlign: 'middle' };
 
 export default function BulkEditCatalog() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const { showSnackbar } = useSnackbar();
+  const VISIBILITY_OPTIONS = useVisibilityOptions(t);
 
   const kind = location.state?.kind === 'package' ? 'package' : 'catalog';
   const backTo = location.state?.backTo || (kind === 'package' ? '/catalog/package' : '/catalog');
-  const label = kind === 'package' ? 'Package' : 'Catalog';
+  const label = kind === 'package' ? t('catalog:common.packageLabel') : t('catalog:common.catalogLabel');
   const initialItems = location.state?.items;
 
   // Draft rows (editable copies of the selected items).
@@ -81,8 +86,8 @@ export default function BulkEditCatalog() {
   if (!initialItems || initialItems.length === 0) {
     return (
       <div style={{ padding: '24px', background: '#F4F4F4', minHeight: 'calc(100vh - 56px)', fontFamily: "'Lato', sans-serif" }}>
-        <p style={{ fontSize: '15px', color: '#7E7E7E' }}>No items selected for bulk edit.</p>
-        <button onClick={() => navigate(backTo)} style={{ border: 'none', background: 'none', color: '#006BFF', cursor: 'pointer', fontSize: '14px' }}>← Back to {label}</button>
+        <p style={{ fontSize: '15px', color: '#7E7E7E' }}>{t('catalog:bulkEdit.noItemsSelected')}</p>
+        <button onClick={() => navigate(backTo)} style={{ border: 'none', background: 'none', color: '#006BFF', cursor: 'pointer', fontSize: '14px' }}>{t('catalog:bulkEdit.backToLabel', { label })}</button>
       </div>
     );
   }
@@ -117,7 +122,7 @@ export default function BulkEditCatalog() {
     }));
     // Reset the bulk fields back to their default state.
     setApplyWeight(''); setApplyLength(''); setApplyWidth(''); setApplyHeight(''); setApplyVisibility('');
-    showSnackbar('Applied to selected rows', 'success');
+    showSnackbar(t('catalog:bulkEdit.appliedToSelected'), 'success');
   }
 
   function handleSave() {
@@ -142,7 +147,7 @@ export default function BulkEditCatalog() {
       };
     });
     applyBulkEdits(kind, edits);
-    showSnackbar('Changes saved', 'success');
+    showSnackbar(t('catalog:bulkEdit.changesSaved'), 'success');
     navigate(backTo);
   }
 
@@ -153,7 +158,7 @@ export default function BulkEditCatalog() {
         {/* Header */}
         <div style={{ marginBottom: '20px' }}>
           <Breadcrumbs
-            title={`Bulk Edit ${label}`}
+            title={t('catalog:bulkEdit.title', { label })}
             breadcrumbs={[{ name: label, onClick: () => goBack(backTo) }]}
             onBack={() => goBack(backTo)}
           />
@@ -162,8 +167,8 @@ export default function BulkEditCatalog() {
         {/* Weight / Volume banner */}
         {missingWeightOrVolume && (
           <div style={{ marginBottom: '20px' }}>
-            <Infobox variant="info" title="Weight or Volume Required"
-              description="Some products are missing weight or volume information. Complete these details so delivery services can calculate shipping costs accurately." />
+            <Infobox variant="info" title={t('catalog:weightVolume.requiredTitle')}
+              description={t('catalog:weightVolume.requiredDesc')} />
           </div>
         )}
 
@@ -171,21 +176,21 @@ export default function BulkEditCatalog() {
         <div style={{ background: '#FFFFFF', borderRadius: '12px', border: '1px solid #E9E9E9', overflow: 'hidden', display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
           {/* Apply-to-selected row */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '16px 20px', borderBottom: '1px solid #E9E9E9', flexShrink: 0 }}>
-            <div style={{ flex: 1, minWidth: 0 }}><NumField value={applyWeight} onChange={setApplyWeight} placeholder="Input weight" unit="gr" /></div>
-            <div style={{ flex: 1, minWidth: 0 }}><NumField value={applyLength} onChange={setApplyLength} placeholder="Input length" unit="cm" /></div>
+            <div style={{ flex: 1, minWidth: 0 }}><NumField value={applyWeight} onChange={setApplyWeight} placeholder={t('catalog:bulkEdit.placeholders.weight')} unit="gr" /></div>
+            <div style={{ flex: 1, minWidth: 0 }}><NumField value={applyLength} onChange={setApplyLength} placeholder={t('catalog:bulkEdit.placeholders.length')} unit="cm" /></div>
             <span style={{ color: '#A9A9A9', flexShrink: 0 }}>x</span>
-            <div style={{ flex: 1, minWidth: 0 }}><NumField value={applyWidth} onChange={setApplyWidth} placeholder="Input width" unit="cm" /></div>
+            <div style={{ flex: 1, minWidth: 0 }}><NumField value={applyWidth} onChange={setApplyWidth} placeholder={t('catalog:bulkEdit.placeholders.width')} unit="cm" /></div>
             <span style={{ color: '#A9A9A9', flexShrink: 0 }}>x</span>
-            <div style={{ flex: 1, minWidth: 0 }}><NumField value={applyHeight} onChange={setApplyHeight} placeholder="Input height" unit="cm" /></div>
+            <div style={{ flex: 1, minWidth: 0 }}><NumField value={applyHeight} onChange={setApplyHeight} placeholder={t('catalog:bulkEdit.placeholders.height')} unit="cm" /></div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <CeDropdown options={VISIBILITY_OPTIONS} value={applyVisibility} onChange={setApplyVisibility} placeholder="Select Web Visibility" size="md" searchable={false} />
+              <CeDropdown options={VISIBILITY_OPTIONS} value={applyVisibility} onChange={setApplyVisibility} placeholder={t('catalog:bulkEdit.selectWebVisibility')} size="md" searchable={false} />
             </div>
             <button onClick={applyToSelected} disabled={!applyHasValue || !someSelected}
               style={{ flexShrink: 0, padding: '10px 16px', borderRadius: '8px', border: 'none', fontSize: '14px', fontWeight: 700, fontFamily: "'Lato', sans-serif", whiteSpace: 'nowrap',
                 background: (applyHasValue && someSelected) ? '#006BFF' : '#F4F4F4',
                 color: (applyHasValue && someSelected) ? '#FFFFFF' : '#A9A9A9',
                 cursor: (applyHasValue && someSelected) ? 'pointer' : 'default' }}>
-              Apply to Selected
+              {t('catalog:bulkEdit.applyToSelected')}
             </button>
           </div>
 
@@ -197,12 +202,12 @@ export default function BulkEditCatalog() {
                   <th style={{ ...TH, width: '44px', padding: '16px 12px 16px 20px' }}>
                     <Checkbox checked={allSelected ? true : someSelected ? 'indeterminate' : false} onChange={toggleSelectAll} />
                   </th>
-                  <th style={{ ...TH, width: '180px' }}>{label} Name</th>
-                  <th style={TH}>Weight</th>
-                  <th style={TH}>Length</th>
-                  <th style={TH}>Width</th>
-                  <th style={TH}>Height</th>
-                  <th style={{ ...TH, textAlign: 'right', width: '144px' }}>Website Visibility</th>
+                  <th style={{ ...TH, width: '180px' }}>{t('catalog:bulkEdit.nameColumn', { label })}</th>
+                  <th style={TH}>{t('catalog:common.weightLabel')}</th>
+                  <th style={TH}>{t('catalog:common.lengthLabel')}</th>
+                  <th style={TH}>{t('catalog:common.widthLabel')}</th>
+                  <th style={TH}>{t('catalog:common.heightLabel')}</th>
+                  <th style={{ ...TH, textAlign: 'right', width: '144px' }}>{t('catalog:common.websiteVisibility')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -212,10 +217,10 @@ export default function BulkEditCatalog() {
                       <Checkbox checked={selectedIds.has(r.id)} onChange={() => toggleRowSelect(r.id)} />
                     </td>
                     <td style={{ ...TD, color: '#006BFF', fontWeight: 500, whiteSpace: 'nowrap', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis' }} title={r.name}>{r.name}</td>
-                    <td style={TD}><NumField value={r.weight} onChange={v => setField(r.id, 'weight', v)} placeholder="Input weight" unit="gr" /></td>
-                    <td style={TD}><NumField value={r.length} onChange={v => setField(r.id, 'length', v)} placeholder="Input length" unit="cm" /></td>
-                    <td style={TD}><NumField value={r.width} onChange={v => setField(r.id, 'width', v)} placeholder="Input width" unit="cm" /></td>
-                    <td style={TD}><NumField value={r.height} onChange={v => setField(r.id, 'height', v)} placeholder="Input height" unit="cm" /></td>
+                    <td style={TD}><NumField value={r.weight} onChange={v => setField(r.id, 'weight', v)} placeholder={t('catalog:bulkEdit.placeholders.weight')} unit="gr" /></td>
+                    <td style={TD}><NumField value={r.length} onChange={v => setField(r.id, 'length', v)} placeholder={t('catalog:bulkEdit.placeholders.length')} unit="cm" /></td>
+                    <td style={TD}><NumField value={r.width} onChange={v => setField(r.id, 'width', v)} placeholder={t('catalog:bulkEdit.placeholders.width')} unit="cm" /></td>
+                    <td style={TD}><NumField value={r.height} onChange={v => setField(r.id, 'height', v)} placeholder={t('catalog:bulkEdit.placeholders.height')} unit="cm" /></td>
                     <td style={{ ...TD, textAlign: 'right', width: '144px' }}>
                       <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
                         <Toggle checked={r.visible} onChange={checked => setField(r.id, 'visible', checked)} />
@@ -229,33 +234,33 @@ export default function BulkEditCatalog() {
 
           {/* Card footer */}
           <div style={{ padding: '16px 20px', borderTop: '1px solid #E9E9E9', flexShrink: 0 }}>
-            <span style={{ fontSize: '14px', color: '#282828', opacity: 0.5 }}>{`Show ${rows.length} from ${rows.length} rows`}</span>
+            <span style={{ fontSize: '14px', color: '#282828', opacity: 0.5 }}>{t('catalog:common.showFromRows', { shown: rows.length, total: rows.length })}</span>
           </div>
         </div>
       </div>
 
       {/* Pinned action bar */}
       <div style={{ flexShrink: 0, background: '#FFFFFF', borderTop: '1px solid #E9E9E9', padding: '16px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <button onClick={() => goBack(backTo)} style={{ border: 'none', background: 'none', color: '#D0021B', fontSize: '14px', fontWeight: 700, fontFamily: "'Lato', sans-serif", cursor: 'pointer' }}>Cancel Edit</button>
-        <Button variant="primary" size="medium" onClick={handleSave}>Save Changes</Button>
+        <button onClick={() => goBack(backTo)} style={{ border: 'none', background: 'none', color: '#D0021B', fontSize: '14px', fontWeight: 700, fontFamily: "'Lato', sans-serif", cursor: 'pointer' }}>{t('catalog:bulkEdit.cancelEdit')}</button>
+        <Button variant="primary" size="medium" onClick={handleSave}>{t('catalog:bulkEdit.saveChanges')}</Button>
       </div>
 
       <Popup
         open={discardTarget !== null}
         onClose={() => setDiscardTarget(null)}
-        title="Discard Changes?"
+        title={t('catalog:bulkEdit.discardTitle')}
         platform="desktop"
-        primaryAction={{ label: 'Yes, Discard', onClick: () => navigate(discardTarget) }}
-        secondaryAction={{ label: 'Cancel', onClick: () => setDiscardTarget(null) }}
+        primaryAction={{ label: t('catalog:common.yesDiscard'), onClick: () => navigate(discardTarget) }}
+        secondaryAction={{ label: t('catalog:common.cancel'), onClick: () => setDiscardTarget(null) }}
       />
 
       <Popup
         open={noChangesOpen}
         onClose={() => setNoChangesOpen(false)}
-        title="No Changes Made"
-        description="Please update the catalog value before saving"
+        title={t('catalog:bulkEdit.noChangesTitle')}
+        description={t('catalog:bulkEdit.noChangesDesc')}
         platform="desktop"
-        primaryAction={{ label: 'Okay', onClick: () => setNoChangesOpen(false) }}
+        primaryAction={{ label: t('catalog:common.okay'), onClick: () => setNoChangesOpen(false) }}
       />
     </div>
   );

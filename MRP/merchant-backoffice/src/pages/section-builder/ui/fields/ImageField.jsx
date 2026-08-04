@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { MediaUploadField } from '../../../../ce-ui';
 import { resolveMedia, isDanglingReference } from './imageValue';
 
@@ -18,6 +19,7 @@ const MAX_BYTES = 10 * 1024 * 1024;
  * the onAdd/onReplace callbacks, after the file is already in hand.
  */
 export default function ImageField({ field, value, onChange, mediaLibrary, onAddMedia, onOpenLibrary }) {
+  const { t } = useTranslation();
   const [error, setError] = useState(null);
   const resolved = resolveMedia(value, mediaLibrary);
   const dangling = isDanglingReference(value, mediaLibrary);
@@ -28,11 +30,11 @@ export default function ImageField({ field, value, onChange, mediaLibrary, onAdd
 
   const acceptPayload = (payload) => {
     if (!ACCEPTED_TYPES.includes(payload.file.type)) {
-      setError('Unsupported file type — use JPG, PNG, WebP, or SVG.');
+      setError(t('sectionBuilder:fields.imageField.unsupportedFileType'));
       return null;
     }
     if (payload.file.size > MAX_BYTES) {
-      setError('File too large — max 10MB');
+      setError(t('sectionBuilder:fields.imageField.fileTooLarge'));
       return null;
     }
     setError(null);
@@ -72,13 +74,13 @@ export default function ImageField({ field, value, onChange, mediaLibrary, onAdd
 
       {items.length === 0 && (
         <>
-          {dangling && <p className="mt-1 text-xs text-amber-600">Image was deleted — please upload a new one</p>}
+          {dangling && <p className="mt-1 text-xs text-amber-600">{t('sectionBuilder:fields.imageField.imageDeleted')}</p>}
           <button
             type="button"
             onClick={() => onOpenLibrary((picked) => onChange({ mediaId: picked.id }))}
             className="mt-1 text-xs text-blue-600 underline"
           >
-            Choose from library
+            {t('sectionBuilder:fields.imageField.chooseFromLibrary')}
           </button>
         </>
       )}

@@ -41,7 +41,7 @@ function TableEmptyCell({ colSpan, title, subtitle }) {
   );
 }
 
-function TableLoadingCell({ colSpan }) {
+function TableLoadingCell({ colSpan, t }) {
   return (
     <tr>
       <td colSpan={colSpan} style={{ padding: 0, borderBottom: 'none' }}>
@@ -52,8 +52,8 @@ function TableLoadingCell({ colSpan }) {
             ))}
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'center', width: '290px', textAlign: 'center' }}>
-            <p style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: '#282828' }}>Loading Data</p>
-            <p style={{ margin: 0, fontSize: '12px', fontWeight: 400, color: '#282828' }}>Please wait a moment</p>
+            <p style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: '#282828' }}>{t('catalog:products.loadingTitle')}</p>
+            <p style={{ margin: 0, fontSize: '12px', fontWeight: 400, color: '#282828' }}>{t('catalog:products.loadingSubtitle')}</p>
           </div>
         </div>
       </td>
@@ -215,10 +215,10 @@ export default function CatalogProducts() {
     setProducts(list => list.map(p => p.id === productId ? { ...p, platform_status: newValue ? 'published' : 'draft' } : p));
     try {
       await saveWebsiteVisibility('catalog', productId, newValue);
-      showSnackbar(newValue ? 'Catalog has been enabled to show on website' : 'Catalog has been disabled from website', 'grey');
+      showSnackbar(newValue ? t('catalog:products.shown') : t('catalog:products.hidden'), 'grey');
     } catch {
       setProducts(list => list.map(p => p.id === productId ? { ...p, platform_status: prev } : p));
-      showSnackbar('Failed to change website visibility', 'red');
+      showSnackbar(t('catalog:common.failedChangeVisibility'), 'red');
     }
   }
 
@@ -266,22 +266,22 @@ export default function CatalogProducts() {
         {/* Weight / Volume info banner */}
         {missingWeightOrVolume && (
           <div style={{ marginBottom: '16px', flexShrink: 0 }}>
-            <Infobox variant="info" title="Weight or Volume Required"
-              description="Some products are missing weight or volume information. Complete these details so delivery services can calculate shipping costs accurately." />
+            <Infobox variant="info" title={t('catalog:weightVolume.requiredTitle')}
+              description={t('catalog:weightVolume.requiredDesc')} />
           </div>
         )}
 
         {/* Summary cards: Category / Unit — each takes 1/4 of the row width */}
         <div style={{ display: 'flex', gap: '16px', marginBottom: '16px' }}>
           <div style={{ flex: '0 0 25%', background: '#FFFFFF', borderRadius: '12px', border: '1px solid #E9E9E9', overflow: 'hidden' }}>
-            <p style={{ margin: 0, padding: '16px', fontSize: '15px', fontWeight: 700, color: '#282828', borderBottom: '1px solid #E9E9E9' }}>Category</p>
+            <p style={{ margin: 0, padding: '16px', fontSize: '15px', fontWeight: 700, color: '#282828', borderBottom: '1px solid #E9E9E9' }}>{t('catalog:common.category')}</p>
             <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', padding: '16px' }}>
               <div>
-                <p style={{ margin: '0 0 2px', fontSize: '12px', color: '#7E7E7E' }}>Total</p>
+                <p style={{ margin: '0 0 2px', fontSize: '12px', color: '#7E7E7E' }}>{t('catalog:common.total')}</p>
                 <p style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: '#282828' }}>{categoryTotal}</p>
               </div>
               <CTAButton
-                label="View Detail"
+                label={t('catalog:common.viewDetail')}
                 variant="primary"
                 size="lg"
                 onClick={() => navigate('/catalog/manage-category?tab=category')}
@@ -290,14 +290,14 @@ export default function CatalogProducts() {
             </div>
           </div>
           <div style={{ flex: '0 0 25%', background: '#FFFFFF', borderRadius: '12px', border: '1px solid #E9E9E9', overflow: 'hidden' }}>
-            <p style={{ margin: 0, padding: '16px', fontSize: '15px', fontWeight: 700, color: '#282828', borderBottom: '1px solid #E9E9E9' }}>Unit</p>
+            <p style={{ margin: 0, padding: '16px', fontSize: '15px', fontWeight: 700, color: '#282828', borderBottom: '1px solid #E9E9E9' }}>{t('catalog:common.unit')}</p>
             <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', padding: '16px' }}>
               <div>
-                <p style={{ margin: '0 0 2px', fontSize: '12px', color: '#7E7E7E' }}>Total</p>
+                <p style={{ margin: '0 0 2px', fontSize: '12px', color: '#7E7E7E' }}>{t('catalog:common.total')}</p>
                 <p style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: '#282828' }}>{total}</p>
               </div>
               <CTAButton
-                label="View Detail"
+                label={t('catalog:common.viewDetail')}
                 variant="primary"
                 size="lg"
                 onClick={() => navigate('/catalog/manage-category?tab=unit')}
@@ -313,7 +313,7 @@ export default function CatalogProducts() {
           {/* Filter bar */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid #D4D4D4', gap: '12px', flexShrink: 0 }}>
             <FilterPill
-              label="Category"
+              label={t('catalog:common.category')}
               multiple
               options={categoryOptions}
               values={filters.categoryIds}
@@ -333,13 +333,13 @@ export default function CatalogProducts() {
           {selectedCount > 0 && (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 20px', background: '#EFF6FF', borderBottom: '1px solid #D4D4D4', flexShrink: 0 }}>
               <span style={{ fontSize: '14px', fontWeight: 700, color: '#282828', fontFamily: "'Lato', sans-serif" }}>
-                {selectedCount} Catalog Selected
+                {t('catalog:products.selected', { count: selectedCount })}
               </span>
               <button
                 onClick={openBulkEdit}
                 style={{ background: '#006BFF', border: 'none', borderRadius: '8px', padding: '8px 16px', color: '#FFFFFF', fontSize: '14px', fontWeight: 700, fontFamily: "'Lato', sans-serif", cursor: 'pointer' }}
               >
-                Bulk Edit
+                {t('catalog:common.bulkEdit')}
               </button>
             </div>
           )}
@@ -383,7 +383,7 @@ export default function CatalogProducts() {
                 </thead>
                 <tbody>
                   {isLoading
-                    ? <TableLoadingCell colSpan={7} />
+                    ? <TableLoadingCell colSpan={7} t={t} />
                     : products.length === 0
                       ? hasActiveFilters
                         ? <TableEmptyCell colSpan={7}
@@ -448,7 +448,7 @@ export default function CatalogProducts() {
               <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                 <RowsSelector size={size} options={SIZE_OPTIONS} onChange={handleSizeChange} />
                 <span style={{ fontSize: '14px', color: '#282828', opacity: 0.5, whiteSpace: 'nowrap' }}>
-                  {isLoading ? 'Loading…' : total === 0 ? 'No results' : `from ${total} rows`}
+                  {isLoading ? t('catalog:common.loadingEllipsis') : total === 0 ? t('catalog:common.noResults') : t('catalog:common.fromRows', { count: total })}
                 </span>
               </div>
               <Pagination

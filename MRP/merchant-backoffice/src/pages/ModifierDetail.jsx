@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useParams, useNavigate } from 'react-router-dom';
 import { fetchModifierById } from '../services/catalogService';
 import { useSnackbar } from '../contexts/SnackbarContext';
@@ -8,28 +9,29 @@ const MIN_ACTIVE = 2; // at least 2 options must be active to enable a modifier
 
 // ─── Deactivate-modifier confirmation modal ──────────────────────────────────
 function DeactivateModal({ onConfirm, onCancel }) {
+  const { t } = useTranslation();
   return (
     <div onClick={onCancel} style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(126,126,126,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
       <div onClick={e => e.stopPropagation()} style={{ background: '#FFFFFF', borderRadius: '16px', padding: '20px', width: '100%', maxWidth: '420px', fontFamily: "'Lato', sans-serif" }}>
         <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-          <button onClick={onCancel} style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: 0, color: '#282828', display: 'flex' }} aria-label="Close">
+          <button onClick={onCancel} style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: 0, color: '#282828', display: 'flex' }} aria-label={t('dashboard:modifier.detail.close')}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </button>
         </div>
         <div style={{ textAlign: 'center', margin: '0 0 24px' }}>
           <p style={{ margin: '0 0 8px', fontSize: '18px', fontWeight: 700, color: '#282828', lineHeight: '26px', letterSpacing: '0.1238px' }}>
-            Services connected to this modifier will become unavailable
+            {t('dashboard:modifier.detail.deactivateWarningTitle')}
           </p>
           <p style={{ margin: 0, fontSize: '12px', color: '#7E7E7E', lineHeight: '18px', letterSpacing: '0.0825px' }}>
-            This modifier must be selected at least {MIN_ACTIVE}.
+            {t('dashboard:modifier.detail.deactivateWarningDesc', { min: MIN_ACTIVE })}
           </p>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           <button onClick={onConfirm} style={{ width: '100%', height: '44px', background: '#006BFF', border: 'none', borderRadius: '10px', color: '#FFFFFF', fontSize: '14px', fontWeight: 700, fontFamily: "'Lato', sans-serif", cursor: 'pointer' }}>
-            Deactivate Modifier
+            {t('dashboard:modifier.detail.deactivateBtn')}
           </button>
           <button onClick={onCancel} style={{ width: '100%', height: '44px', background: '#FFFFFF', border: '1px solid #006BFF', borderRadius: '10px', color: '#006BFF', fontSize: '14px', fontWeight: 700, fontFamily: "'Lato', sans-serif", cursor: 'pointer' }}>
-            Cancel
+            {t('dashboard:profile.cancelBtn')}
           </button>
         </div>
       </div>
@@ -37,8 +39,8 @@ function DeactivateModal({ onConfirm, onCancel }) {
   );
 }
 
-function formatOptionPrice(price) {
-  if (!price) return 'Free';
+function formatOptionPrice(price, t) {
+  if (!price) return t('dashboard:modifier.free');
   return `+IDR ${new Intl.NumberFormat('id-ID').format(price)}`;
 }
 
@@ -53,6 +55,7 @@ function ImageThumb() {
 }
 
 export default function ModifierDetail() {
+  const { t } = useTranslation();
   const { id } = useParams();
   const navigate = useNavigate();
   const { showSnackbar } = useSnackbar();
@@ -88,7 +91,7 @@ export default function ModifierDetail() {
   function applyOptions(nextList) {
     const nextAvailable = nextList.filter(o => o.active).length >= MIN_ACTIVE;
     if (nextAvailable !== available) {
-      showSnackbar(nextAvailable ? 'Modifier has been enabled' : 'Modifier has been disabled', 'success');
+      showSnackbar(nextAvailable ? t('dashboard:modifier.detail.enabledMsg') : t('dashboard:modifier.detail.disabledMsg'), 'success');
     }
     setOptionState(nextList);
     setAvailable(nextAvailable);
@@ -123,15 +126,15 @@ export default function ModifierDetail() {
       {/* Header */}
       <div style={{ marginBottom: '20px' }}>
         <Breadcrumbs
-          title={loading ? 'Modifier' : (modifier?.name || 'Modifier')}
-          breadcrumbs={[{ name: 'Modifier', onClick: () => navigate('/catalog/modifier') }]}
+          title={loading ? t('dashboard:sidebar.modifier') : (modifier?.name || t('dashboard:sidebar.modifier'))}
+          breadcrumbs={[{ name: t('dashboard:sidebar.modifier'), onClick: () => navigate('/catalog/modifier') }]}
           onBack={() => navigate('/catalog/modifier')}
         />
       </div>
 
       {error && !loading && (
         <div style={{ background: '#FFFFFF', borderRadius: '12px', border: '1px solid #E9E9E9', padding: '64px', textAlign: 'center' }}>
-          <p style={{ margin: '0 0 4px', fontSize: '16px', color: '#D0021B' }}>Failed to load modifier</p>
+          <p style={{ margin: '0 0 4px', fontSize: '16px', color: '#D0021B' }}>{t('dashboard:modifier.detail.loadError')}</p>
           <p style={{ margin: 0, fontSize: '13px', color: '#7E7E7E' }}>{error}</p>
         </div>
       )}
@@ -151,15 +154,15 @@ export default function ModifierDetail() {
                 <div style={{ padding: '20px', borderBottom: '1px solid #E9E9E9' }}>
                   <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px' }}>
                     <div>
-                      <p style={{ margin: '0 0 2px', fontSize: '14px', fontWeight: 700, color: '#282828', letterSpacing: '0.096px' }}>Modifier Availability</p>
-                      <p style={{ margin: 0, fontSize: '12px', color: '#7E7E7E', letterSpacing: '0.0825px' }}>Click the toggle to set availability</p>
+                      <p style={{ margin: '0 0 2px', fontSize: '14px', fontWeight: 700, color: '#282828', letterSpacing: '0.096px' }}>{t('dashboard:modifier.detail.availabilityTitle')}</p>
+                      <p style={{ margin: 0, fontSize: '12px', color: '#7E7E7E', letterSpacing: '0.0825px' }}>{t('dashboard:modifier.detail.availabilityDesc')}</p>
                     </div>
                     <Toggle checked={available} onChange={toggleMaster} />
                   </div>
                   {/* Rule hint — only when exactly the minimum options remain active */}
                   {activeCount === MIN_ACTIVE && (
                     <div style={{ marginTop: '12px' }}>
-                      <Infobox variant="info" message={`At least ${MIN_ACTIVE} options must be active to enable this modifier.`} />
+                      <Infobox variant="info" message={t('dashboard:modifier.detail.minActiveInfo', { min: MIN_ACTIVE })} />
                     </div>
                   )}
                 </div>
@@ -168,23 +171,23 @@ export default function ModifierDetail() {
                   <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', padding: '16px 20px', borderBottom: idx < optionState.length - 1 ? '1px solid #E9E9E9' : 'none' }}>
                     <div>
                       <p style={{ margin: '0 0 2px', fontSize: '14px', color: '#282828', letterSpacing: '0.096px' }}>{opt.name}</p>
-                      <p style={{ margin: 0, fontSize: '12px', color: '#7E7E7E', letterSpacing: '0.0825px' }}>{formatOptionPrice(opt.price)}</p>
+                      <p style={{ margin: 0, fontSize: '12px', color: '#7E7E7E', letterSpacing: '0.0825px' }}>{formatOptionPrice(opt.price, t)}</p>
                     </div>
                     <Toggle checked={opt.active} onChange={checked => toggleOption(idx, checked)} />
                   </div>
                 ))}
               </>
             ) : (
-              <div style={{ padding: '40px', textAlign: 'center', color: '#7E7E7E' }}>Modifier not found</div>
+              <div style={{ padding: '40px', textAlign: 'center', color: '#7E7E7E' }}>{t('dashboard:modifier.detail.notFound')}</div>
             )}
           </div>
 
           {/* Connected Catalog card */}
           {!loading && modifier && (
             <div style={{ flex: 1, minWidth: 0, background: '#FFFFFF', borderRadius: '12px', border: '1px solid #E9E9E9', padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: '#282828', letterSpacing: '0.096px' }}>Connected Catalog</p>
+              <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: '#282828', letterSpacing: '0.096px' }}>{t('dashboard:modifier.connectedCatalog')}</p>
               {modifier.connected.length === 0 ? (
-                <p style={{ margin: 0, fontSize: '14px', color: '#7E7E7E' }}>No connected catalog</p>
+                <p style={{ margin: 0, fontSize: '14px', color: '#7E7E7E' }}>{t('dashboard:modifier.detail.noConnectedCatalog')}</p>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   {modifier.connected.map((name, i) => (

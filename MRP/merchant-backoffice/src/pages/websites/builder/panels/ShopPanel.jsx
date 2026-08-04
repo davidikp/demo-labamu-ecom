@@ -61,10 +61,10 @@ function ShopPanel({ enableCheckout, handleSetCheckout, featuredSections, handle
       {/* Featured homepage sections */}
       <div>
         <div style={{ fontSize: '14px', fontWeight: 700, color: '#111827', marginBottom: '4px' }}>
-          Homepage Sections
+          {t('studio.panelContent.shop.sectionsTitle')}
         </div>
         <div style={{ fontSize: '13px', color: '#6B7280', marginBottom: '16px' }}>
-          Select up to 2 categories to feature as product groups on the homepage.
+          {t('studio.panelContent.shop.sectionsDesc')}
         </div>
 
         {catLoading ? (
@@ -90,7 +90,7 @@ function ShopPanel({ enableCheckout, handleSetCheckout, featuredSections, handle
                   </div>
                   <button
                     onClick={() => handleSlotRemove(idx)}
-                    title="Remove section"
+                    title={t('studio.panelContent.shop.removeSection')}
                     style={{ flexShrink: 0, width: '32px', height: '32px', border: '1px solid #E5E7EB', borderRadius: '8px', background: '#FFFFFF', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6B7280' }}
                   >
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg>
@@ -105,13 +105,13 @@ function ShopPanel({ enableCheckout, handleSetCheckout, featuredSections, handle
                 style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 12px', border: '1.5px dashed #D1D5DB', borderRadius: '8px', background: 'transparent', cursor: 'pointer', fontSize: '13px', color: '#6B7280', width: '100%', justifyContent: 'center' }}
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 5v14M5 12h14"/></svg>
-                Add section
+                {t('studio.panelContent.shop.addSection')}
               </button>
             )}
 
             {categories.length === 0 && !catLoading && (
               <div style={{ fontSize: '13px', color: '#9CA3AF', padding: '12px', background: '#F9FAFB', borderRadius: '8px', textAlign: 'center' }}>
-                No categories with published products. Publish products in your catalog to feature them here.
+                {t('studio.panelContent.shop.emptyState')}
               </div>
             )}
           </div>

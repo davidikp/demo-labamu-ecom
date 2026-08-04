@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { MapPin } from 'lucide-react';
 
 const TILE_SIZE = 256;
@@ -41,6 +42,7 @@ function buildTileGrid({ lat, lng, zoom, width, height }) {
 }
 
 export default function StaticMapPreview({ lat, lng, width = 600, height = 260, zoom = 16, className = '' }) {
+  const { t } = useTranslation('delivery');
   const tiles = useMemo(
     () => buildTileGrid({ lat, lng, zoom, width, height }),
     [lat, lng, zoom, width, height]
@@ -70,7 +72,7 @@ export default function StaticMapPreview({ lat, lng, width = 600, height = 260, 
         aria-hidden="true"
       />
       <span className="absolute right-1 bottom-0.5 text-[9px] font-lb text-lb-on-surface-2 bg-white/70 px-1 rounded-sm">
-        © OpenStreetMap contributors
+        {t('map.attribution')}
       </span>
     </div>
   );

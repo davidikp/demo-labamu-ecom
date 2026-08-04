@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Popup } from '../../../ce-ui';
 
 /**
@@ -8,7 +9,9 @@ import { Popup } from '../../../ce-ui';
  * trapping, so Escape is added here; Tab-trapping is left to Popup as-is
  * (it's the vendored component's own gap, not something to work around).
  */
-export default function ConfirmDialog({ open, title, confirmLabel = 'Confirm', danger = false, onConfirm, onCancel }) {
+export default function ConfirmDialog({ open, title, description, confirmLabel, danger = false, onConfirm, onCancel }) {
+  const { t } = useTranslation();
+  const resolvedConfirmLabel = confirmLabel ?? t('sectionBuilder:editor.common.confirm');
   useEffect(() => {
     if (!open) return;
     const handler = (e) => e.key === 'Escape' && onCancel();
@@ -16,14 +19,21 @@ export default function ConfirmDialog({ open, title, confirmLabel = 'Confirm', d
     return () => document.removeEventListener('keydown', handler);
   }, [open, onCancel]);
 
+  // Back-compat: callers that pass only `title` (a full sentence) keep the
+  // old body-only layout. Passing `description` too promotes `title` to a
+  // bold heading with the message beneath it.
+  const popupTitle = description ? title : undefined;
+  const popupDescription = description ?? title;
+
   return (
     <Popup
       open={open}
       onClose={onCancel}
-      description={title}
+      title={popupTitle}
+      description={popupDescription}
       platform="desktop"
-      primaryAction={{ label: confirmLabel, onClick: onConfirm, destructive: danger }}
-      secondaryAction={{ label: 'Cancel', onClick: onCancel }}
+      primaryAction={{ label: resolvedConfirmLabel, onClick: onConfirm, destructive: danger }}
+      secondaryAction={{ label: t('sectionBuilder:editor.common.cancel'), onClick: onCancel }}
     />
   );
 }

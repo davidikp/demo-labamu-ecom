@@ -43,6 +43,8 @@ const ModifierDetail = React.lazy(() => import('./pages/ModifierDetail'));
 const BulkEditCatalog = React.lazy(() => import('./pages/BulkEditCatalog'));
 const ComingSoon = React.lazy(() => import('./pages/ComingSoon'));
 const DeliverySettings = React.lazy(() => import('./pages/DeliverySettings'));
+const OrderList = React.lazy(() => import('./pages/OrderList'));
+const OrderDetail = React.lazy(() => import('./pages/OrderDetail'));
 const HouzezPreview = React.lazy(() => import('./pages/websites/templates/houzez/HouzezPreview'));
 const TemplateBuilder = React.lazy(() => import('./pages/websites/TemplateBuilder'));
 const SectionBuilder = React.lazy(() => import('./pages/section-builder/SectionBuilder'));
@@ -95,7 +97,8 @@ export default function App() {
             <Route path="/catalog/package/:id" element={<PackageDetail />} />
             <Route path="/catalog/modifier" element={<ModifierList />} />
             <Route path="/catalog/modifier/:id" element={<ModifierDetail />} />
-            <Route path="/orders" element={<ComingSoon />} />
+            <Route path="/orders" element={<OrderList />} />
+            <Route path="/orders/:id" element={<OrderDetail />} />
             <Route path="/rfq" element={<ComingSoon />} />
             <Route path="/bookings" element={<ComingSoon />} />
             <Route path="/reviews" element={<ComingSoon />} />

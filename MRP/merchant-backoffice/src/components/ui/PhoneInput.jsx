@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { getCountries, getCountryCallingCode } from 'react-phone-number-input/min';
 import enLabels from 'react-phone-number-input/locale/en.json';
@@ -230,7 +230,7 @@ const ERROR_RED = '#D0021B';
 export default function PhoneInput({
   value,
   onChange,
-  placeholder = 'Phone Number',
+  placeholder,
   disabled = false,
   defaultCountry = 'ID',
   error = '',
@@ -238,6 +238,8 @@ export default function PhoneInput({
   isMobile = false,
   height = '40px',
 }) {
+  const { t } = useTranslation('common');
+  const resolvedPlaceholder = placeholder ?? t('phone.placeholder');
   // LOCAL buffer — not synced from parent on every render.
   // This eliminates the controlled-input double-delete bug.
   const [localValue, setLocalValue] = useState(() => value || '');
@@ -323,7 +325,7 @@ export default function PhoneInput({
           onChange={handleInput}
           onFocus={() => setIsFocused(true)}
           onBlur={handleBlur}
-          placeholder={placeholder}
+          placeholder={resolvedPlaceholder}
           disabled={disabled}
           style={{
             flex: 1, height: '100%',

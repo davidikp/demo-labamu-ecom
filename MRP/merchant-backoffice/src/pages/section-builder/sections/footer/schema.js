@@ -1,3 +1,5 @@
+import { SECTION_CHROME_FIELDS_NO_PADDING } from '../shared/sectionChrome';
+
 /** US-11.A2 — Footer (global singleton). */
 export const schema = {
   tagline: { type: 'textarea', label: 'Tagline', maxLength: 400, group: 'content' },
@@ -21,12 +23,6 @@ export const schema = {
   },
   copyright_text: { type: 'text', label: 'Copyright text', maxLength: 400, default: '', group: 'content' },
   show_social_icons: { type: 'boolean', label: 'Show social icons', default: true, group: 'content' },
-  background_color: { type: 'color', label: 'Background color', default: { slot: 'primary' }, group: 'color' },
-  text_color: {
-    type: 'color',
-    label: 'Text color',
-    default: { slot: 'primary_text' },
-    group: 'color',
-    contrastCheck: { against: 'background_color' },
-  },
+  ...SECTION_CHROME_FIELDS_NO_PADDING,
+  color_scheme: { ...SECTION_CHROME_FIELDS_NO_PADDING.color_scheme, default: 'primary' },
 };

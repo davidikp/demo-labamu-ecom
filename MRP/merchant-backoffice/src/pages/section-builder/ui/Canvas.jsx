@@ -1,19 +1,42 @@
-import { memo, useState } from 'react';
+import { memo, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { labelForType } from '../sections/registry';
-import { hasNonDefaultContent } from '../sections/contentHelpers';
 import { SECTION_DEFINITIONS } from '../sections/index';
+import { Plus, ArrowUp, ArrowDown, Copy, Trash2 } from 'lucide-react';
+import { MAX_SECTIONS_PER_PAGE } from '../state/builderReducer';
+import { parseBlockSelection, isAtBlockMax, createBlockCtx } from '../sections/blockHelpers';
+import SectionShell from './SectionShell';
 
 const VIEWPORT_WIDTH = { desktop: 1280, mobile: 390 };
 
-const RenderedEntity = memo(function RenderedEntity({ entity, theme, mediaLibrary }) {
+const RenderedEntity = memo(function RenderedEntity({ entity, theme, mediaLibrary, onEdit, blockCtx, isMobile }) {
+  const { t } = useTranslation();
   const Renderer = SECTION_DEFINITIONS[entity.type]?.Renderer;
   if (!Renderer) {
-    return <p className="p-6 text-xs text-gray-400">Unknown section type: {entity.type}</p>;
+    return <p className="p-6 text-xs text-gray-400">{t('sectionBuilder:editor.canvas.unknownSectionType', { type: entity.type })}</p>;
   }
-  return <Renderer data={entity.data ?? {}} theme={theme} mediaLibrary={mediaLibrary} isBuilder />;
+  return (
+    <SectionShell data={entity.data ?? {}} theme={theme}>
+      <Renderer
+        data={entity.data ?? {}}
+        blocks={entity.blocks ?? []}
+        theme={theme}
+        mediaLibrary={mediaLibrary}
+        isBuilder
+        onEdit={onEdit}
+        blockCtx={blockCtx}
+        isMobile={isMobile}
+      />
+    </SectionShell>
+  );
 });
 
-const GlobalBlock = memo(function GlobalBlock({ entity, selected, onSelect, theme, mediaLibrary, readOnly }) {
+const GlobalBlock = memo(function GlobalBlock({ entity, selected, onSelect, onInlineEdit, theme, mediaLibrary, readOnly, isMobile }) {
+  const { t } = useTranslation();
+  const handleEdit = useCallback(
+    (key, value) => onInlineEdit?.(entity.type, key, value),
+    [onInlineEdit, entity.type]
+  );
   if (entity.hidden) {
     // On the live storefront a hidden header/footer simply isn't rendered;
     // the "hidden" placeholder is a builder-only affordance.
@@ -23,7 +46,7 @@ const GlobalBlock = memo(function GlobalBlock({ entity, selected, onSelect, them
         onClick={() => onSelect(entity.type)}
         className="cursor-pointer border-b border-dashed border-gray-200 bg-gray-50 p-3 text-center text-xs text-gray-400"
       >
-        {labelForType(entity.type)} hidden
+        {t('sectionBuilder:editor.canvas.hiddenLabel', { label: labelForType(entity.type) })}
       </div>
     );
   }
@@ -37,7 +60,7 @@ const GlobalBlock = memo(function GlobalBlock({ entity, selected, onSelect, them
           {labelForType(entity.type)}
         </span>
       )}
-      <RenderedEntity entity={entity} theme={theme} mediaLibrary={mediaLibrary} />
+      <RenderedEntity entity={entity} theme={theme} mediaLibrary={mediaLibrary} onEdit={readOnly ? undefined : handleEdit} isMobile={isMobile} />
     </div>
   );
 });
@@ -50,94 +73,115 @@ const GlobalBlock = memo(function GlobalBlock({ entity, selected, onSelect, them
  * this component binds `section.id` itself so the props it receives never
  * change identity for unrelated edits.
  */
-const SectionBlock = memo(function SectionBlock({ section, index, count, selected, onSelect, onMove, onDuplicate, onDelete, theme, mediaLibrary }) {
-  const [confirming, setConfirming] = useState(false);
+const SectionBlock = memo(function SectionBlock({ section, index, count, selectedId, onSelect, onMove, onDuplicate, onDelete, onInlineEdit, onSelectBlock, onAddBlock, onBlockInlineEdit, onRequestAdd, canAdd, theme, mediaLibrary, isMobile }) {
+  const { t } = useTranslation();
+  const selected = selectedId === section.id;
+  const handleEdit = useCallback(
+    (key, value) => onInlineEdit?.(section.id, key, value),
+    [onInlineEdit, section.id]
+  );
+
+  // Builder-only block interaction context handed to the Renderer. Bound to
+  // this section's id so blocks select/edit/add against the right section.
+  // createBlockCtx recurses to any nesting depth via .childCtxFor(blockId).
+  const blockSel = parseBlockSelection(selectedId);
+  const inThisSection = blockSel?.sectionId === section.id;
+  const selPath = inThisSection ? blockSel.path : [];
+  const blockCtx = onSelectBlock
+    ? createBlockCtx(section.id, [], selPath, {
+        atMax: isAtBlockMax(section.type, section.blocks),
+        sectionActive: selected,
+        onSelectBlock,
+        onBlockInlineEdit,
+        onAddBlock,
+      })
+    : undefined;
 
   const handleDeleteClick = (e) => {
     e.stopPropagation();
-    if (hasNonDefaultContent(section)) {
-      setConfirming(true);
-    } else {
-      onDelete(section.id);
-    }
+    onDelete(section.id);
   };
 
   return (
     <div
       onClick={() => onSelect(section.id)}
-      className={'group relative cursor-pointer ' + (selected ? 'outline outline-2 outline-blue-500' : '')}
+      className={'group relative cursor-pointer ' + (selected ? 'z-10' : '')}
     >
       {selected && (
-        <span className="absolute left-2 top-2 z-10 rounded bg-blue-500 px-1.5 py-0.5 text-[10px] font-medium text-white">
-          {labelForType(section.type)}
-        </span>
+        <>
+          {/* Inset overlay border — reliable on all four edges regardless of
+              neighbouring full-bleed sections (an `outline` gets painted over
+              by later positioned siblings like the footer). */}
+          <div className="pointer-events-none absolute inset-0 z-20 border-2 border-blue-500" />
+          <span className="absolute left-2 top-2 z-20 rounded bg-blue-500 px-1.5 py-0.5 text-[10px] font-medium text-white">
+            {labelForType(section.type)}
+          </span>
+        </>
+      )}
+
+      {/* Persistent "Add section" buttons above and below the active section
+          (US-3.x). Clicking opens the modal picker at the right index. */}
+      {selected && canAdd && (
+        <>
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onRequestAdd(index); }}
+            className="absolute -top-3.5 left-1/2 z-20 flex -translate-x-1/2 items-center gap-1 rounded-full bg-blue-600 px-3 py-1 text-xs font-medium text-white shadow-md hover:bg-blue-700"
+          >
+            <Plus size={13} /> {t('sectionBuilder:editor.canvas.insertSection', 'Add section')}
+          </button>
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onRequestAdd(index + 1); }}
+            className="absolute -bottom-3.5 left-1/2 z-20 flex -translate-x-1/2 items-center gap-1 rounded-full bg-blue-600 px-3 py-1 text-xs font-medium text-white shadow-md hover:bg-blue-700"
+          >
+            <Plus size={13} /> {t('sectionBuilder:editor.canvas.insertSection', 'Add section')}
+          </button>
+        </>
       )}
 
       <div className="absolute right-2 top-2 z-10 hidden items-center gap-1 rounded-md border border-gray-200 bg-white p-0.5 shadow-sm group-hover:flex">
         <button
           type="button"
-          title="Move up"
+          title={t('sectionBuilder:editor.canvas.moveUp')}
           aria-label="Move section up"
           disabled={index === 0}
           onClick={(e) => { e.stopPropagation(); onMove(section.id, -1); }}
-          className="rounded px-1.5 py-0.5 text-xs text-gray-600 hover:bg-gray-100 disabled:opacity-30"
+          className="rounded p-1 text-gray-600 hover:bg-gray-100 disabled:opacity-30"
         >
-          ↑
+          <ArrowUp size={14} />
         </button>
         <button
           type="button"
-          title="Move down"
+          title={t('sectionBuilder:editor.canvas.moveDown')}
           aria-label="Move section down"
           disabled={index === count - 1}
           onClick={(e) => { e.stopPropagation(); onMove(section.id, 1); }}
-          className="rounded px-1.5 py-0.5 text-xs text-gray-600 hover:bg-gray-100 disabled:opacity-30"
+          className="rounded p-1 text-gray-600 hover:bg-gray-100 disabled:opacity-30"
         >
-          ↓
+          <ArrowDown size={14} />
         </button>
         <button
           type="button"
-          title="Duplicate"
+          title={t('sectionBuilder:editor.canvas.duplicate')}
           aria-label="Duplicate section"
           onClick={(e) => { e.stopPropagation(); onDuplicate(section.id); }}
-          className="rounded px-1.5 py-0.5 text-xs text-gray-600 hover:bg-gray-100"
+          className="rounded p-1 text-gray-600 hover:bg-gray-100"
         >
-          ⧉
+          <Copy size={14} />
         </button>
         <button
           type="button"
-          title="Delete"
+          title={t('sectionBuilder:editor.common.delete')}
           aria-label="Delete section"
           onClick={handleDeleteClick}
-          className="rounded px-1.5 py-0.5 text-xs text-red-600 hover:bg-red-50"
+          className="rounded p-1 text-red-600 hover:bg-red-50"
         >
-          ✕
+          <Trash2 size={14} />
         </button>
       </div>
 
-      {confirming ? (
-        <div
-          onClick={(e) => e.stopPropagation()}
-          className="flex items-center gap-2 border-b border-dashed border-gray-200 bg-white p-4 text-sm text-gray-700"
-        >
-          <span>Delete this section? This can't be undone.</span>
-          <button
-            type="button"
-            onClick={() => onDelete(section.id)}
-            className="rounded bg-red-600 px-2 py-1 text-xs font-medium text-white hover:bg-red-700"
-          >
-            Delete
-          </button>
-          <button
-            type="button"
-            onClick={() => setConfirming(false)}
-            className="rounded border border-gray-200 px-2 py-1 text-xs text-gray-600 hover:bg-gray-50"
-          >
-            Cancel
-          </button>
-        </div>
-      ) : (
-        <RenderedEntity entity={section} theme={theme} mediaLibrary={mediaLibrary} />
-      )}
+      <RenderedEntity entity={section} theme={theme} mediaLibrary={mediaLibrary} onEdit={handleEdit} blockCtx={blockCtx} isMobile={isMobile} />
     </div>
   );
 });
@@ -158,12 +202,20 @@ export default function Canvas({
   onMoveSection,
   onDuplicateSection,
   onDeleteSection,
+  onRequestAddSection,
+  onInlineEdit,
+  onSelectBlock,
+  onAddBlock,
+  onBlockInlineEdit,
   theme,
   mediaLibrary,
   readOnly = false,
 }) {
+  const { t } = useTranslation();
   const isMobile = viewport === 'mobile';
   const width = VIEWPORT_WIDTH[viewport];
+  const atCap = sections.length >= MAX_SECTIONS_PER_PAGE;
+  const canInsert = !readOnly && !!onRequestAddSection && !atCap;
 
   return (
     <div className="min-w-[480px] flex-1 overflow-auto bg-gray-50 p-6" onClick={onDeselect}>
@@ -179,15 +231,26 @@ export default function Canvas({
           entity={header}
           selected={selectedId === 'header'}
           onSelect={onSelect}
+          onInlineEdit={onInlineEdit}
           theme={theme}
           mediaLibrary={mediaLibrary}
           readOnly={readOnly}
+          isMobile={readOnly ? undefined : isMobile}
         />
 
         {sections.length === 0 ? (
           !readOnly && (
-            <div className="flex h-48 items-center justify-center text-sm text-gray-400">
-              No sections yet
+            <div className="flex h-48 flex-col items-center justify-center gap-3 text-sm text-gray-400">
+              {t('sectionBuilder:editor.canvas.empty')}
+              {!readOnly && !!onRequestAddSection && (
+                <button
+                  type="button"
+                  onClick={() => onRequestAddSection(0)}
+                  className="flex items-center gap-1 rounded-full bg-blue-600 px-4 py-1.5 text-xs font-medium text-white shadow-sm hover:bg-blue-700"
+                >
+                  <Plus size={14} /> {t('sectionBuilder:editor.canvas.insertSection', 'Add section')}
+                </button>
+              )}
             </div>
           )
         ) : readOnly ? (
@@ -201,13 +264,20 @@ export default function Canvas({
               section={section}
               index={index}
               count={sections.length}
-              selected={selectedId === section.id}
+              selectedId={selectedId}
               onSelect={onSelect}
               onMove={onMoveSection}
               onDuplicate={onDuplicateSection}
               onDelete={onDeleteSection}
+              onInlineEdit={onInlineEdit}
+              onSelectBlock={onSelectBlock}
+              onAddBlock={onAddBlock}
+              onBlockInlineEdit={onBlockInlineEdit}
+              onRequestAdd={onRequestAddSection}
+              canAdd={canInsert}
               theme={theme}
               mediaLibrary={mediaLibrary}
+              isMobile={isMobile}
             />
           ))
         )}
@@ -216,9 +286,11 @@ export default function Canvas({
           entity={footer}
           selected={selectedId === 'footer'}
           onSelect={onSelect}
+          onInlineEdit={onInlineEdit}
           theme={theme}
           mediaLibrary={mediaLibrary}
           readOnly={readOnly}
+          isMobile={readOnly ? undefined : isMobile}
         />
       </div>
     </div>

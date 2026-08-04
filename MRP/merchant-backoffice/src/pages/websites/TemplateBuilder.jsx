@@ -95,7 +95,7 @@ export default function TemplateBuilder() {
       if (found) {
         items.push({ id: found.id, title: t(`studio.configure.panels.${found.id}`), desc: t(`studio.configure.panels.${found.id}Desc`), icon: found.icon });
       } else {
-        items.push({ id, title: currentConfig.customPages?.[id] || 'Custom Page', desc: 'Custom page content', icon: LinkIcon, isCustom: true });
+        items.push({ id, title: currentConfig.customPages?.[id] || t('studio.customPage.defaultTitle'), desc: t('studio.customPage.defaultDesc'), icon: LinkIcon, isCustom: true });
       }
     });
     return items;
@@ -207,7 +207,7 @@ export default function TemplateBuilder() {
             />
           );
         }
-        return <div style={{ padding: '40px', textAlign: 'center', color: '#9CA3AF' }}>Select a section to configure.</div>;
+        return <div style={{ padding: '40px', textAlign: 'center', color: '#9CA3AF' }}>{t('studio.selectSection')}</div>;
     }
   };
 
@@ -321,7 +321,7 @@ export default function TemplateBuilder() {
             {currentStep < 3 ? (
               <Button variant="primary" onClick={() => handleStepChange(currentStep + 1)}>{t('studio.actions.continue')}</Button>
             ) : (
-              <Button variant="primary" onClick={() => alert('Website published! (Mock)')}>{t('studio.publish.publishBtn')}</Button>
+              <Button variant="primary" onClick={() => alert(t('studio.publishedMock'))}>{t('studio.publish.publishBtn')}</Button>
             )}
           </div>
         </div>
@@ -332,7 +332,7 @@ export default function TemplateBuilder() {
           {/* Floating Sidebar Toggle */}
           <button
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            title={isSidebarOpen ? "Collapse Sidebar" : "Expand Sidebar"}
+            title={isSidebarOpen ? t('studio.sidebarToggle.collapse') : t('studio.sidebarToggle.expand')}
             style={{ position: 'absolute', left: '0px', marginLeft: '-1px', top: '24px', zIndex: 99999, background: '#FFFFFF', border: '1px solid #D1D5DB', borderLeft: 'none', borderRadius: '0 8px 8px 0', width: '28px', height: '48px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#4B5563', boxShadow: '4px 0 12px rgba(0,0,0,0.05)', transition: 'background 0.2s', outline: 'none' }}
             onMouseEnter={e => e.currentTarget.style.background = '#F3F4F6'}
             onMouseLeave={e => e.currentTarget.style.background = '#FFFFFF'}
@@ -365,13 +365,13 @@ export default function TemplateBuilder() {
                     style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 12px', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: 600, transition: 'all 0.2s', background: viewport === 'desktop' ? '#FFFFFF' : 'transparent', color: viewport === 'desktop' ? '#006BFF' : '#6B7280', boxShadow: viewport === 'desktop' ? '0 2px 4px rgba(0,0,0,0.05)' : 'none' }}
                   >
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2" /><line x1="8" y1="21" x2="16" y2="21" /><line x1="12" y1="17" x2="12" y2="21" /></svg>
-                    Desktop
+                    {t('studio.viewport.desktop')}
                   </button>
                   <button onClick={() => setViewport('mobile')}
                     style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 12px', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: 600, transition: 'all 0.2s', background: viewport === 'mobile' ? '#FFFFFF' : 'transparent', color: viewport === 'mobile' ? '#006BFF' : '#6B7280', boxShadow: viewport === 'mobile' ? '0 2px 4px rgba(0,0,0,0.05)' : 'none' }}
                   >
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2" /><line x1="12" y1="18" x2="12.01" y2="18" /></svg>
-                    Mobile
+                    {t('studio.viewport.mobile')}
                   </button>
                 </div>
               </div>
@@ -404,8 +404,8 @@ export default function TemplateBuilder() {
       <ImageCropModal
         imageSrc={cropModal.imageSrc}
         aspectRatio={cropModal.aspectRatio}
-        title="Preview Image"
-        subtitle="Make sure the image is fully visible and within the area."
+        title={t('studio.previewModal.title')}
+        subtitle={t('studio.previewModal.subtitle')}
         onSave={cropModal.onSave}
         onClose={closeCropModal}
       />

@@ -62,7 +62,7 @@ export default function PreviewLayout({ children }) {
               boxShadow: viewMode === 'desktop' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
             }}
           >
-            Desktop
+            {t('website:studio.viewport.desktop')}
           </button>
           <button
             onClick={() => setViewMode('mobile')}
@@ -74,7 +74,7 @@ export default function PreviewLayout({ children }) {
               boxShadow: viewMode === 'mobile' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
             }}
           >
-            Mobile
+            {t('website:studio.viewport.mobile')}
           </button>
         </div>
       </div>

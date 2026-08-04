@@ -1,3 +1,5 @@
+import { SECTION_CHROME_FIELDS_NO_PADDING } from '../shared/sectionChrome';
+
 /** US-11.A1 — Header (global singleton). */
 export const schema = {
   logo_text: { type: 'text', label: 'Logo text fallback', maxLength: 100, default: 'My Store', group: 'content' },
@@ -14,12 +16,6 @@ export const schema = {
   sticky: { type: 'boolean', label: 'Sticky on scroll', default: true, group: 'layout' },
   show_cart_icon: { type: 'boolean', label: 'Show cart icon', default: true, group: 'layout' },
   show_search_icon: { type: 'boolean', label: 'Show search icon', default: true, group: 'layout' },
-  background_color: { type: 'color', label: 'Background color', default: { slot: 'primary' }, group: 'color' },
-  text_color: {
-    type: 'color',
-    label: 'Text / link color',
-    default: { slot: 'primary_text' },
-    group: 'color',
-    contrastCheck: { against: 'background_color' },
-  },
+  ...SECTION_CHROME_FIELDS_NO_PADDING,
+  color_scheme: { ...SECTION_CHROME_FIELDS_NO_PADDING.color_scheme, default: 'primary' },
 };

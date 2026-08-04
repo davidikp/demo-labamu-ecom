@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { fetchProductById, fetchCategories, fetchProductModifiers, saveWebsiteVisibility, saveFragileHandling, applyBulkEdits } from '../services/catalogService';
 import { useSnackbar } from '../contexts/SnackbarContext';
 import Button from '../components/ui/Button';
@@ -37,6 +38,7 @@ function LoadingState() {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 export default function ProductDetail() {
+  const { t } = useTranslation();
   const { id } = useParams();
   const navigate = useNavigate();
   const { showSnackbar } = useSnackbar();
@@ -93,10 +95,10 @@ export default function ProductDetail() {
     setIsToggling(true);
     try {
       await saveWebsiteVisibility('catalog', product.id, newVisible);
-      showSnackbar(newVisible ? 'Catalog has been enabled to show on website' : 'Catalog has been disabled from website', 'grey');
+      showSnackbar(newVisible ? t('catalog:products.shown') : t('catalog:products.hidden'), 'grey');
     } catch {
       setProduct(p => ({ ...p, platform_status: prev }));
-      showSnackbar('Failed to change website visibility', 'red');
+      showSnackbar(t('catalog:common.failedChangeVisibility'), 'red');
     } finally {
       setIsToggling(false);
     }
@@ -109,10 +111,10 @@ export default function ProductDetail() {
     setIsFragileSaving(true);
     try {
       await saveFragileHandling('catalog', product.id, newFragile);
-      showSnackbar(newFragile ? 'Catalog has been enabled for fragile handling' : 'Catalog has been disabled from fragile handling', 'grey');
+      showSnackbar(newFragile ? t('catalog:products.fragileEnabled') : t('catalog:products.fragileDisabled'), 'grey');
     } catch {
       setIsFragile(!newFragile);
-      showSnackbar('Failed to change fragile handling', 'red');
+      showSnackbar(t('catalog:common.failedChangeFragile'), 'red');
     } finally {
       setIsFragileSaving(false);
     }
@@ -137,7 +139,7 @@ export default function ProductDetail() {
     setProduct(p => p ? { ...p, gross_weight: weight, length, width, height } : p);
     applyBulkEdits('catalog', [{ id: product.id, gross_weight: weight, weight, length, width, height }]);
     setDeliveryModal('none');
-    showSnackbar('Delivery properties updated', 'success');
+    showSnackbar(t('catalog:delivery.updated'), 'success');
   }
 
   return (
@@ -150,8 +152,8 @@ export default function ProductDetail() {
       {/* ── Page header ──────────────────────────────────────────────────────── */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '20px', gap: '12px' }}>
         <Breadcrumbs
-          title="Catalog Detail"
-          breadcrumbs={[{ name: 'Catalog', onClick: () => navigate('/catalog') }]}
+          title={t('catalog:products.detailTitle')}
+          breadcrumbs={[{ name: t('catalog:common.catalogLabel'), onClick: () => navigate('/catalog') }]}
           onBack={() => navigate('/catalog')}
         />
 
@@ -162,7 +164,7 @@ export default function ProductDetail() {
             size="small"
             onClick={() => setDeliveryModal('edit')}
           >
-            Edit Delivery Properties
+            {t('catalog:delivery.editButton')}
           </Button>
         )}
 
@@ -171,11 +173,11 @@ export default function ProductDetail() {
       {/* ── Error state ───────────────────────────────────────────────────────── */}
       {error && !loading && (
         <div style={{ background: '#FFFFFF', borderRadius: '12px', border: '1px solid #E9E9E9', padding: '64px', textAlign: 'center' }}>
-          <p style={{ margin: '0 0 4px', fontSize: '16px', color: '#D0021B' }}>Failed to load product</p>
+          <p style={{ margin: '0 0 4px', fontSize: '16px', color: '#D0021B' }}>{t('catalog:products.failedToLoad')}</p>
           <p style={{ margin: '0 0 20px', fontSize: '13px', color: '#7E7E7E' }}>{error}</p>
           <button onClick={() => navigate('/catalog')} style={{
             border: 'none', background: 'none', color: '#006BFF', cursor: 'pointer', fontSize: '14px', fontFamily: "'Lato', sans-serif",
-          }}>← Back to Catalog</button>
+          }}>{t('catalog:products.backToCatalog')}</button>
         </div>
       )}
 
@@ -188,8 +190,8 @@ export default function ProductDetail() {
             <div style={{ background: '#FFFFFF', borderRadius: '12px', border: '1px solid #E9E9E9', overflow: 'hidden' }}>
               {loading ? <LoadingState /> : !product ? (
                 <div style={{ padding: '64px', textAlign: 'center' }}>
-                  <p style={{ margin: '0 0 16px', fontSize: '16px', color: '#7E7E7E' }}>Product not found</p>
-                  <button onClick={() => navigate('/catalog')} style={{ border: 'none', background: 'none', color: '#006BFF', cursor: 'pointer', fontSize: '14px', fontFamily: "'Lato', sans-serif" }}>← Back to Catalog</button>
+                  <p style={{ margin: '0 0 16px', fontSize: '16px', color: '#7E7E7E' }}>{t('catalog:products.notFound')}</p>
+                  <button onClick={() => navigate('/catalog')} style={{ border: 'none', background: 'none', color: '#006BFF', cursor: 'pointer', fontSize: '14px', fontFamily: "'Lato', sans-serif" }}>{t('catalog:products.backToCatalog')}</button>
                 </div>
               ) : (
                 <div style={{ display: 'flex', gap: '24px', padding: '20px' }}>
@@ -264,7 +266,7 @@ export default function ProductDetail() {
                       }}
                     >
                       <p style={{ margin: 0, fontSize: '12px', color: '#A9A9A9', fontFamily: "'Lato', sans-serif", letterSpacing: '0.0825px' }}>
-                        Modifier
+                        {t('catalog:products.modifierLabel')}
                       </p>
                       <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: modifierCount > 0 ? '#006BFF' : '#282828', fontFamily: "'Lato', sans-serif", letterSpacing: '0.096px' }}>
                         {modifierCount > 0 ? modifierLabel : '-'}
@@ -281,22 +283,22 @@ export default function ProductDetail() {
               <div style={{ background: '#FFFFFF', borderRadius: '12px', border: '1px solid #E9E9E9', padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                   <p style={{ margin: 0, flex: 1, fontSize: '14px', fontWeight: 700, color: '#282828', fontFamily: "'Lato', sans-serif", letterSpacing: '0.096px' }}>
-                    E-Commerce Delivery
+                    {t('catalog:delivery.title')}
                   </p>
-                  <StatusBadge tone="soft" color={isDeliveryEligible ? 'blue' : 'red'} label={isDeliveryEligible ? 'Eligible' : 'Pickup Only'} />
+                  <StatusBadge tone="soft" color={isDeliveryEligible ? 'blue' : 'red'} label={isDeliveryEligible ? t('catalog:delivery.eligible') : t('catalog:delivery.pickupOnly')} />
                 </div>
                 {!isDeliveryEligible && (
-                  <Infobox variant="info" message="Add the product's weight and volume to enable delivery services." />
+                  <Infobox variant="info" message={t('catalog:delivery.addWeightVolumeInfo')} />
                 )}
                 <div style={{ display: 'flex', gap: '12px' }}>
                   <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <p style={{ margin: 0, fontSize: '14px', color: '#7E7E7E', fontFamily: "'Lato', sans-serif", letterSpacing: '0.096px' }}>Total Weight</p>
+                    <p style={{ margin: 0, fontSize: '14px', color: '#7E7E7E', fontFamily: "'Lato', sans-serif", letterSpacing: '0.096px' }}>{t('catalog:delivery.totalWeightLabel')}</p>
                     <p style={{ margin: 0, fontSize: '16px', color: '#282828', fontFamily: "'Lato', sans-serif", letterSpacing: '0.11px' }}>
                       {delivery.weight ? `${delivery.weight} gr` : '-'}
                     </p>
                   </div>
                   <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <p style={{ margin: 0, fontSize: '14px', color: '#7E7E7E', fontFamily: "'Lato', sans-serif", letterSpacing: '0.096px' }}>Volume</p>
+                    <p style={{ margin: 0, fontSize: '14px', color: '#7E7E7E', fontFamily: "'Lato', sans-serif", letterSpacing: '0.096px' }}>{t('catalog:common.volumeLabel')}</p>
                     <p style={{ margin: 0, fontSize: '16px', color: '#282828', fontFamily: "'Lato', sans-serif", letterSpacing: '0.11px' }}>
                       {volume || '-'}
                     </p>
@@ -312,8 +314,8 @@ export default function ProductDetail() {
             {/* Show on Website toggle card */}
             {!loading && product && (
               <ToggleCard
-                title="Show on Website"
-                subtitle="Display this catalog in your website for customers to view online."
+                title={t('catalog:common.showOnWebsiteTitle')}
+                subtitle={t('catalog:products.showOnWebsiteDesc')}
                 on={isPublished}
                 onClick={handleTogglePublish}
                 loading={isToggling}
@@ -323,8 +325,8 @@ export default function ProductDetail() {
             {/* Fragile Handling toggle card (UI-only, not yet wired to backend) */}
             {!loading && product && (
               <ToggleCard
-                title="Fragile Handling"
-                subtitle="Turn this on for products that are easily damaged. Delivery providers that support fragile handling will receive this information."
+                title={t('catalog:common.fragileHandlingTitle')}
+                subtitle={t('catalog:products.fragileHandlingDesc')}
                 on={isFragile}
                 onClick={handleToggleFragile}
                 loading={isFragileSaving}

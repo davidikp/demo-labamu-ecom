@@ -232,7 +232,7 @@ function DeliveryInfoTab({
               allowNegative={false}
               decimalPlaces={0}
               disabled={zipLoading}
-              placeholder={zipLoading ? t('pickupInfo.zipLoading', 'Loading...') : 'e.g. 12345'}
+              placeholder={zipLoading ? t('pickupInfo.zipLoading', 'Loading...') : t('pickupInfo.zipInputPlaceholder')}
               value={zip}
               onChange={(e) => onZipChange(e.target.value)}
             />
@@ -307,7 +307,7 @@ const LALAMOVE_COVERED_CITIES = ['Jakarta Selatan', 'Jakarta Pusat', 'Jakarta Ut
 
 function CourierServiceTab({
   t, country, city,
-  lalamoveEnabled, onLalamoveEnabledChange, instant, onInstantChange, scheduled, onScheduledChange,
+  lalamoveEnabled, onLalamoveEnabledChange,
   apiKey, onApiKeyChange, apiSecret, onApiSecretChange,
   savedApiKey, onSavedApiKeyChange, savedApiSecret, onSavedApiSecretChange,
   connectionStatus, onConnectionStatusChange,
@@ -381,10 +381,6 @@ function CourierServiceTab({
 
   const handleToggleLalamove = (checked) => {
     onLalamoveEnabledChange(checked);
-    if (!checked) {
-      onInstantChange(false);
-      onScheduledChange(false);
-    }
   };
 
   return (
@@ -393,41 +389,26 @@ function CourierServiceTab({
         <div className={`rounded-xl border p-4 flex flex-col gap-4 w-full bg-lb-surface ${lalamoveEnabled && !isOutOfCoverage ? 'border-lb-brand' : 'border-lb-line-1'}`}>
           <div className="flex items-center gap-2">
             <Checkbox checked={lalamoveEnabled && !isOutOfCoverage} disabled={isOutOfCoverage} onChange={handleToggleLalamove} />
-            <img src={lalamoveLogo} alt="Lalamove" className="h-5 w-auto object-contain" />
-            <span className="font-lb font-lb-bold text-[16px] text-lb-on-surface">Lalamove</span>
+            <img src={lalamoveLogo} alt={t('courier.lalamoveName')} className="h-5 w-auto object-contain" />
+            <span className="font-lb font-lb-bold text-[16px] text-lb-on-surface">{t('courier.lalamoveName')}</span>
             <span className={`w-2 h-2 rounded-full shrink-0 ${STATUS_DOT_CLASS[connectionStatus]}`} aria-hidden="true" />
             <span className="flex-1" />
             <ChevronRight size={20} className="text-lb-on-surface-3 shrink-0" aria-hidden="true" />
           </div>
-          <div className="h-px bg-lb-line-1" />
           {isOutOfCoverage && (
             <>
-              <Infobox variant="warning" description={t('courier.outOfCoverage', "Your address is outside the courier's coverage area. Please use a different delivery address.")} />
               <div className="h-px bg-lb-line-1" />
+              <Infobox variant="warning" description={t('courier.outOfCoverage', "Your address is outside the courier's coverage area. Please use a different delivery address.")} />
             </>
           )}
-          <div className="flex items-center gap-2">
-            <Checkbox checked={lalamoveEnabled && instant && !isOutOfCoverage} disabled={!lalamoveEnabled || isOutOfCoverage} onChange={onInstantChange} />
-            <div>
-              <p className="font-lb text-[14px] text-lb-on-surface m-0">{t('courier.instantDelivery.label')}</p>
-              <p className="font-lb text-[12px] text-lb-on-surface-2 m-0">{t('courier.instantDelivery.description')}</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <Checkbox checked={lalamoveEnabled && scheduled && !isOutOfCoverage} disabled={!lalamoveEnabled || isOutOfCoverage} onChange={onScheduledChange} />
-            <div>
-              <p className="font-lb text-[14px] text-lb-on-surface m-0">{t('courier.scheduledDelivery.label')}</p>
-              <p className="font-lb text-[12px] text-lb-on-surface-2 m-0">{t('courier.scheduledDelivery.description')}</p>
-            </div>
-          </div>
         </div>
       </div>
 
       <div className="flex-1 min-w-0 rounded-xl border border-lb-line-1 p-5 flex flex-col gap-4">
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <img src={lalamoveLogo} alt="Lalamove" className="h-7 w-auto object-contain" />
-            <span className="font-lb font-lb-bold text-[18px] text-lb-on-surface">Lalamove</span>
+            <img src={lalamoveLogo} alt={t('courier.lalamoveName')} className="h-7 w-auto object-contain" />
+            <span className="font-lb font-lb-bold text-[18px] text-lb-on-surface">{t('courier.lalamoveName')}</span>
             <span className="flex items-center gap-2">
               <span className={`w-2 h-2 rounded-full ${STATUS_DOT_CLASS[connectionStatus]}`} aria-hidden="true" />
               <span className="font-lb text-[14px] text-lb-on-surface">
@@ -503,7 +484,7 @@ function CourierServiceTab({
             <li>{t('courier.prerequisites.item2')}</li>
           </ul>
 
-          <img src={stepPartnerPortal} alt="Lalamove Partner Portal login" className="w-full max-w-[400px] rounded-lb-sm border border-lb-line-1 mt-2" />
+          <img src={stepPartnerPortal} alt={t('courier.lalamovePartnerPortalLoginAlt')} className="w-full max-w-[400px] rounded-lb-sm border border-lb-line-1 mt-2" />
 
           <p className="font-lb font-lb-bold text-[14px] text-lb-on-surface m-0 mt-2">{t('courier.stepByStep.title')}</p>
           <ol className="font-lb text-[14px] text-lb-on-surface pl-5 m-0 flex flex-col gap-1 list-decimal">
@@ -537,7 +518,7 @@ function CourierServiceTab({
             </li>
           </ol>
 
-          <img src={stepApiKeys} alt="Lalamove API Keys page" className="w-full max-w-[400px] rounded-lb-sm border border-lb-line-1 mt-2" />
+          <img src={stepApiKeys} alt={t('courier.lalamoveApiKeysPageAlt')} className="w-full max-w-[400px] rounded-lb-sm border border-lb-line-1 mt-2" />
         </div>
       </div>
 
@@ -578,6 +559,7 @@ export default function DeliverySettings() {
 
   const [purchasability, setPurchasability] = useState(saved?.purchasability ?? DEFAULT_PURCHASABILITY);
   const [showPurchasabilityError, setShowPurchasabilityError] = useState(false);
+  const [noCourierModalOpen, setNoCourierModalOpen] = useState(false);
   const [contactName, setContactName] = useState(saved?.contactName ?? '');
   const [phone, setPhone] = useState(saved?.phone ?? '');
   const [pickupCountry, setPickupCountry] = useState(saved?.country ?? 'Indonesia');
@@ -590,8 +572,6 @@ export default function DeliverySettings() {
   const [selectedPlace, setSelectedPlace] = useState(saved?.selectedPlace ?? null);
 
   const [lalamoveEnabled, setLalamoveEnabled] = useState(saved?.lalamoveEnabled ?? true);
-  const [instant, setInstant] = useState(saved?.instant ?? true);
-  const [scheduled, setScheduled] = useState(saved?.scheduled ?? true);
   const [apiKey, setApiKey] = useState(saved?.apiKey ?? '');
   const [apiSecret, setApiSecret] = useState(saved?.apiSecret ?? '');
   const [savedApiKey, setSavedApiKey] = useState(saved?.savedApiKey ?? '');
@@ -603,20 +583,37 @@ export default function DeliverySettings() {
     { id: 'courier', label: t('tabs.courierService') },
   ];
 
-  const handleSaveChanges = () => {
-    if (!purchasability.pickup && !purchasability.delivery) {
+  const commitSave = (effectivePurchasability) => {
+    if (!effectivePurchasability.pickup && !effectivePurchasability.delivery) {
+      setPurchasability(effectivePurchasability);
       setShowPurchasabilityError(true);
       setActiveTab('info');
       showSnackbar(t('purchasability.selectAtLeastOne', 'Select at least one option'), 'red');
       return;
     }
+    setPurchasability(effectivePurchasability);
     setShowPurchasabilityError(false);
     saveDeliverySettings({
-      purchasability, contactName, phone,
+      purchasability: effectivePurchasability, contactName, phone,
       country: pickupCountry, province, city: pickupCity, district, region, zip, address, selectedPlace,
-      lalamoveEnabled, instant, scheduled, apiKey, apiSecret, savedApiKey, savedApiSecret, connectionStatus,
+      lalamoveEnabled, apiKey, apiSecret, savedApiKey, savedApiSecret, connectionStatus,
     });
     showSnackbar(t('saveSuccess'), 'green');
+  };
+
+  const handleSaveChanges = () => {
+    if (purchasability.delivery && connectionStatus !== 'connected') {
+      setNoCourierModalOpen(true);
+      return;
+    }
+    commitSave(purchasability);
+  };
+
+  const handleNoCourierCancel = () => setNoCourierModalOpen(false);
+
+  const handleNoCourierContinue = () => {
+    setNoCourierModalOpen(false);
+    commitSave({ ...purchasability, delivery: false });
   };
 
   return (
@@ -647,8 +644,6 @@ export default function DeliverySettings() {
               t={t}
               country={pickupCountry} city={pickupCity}
               lalamoveEnabled={lalamoveEnabled} onLalamoveEnabledChange={setLalamoveEnabled}
-              instant={instant} onInstantChange={setInstant}
-              scheduled={scheduled} onScheduledChange={setScheduled}
               apiKey={apiKey} onApiKeyChange={setApiKey}
               apiSecret={apiSecret} onApiSecretChange={setApiSecret}
               savedApiKey={savedApiKey} onSavedApiKeyChange={setSavedApiKey}
@@ -662,6 +657,16 @@ export default function DeliverySettings() {
       <div className="bg-lb-surface border-t-2 border-lb-line-1 px-6 py-4 flex justify-end">
         <MainBtn label={t('saveChanges')} onClick={handleSaveChanges} />
       </div>
+
+      <Popup
+        open={noCourierModalOpen}
+        onClose={handleNoCourierCancel}
+        platform="desktop"
+        title={t('noCourierModal.title', 'No Delivery Service Connected')}
+        description={t('noCourierModal.description', 'Delivery is enabled, but no delivery service is connected. If you continue, the Delivery option will be turned off automatically. You can connect a delivery service and enable it again anytime.')}
+        secondaryAction={{ label: t('noCourierModal.cancel', 'Cancel'), onClick: handleNoCourierCancel }}
+        primaryAction={{ label: t('noCourierModal.continue', 'Continue'), onClick: handleNoCourierContinue }}
+      />
     </div>
   );
 }

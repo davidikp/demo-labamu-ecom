@@ -94,7 +94,7 @@ export default function FirstTimeLabamu() {
               }}
             >
               <Sparkles size={16} />
-              First-time setup
+              {t('auth:firstTime.badge')}
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%', alignSelf: 'stretch', color: '#FFFFFF' }}>
@@ -102,18 +102,18 @@ export default function FirstTimeLabamu() {
                 <Store size={36} />
               </div>
               <h1 style={{ margin: 0, fontSize: '36px', lineHeight: '44px', fontWeight: 800, letterSpacing: '-0.02em', color: '#FFFFFF', width: '100%' }}>
-                Let&apos;s get your storefront ready
+                {t('auth:firstTime.heading')}
               </h1>
               <p style={{ margin: 0, fontSize: '16px', lineHeight: '26px', color: 'rgba(255, 255, 255, 0.82)', width: '100%' }}>
-                Complete a quick one-time setup to launch your website and keep everything synced with the Labamu App.
+                {t('auth:firstTime.labamu.body')}
               </p>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {[
-                'Confirm your business information',
-                'Choose your website template and style',
-                'Continue to your merchant dashboard',
+                t('auth:firstTime.steps.confirmBusiness'),
+                t('auth:firstTime.steps.chooseTemplate'),
+                t('auth:firstTime.steps.continueDashboard'),
               ].map((item) => (
                 <div
                   key={item}
@@ -170,10 +170,10 @@ export default function FirstTimeLabamu() {
             >
               <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--feature-brand-on-container)' }}>
-                  Labamu App access
+                  {t('auth:firstTime.labamu.accessTitle')}
                 </div>
                 <div style={{ fontSize: '13px', color: 'var(--neutral-on-surface-secondary)', lineHeight: '20px' }}>
-                  Your account is ready. Continue with the setup to launch your storefront.
+                  {t('auth:firstTime.accessBody')}
                 </div>
               </div>
             </div>

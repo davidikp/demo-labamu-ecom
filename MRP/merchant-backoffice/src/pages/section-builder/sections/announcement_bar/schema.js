@@ -1,19 +1,15 @@
-/** US-11.B2 — Announcement Bar. */
+import { SECTION_CHROME_FIELDS } from '../shared/sectionChrome';
+
+/** US-11.B2 — Announcement Bar. Messages are now blocks (see blockConfig). */
 export const schema = {
-  message: { type: 'text', label: 'Message text', maxLength: 400, default: 'Free shipping on orders over $50', group: 'content' },
-  show_link: { type: 'boolean', label: 'Show link', default: false, group: 'content' },
-  link_label: { type: 'text', label: 'Link label', maxLength: 100, default: '', group: 'content', dependsOn: { field: 'show_link', equals: true } },
-  link_url: { type: 'text', label: 'Link URL', default: '', group: 'content', dependsOn: { field: 'show_link', equals: true } },
   text_alignment: {
     type: 'select', label: 'Text alignment', default: 'center', group: 'layout',
     options: [{ value: 'left', label: 'Left' }, { value: 'center', label: 'Center' }],
   },
-  background_color: { type: 'color', label: 'Background color', default: { slot: 'accent' }, group: 'color' },
-  text_color: {
-    type: 'color',
-    label: 'Text color',
-    default: { slot: 'accent_text' },
-    group: 'color',
-    contrastCheck: { against: 'background_color' },
-  },
+  ...SECTION_CHROME_FIELDS,
+  color_scheme: { ...SECTION_CHROME_FIELDS.color_scheme, default: 'accent' },
+  padding_top: { ...SECTION_CHROME_FIELDS.padding_top, default: 8 },
+  padding_bottom: { ...SECTION_CHROME_FIELDS.padding_bottom, default: 8 },
 };
+
+export const blockConfig = { allowed: ['announcement'], presets: ['announcement'], max: 5 };

@@ -296,8 +296,8 @@ export default function LoginRevamp() {
                     zIndex: 10,
                     minWidth: '160px',
                   }}>
-                    <button type="button" onClick={() => handleLangChange('id')} style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%', padding: '12px 16px', background: lang === 'id' ? '#F4F4F4' : 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left', fontFamily: "'Lato', sans-serif", fontSize: '14px', color: '#081B34' }}>🇮🇩 Indonesia</button>
-                    <button type="button" onClick={() => handleLangChange('en')} style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%', padding: '12px 16px', background: lang === 'en' ? '#F4F4F4' : 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left', fontFamily: "'Lato', sans-serif", fontSize: '14px', color: '#081B34' }}>🇺🇸 English</button>
+                    <button type="button" onClick={() => handleLangChange('id')} style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%', padding: '12px 16px', background: lang === 'id' ? '#F4F4F4' : 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left', fontFamily: "'Lato', sans-serif", fontSize: '14px', color: '#081B34' }}>🇮🇩 {t('auth:languageOptions.indonesian')}</button>
+                    <button type="button" onClick={() => handleLangChange('en')} style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%', padding: '12px 16px', background: lang === 'en' ? '#F4F4F4' : 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left', fontFamily: "'Lato', sans-serif", fontSize: '14px', color: '#081B34' }}>🇺🇸 {t('auth:languageOptions.english')}</button>
                   </div>
                 )}
               </div>

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { fetchPackageById, saveWebsiteVisibility, saveFragileHandling, applyBulkEdits } from '../services/catalogService';
 import { useSnackbar } from '../contexts/SnackbarContext';
 import Button from '../components/ui/Button';
@@ -14,6 +15,7 @@ function formatPrice(val) {
 
 
 export default function PackageDetail() {
+  const { t } = useTranslation();
   const { id } = useParams();
   const navigate = useNavigate();
   const { showSnackbar } = useSnackbar();
@@ -59,10 +61,10 @@ export default function PackageDetail() {
     setIsToggling(true);
     try {
       await saveWebsiteVisibility('package', pkg.id, newVisible);
-      showSnackbar(newVisible ? 'Package has been enabled to show on website' : 'Package has been disabled from website', 'grey');
+      showSnackbar(newVisible ? t('catalog:packages.shown') : t('catalog:packages.hidden'), 'grey');
     } catch {
       setPkg(p => ({ ...p, platform_status: prev }));
-      showSnackbar('Failed to change website visibility', 'red');
+      showSnackbar(t('catalog:common.failedChangeVisibility'), 'red');
     } finally {
       setIsToggling(false);
     }
@@ -75,10 +77,10 @@ export default function PackageDetail() {
     setIsFragileSaving(true);
     try {
       await saveFragileHandling('package', pkg.id, newFragile);
-      showSnackbar(newFragile ? 'Package has been enabled for fragile handling' : 'Package has been disabled from fragile handling', 'grey');
+      showSnackbar(newFragile ? t('catalog:packages.fragileEnabled') : t('catalog:packages.fragileDisabled'), 'grey');
     } catch {
       setIsFragile(!newFragile);
-      showSnackbar('Failed to change fragile handling', 'red');
+      showSnackbar(t('catalog:common.failedChangeFragile'), 'red');
     } finally {
       setIsFragileSaving(false);
     }
@@ -93,7 +95,7 @@ export default function PackageDetail() {
     setPkg(p => p ? { ...p, gross_weight, length, width, height } : p);
     applyBulkEdits('package', [{ id: pkg.id, gross_weight, length, width, height }]);
     setDeliveryModal('none');
-    showSnackbar('Delivery properties updated', 'success');
+    showSnackbar(t('catalog:delivery.updated'), 'success');
   }
 
   const images = pkg?.image_attached || [];
@@ -109,18 +111,18 @@ export default function PackageDetail() {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '20px', gap: '12px' }}>
         <Breadcrumbs
-          title="Package Detail"
-          breadcrumbs={[{ name: 'Catalog', onClick: () => navigate('/catalog/package') }]}
+          title={t('catalog:packages.detailTitle')}
+          breadcrumbs={[{ name: t('catalog:common.catalogLabel'), onClick: () => navigate('/catalog/package') }]}
           onBack={() => navigate('/catalog/package')}
         />
         {!loading && pkg && (
-          <Button variant="secondary" size="small" onClick={() => setDeliveryModal('edit')}>Edit Delivery Properties</Button>
+          <Button variant="secondary" size="small" onClick={() => setDeliveryModal('edit')}>{t('catalog:delivery.editButton')}</Button>
         )}
       </div>
 
       {error && !loading && (
         <div style={{ background: '#FFFFFF', borderRadius: '12px', border: '1px solid #E9E9E9', padding: '64px', textAlign: 'center' }}>
-          <p style={{ margin: '0 0 4px', fontSize: '16px', color: '#D0021B' }}>Failed to load package</p>
+          <p style={{ margin: '0 0 4px', fontSize: '16px', color: '#D0021B' }}>{t('catalog:packages.failedToLoadSingle')}</p>
           <p style={{ margin: '0 0 20px', fontSize: '13px', color: '#7E7E7E' }}>{error}</p>
         </div>
       )}
@@ -168,27 +170,27 @@ export default function PackageDetail() {
                     <h2 style={{ margin: 0, fontSize: '26px', fontWeight: 700, color: '#282828', letterSpacing: '0.18px' }}>{pkg.name}</h2>
                     <p style={{ margin: 0, fontSize: '16px', color: '#282828', letterSpacing: '0.11px' }}>{formatPrice(pkg.selling_price)}</p>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '14px', color: '#7E7E7E' }}>
-                      <span>SKU <span style={{ color: '#282828' }}>{pkg.sku}</span></span>
+                      <span>{t('catalog:packages.sku')} <span style={{ color: '#282828' }}>{pkg.sku}</span></span>
                       <span style={{ color: '#E9E9E9' }}>|</span>
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7E7E7E" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                           <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
                         </svg>
-                        Sold <span style={{ color: '#282828', fontWeight: 700 }}>{pkg.sold_count} times</span>
+                        <span style={{ color: '#282828', fontWeight: 700 }}>{t('catalog:packages.soldTimes', { count: pkg.sold_count })}</span>
                       </span>
                     </div>
                   </div>
                   <div style={{ height: '1px', background: '#E9E9E9' }} />
-                  <ToggleCard bordered={false} title="Show on Website"
-                    subtitle="Display this catalog in your website for customers to view online."
+                  <ToggleCard bordered={false} title={t('catalog:common.showOnWebsiteTitle')}
+                    subtitle={t('catalog:packages.showOnWebsiteDesc')}
                     on={isPublished} onClick={handleTogglePublish} loading={isToggling} />
                   <div style={{ height: '1px', background: '#E9E9E9' }} />
-                  <ToggleCard bordered={false} title="Fragile Handling"
-                    subtitle="Turn this on for products that are easily damaged. Delivery providers that support fragile handling will receive this information."
+                  <ToggleCard bordered={false} title={t('catalog:common.fragileHandlingTitle')}
+                    subtitle={t('catalog:packages.fragileHandlingDesc')}
                     on={isFragile} onClick={handleToggleFragile} loading={isFragileSaving} />
                 </>
               ) : (
-                <p style={{ margin: 0, fontSize: '16px', color: '#7E7E7E' }}>Package not found</p>
+                <p style={{ margin: 0, fontSize: '16px', color: '#7E7E7E' }}>{t('catalog:packages.notFound')}</p>
               )}
             </div>
 
@@ -196,19 +198,19 @@ export default function PackageDetail() {
             {!loading && pkg && (
               <div style={{ background: '#FFFFFF', borderRadius: '12px', border: '1px solid #E9E9E9', padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                  <p style={{ margin: 0, flex: 1, fontSize: '14px', fontWeight: 700, color: '#282828', letterSpacing: '0.096px' }}>E-Commerce Delivery</p>
-                  <StatusBadge tone="soft" color={isDeliveryEligible ? 'blue' : 'red'} label={isDeliveryEligible ? 'Eligible' : 'Pickup Only'} />
+                  <p style={{ margin: 0, flex: 1, fontSize: '14px', fontWeight: 700, color: '#282828', letterSpacing: '0.096px' }}>{t('catalog:delivery.title')}</p>
+                  <StatusBadge tone="soft" color={isDeliveryEligible ? 'blue' : 'red'} label={isDeliveryEligible ? t('catalog:delivery.eligible') : t('catalog:delivery.pickupOnly')} />
                 </div>
                 {!isDeliveryEligible && (
-                  <Infobox variant="info" message="Add the product's weight and volume to enable delivery services." />
+                  <Infobox variant="info" message={t('catalog:delivery.addWeightVolumeInfo')} />
                 )}
                 <div style={{ display: 'flex', gap: '12px' }}>
                   <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <p style={{ margin: 0, fontSize: '14px', color: '#7E7E7E', letterSpacing: '0.096px' }}>Total Weight</p>
+                    <p style={{ margin: 0, fontSize: '14px', color: '#7E7E7E', letterSpacing: '0.096px' }}>{t('catalog:delivery.totalWeightLabel')}</p>
                     <p style={{ margin: 0, fontSize: '16px', color: '#282828', letterSpacing: '0.11px' }}>{delivery.weight ? `${delivery.weight} gr` : '-'}</p>
                   </div>
                   <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <p style={{ margin: 0, fontSize: '14px', color: '#7E7E7E', letterSpacing: '0.096px' }}>Volume</p>
+                    <p style={{ margin: 0, fontSize: '14px', color: '#7E7E7E', letterSpacing: '0.096px' }}>{t('catalog:common.volumeLabel')}</p>
                     <p style={{ margin: 0, fontSize: '16px', color: '#282828', letterSpacing: '0.11px' }}>{volume || '-'}</p>
                   </div>
                 </div>
@@ -218,7 +220,7 @@ export default function PackageDetail() {
             {/* Catalog List (package contents) */}
             {!loading && pkg?.catalog_items?.length > 0 && (
               <div style={{ background: '#FFFFFF', borderRadius: '12px', border: '1px solid #E9E9E9', padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: '#282828', letterSpacing: '0.096px' }}>Catalog List</p>
+                <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: '#282828', letterSpacing: '0.096px' }}>{t('catalog:packages.catalogListTitle')}</p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   {pkg.catalog_items.map(item => {
                     const dim = item.out_of_stock ? '#A9A9A9' : '#282828';
@@ -230,7 +232,7 @@ export default function PackageDetail() {
                           <p style={{ margin: 0, fontSize: '12px', color: '#7E7E7E' }}>{item.qty}x {formatPrice(item.price)}</p>
                         </div>
                         {item.out_of_stock && (
-                          <span style={{ fontSize: '12px', color: '#A9A9A9', fontWeight: 700, whiteSpace: 'nowrap' }}>Out of stock</span>
+                          <span style={{ fontSize: '12px', color: '#A9A9A9', fontWeight: 700, whiteSpace: 'nowrap' }}>{t('catalog:packages.outOfStock')}</span>
                         )}
                       </div>
                     );

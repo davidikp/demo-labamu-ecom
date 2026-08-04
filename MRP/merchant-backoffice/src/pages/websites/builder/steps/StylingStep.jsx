@@ -33,7 +33,7 @@ const StylingStep = React.memo(({ primaryColor, fontFamily, updateConfig, t }) =
             style={{ padding: '12px', borderRadius: '12px', border: '1px solid #E5E7EB', background: fontFamily === f.font ? '#F9FAFB' : '#FFFFFF', borderColor: fontFamily === f.font ? '#006BFF' : '#E5E7EB', textAlign: 'left', cursor: 'pointer', fontFamily: f.font }}
           >
             <div style={{ fontSize: '14px', fontWeight: 700, color: '#111827', marginBottom: '2px' }}>{f.label}</div>
-            <div style={{ fontSize: '12px', color: '#6B7280' }}>The quick brown fox</div>
+            <div style={{ fontSize: '12px', color: '#6B7280' }}>{t('studio.features.fontPreviewSample')}</div>
           </button>
         ))}
       </div>

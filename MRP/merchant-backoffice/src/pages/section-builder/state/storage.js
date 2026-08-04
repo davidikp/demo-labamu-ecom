@@ -7,6 +7,8 @@
  * No backend endpoint exists yet (US-8.3's "draft and published versions are
  * stored independently" is satisfied here purely with two localStorage keys).
  */
+import { migrateState } from './migrations';
+
 const DRAFT_KEY_PREFIX = 'sb_draft_v1';
 const PUBLISHED_KEY_PREFIX = 'sb_published_v1';
 
@@ -18,7 +20,9 @@ function load(prefix, storeId) {
   try {
     const raw = localStorage.getItem(keyFor(prefix, storeId));
     if (!raw) return null;
-    return JSON.parse(raw);
+    // Run schema migrations (e.g. repeater → blocks) on every load so drafts
+    // saved by older builds keep working.
+    return migrateState(JSON.parse(raw));
   } catch {
     return null;
   }

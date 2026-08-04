@@ -1,15 +1,17 @@
-const OPTIONS = [
-  { value: 'desktop', label: 'Desktop' },
-  { value: 'mobile', label: 'Mobile' },
-];
+import { useTranslation } from 'react-i18next';
 
 /**
  * US-2.1 — switches the canvas reference width; both viewports render the
  * same draft content, so this never triggers a reload.
  */
 export default function ViewportToggle({ viewport, onChange }) {
+  const { t } = useTranslation();
+  const OPTIONS = [
+    { value: 'desktop', label: t('sectionBuilder:editor.viewportToggle.desktop') },
+    { value: 'mobile', label: t('sectionBuilder:editor.viewportToggle.mobile') },
+  ];
   return (
-    <div role="group" aria-label="Viewport" className="inline-flex rounded-md border border-gray-200 p-0.5">
+    <div role="group" aria-label={t('sectionBuilder:editor.viewportToggle.ariaLabel')} className="inline-flex rounded-md border border-gray-200 p-0.5">
       {OPTIONS.map((opt) => (
         <button
           key={opt.value}

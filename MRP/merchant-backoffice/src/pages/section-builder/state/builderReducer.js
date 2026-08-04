@@ -34,6 +34,13 @@ export const ACTIONS = {
   MOVE_SECTION: 'MOVE_SECTION',
   REORDER_SECTIONS: 'REORDER_SECTIONS',
   UPDATE_SECTION_DATA: 'UPDATE_SECTION_DATA',
+  ADD_BLOCK: 'ADD_BLOCK',
+  REMOVE_BLOCK: 'REMOVE_BLOCK',
+  DUPLICATE_BLOCK: 'DUPLICATE_BLOCK',
+  MOVE_BLOCK: 'MOVE_BLOCK',
+  REORDER_BLOCKS: 'REORDER_BLOCKS',
+  MOVE_BLOCK_TO_PATH: 'MOVE_BLOCK_TO_PATH',
+  UPDATE_BLOCK_DATA: 'UPDATE_BLOCK_DATA',
   TOGGLE_GLOBAL_HIDDEN: 'TOGGLE_GLOBAL_HIDDEN',
   UPDATE_GLOBAL_DATA: 'UPDATE_GLOBAL_DATA',
   UPDATE_THEME_FIELD: 'UPDATE_THEME_FIELD',
@@ -59,6 +66,35 @@ export function createInitialState({ storeId, pages, theme, header, footer }) {
 
 function updatePage(pages, pageId, updater) {
   return pages.map((page) => (page.id === pageId ? updater(page) : page));
+}
+
+function updateSection(pages, pageId, sectionId, updater) {
+  return updatePage(pages, pageId, (page) => ({
+    ...page,
+    sections: page.sections.map((s) => (s.id === sectionId ? updater(s) : s)),
+  }));
+}
+
+// Compound selection id for a block ("<sectionId>::<id1>::<id2>::…"). Kept in
+// sync with sections/blockHelpers.js (which owns the reverse parse) so the
+// reducer has no import cycle with the sections registry. `path` is the
+// block-id chain from the top-level block down to the target.
+function blockSelId(sectionId, path) {
+  const ids = path ?? [];
+  return ids.length ? `${sectionId}::${ids.join('::')}` : sectionId;
+}
+
+// Apply `fn` to the block array living at `parentPath` — [] means the
+// section's own top-level blocks; a non-empty array descends through nested
+// group blocks by id, at any depth, to reach the target container.
+function mapContainerAtPath(blocks, path, fn) {
+  if (!path || path.length === 0) return fn(blocks);
+  const [head, ...rest] = path;
+  return blocks.map((b) => (b.id === head ? { ...b, blocks: mapContainerAtPath(b.blocks ?? [], rest, fn) } : b));
+}
+
+function mapBlockContainer(section, parentPath, fn) {
+  return { ...section, blocks: mapContainerAtPath(section.blocks ?? [], parentPath ?? [], fn) };
 }
 
 function clampInsertIndex(length, index) {
@@ -91,7 +127,13 @@ export function builderReducer(state, action) {
       const pages = updatePage(state.pages, pageId, (page) => {
         const idx = page.sections.findIndex((s) => s.id === sectionId);
         if (idx === -1 || page.sections.length >= MAX_SECTIONS_PER_PAGE) return page;
-        newSection = { ...page.sections[idx], id: newId, data: { ...page.sections[idx].data } };
+        const original = page.sections[idx];
+        newSection = {
+          ...original,
+          id: newId,
+          data: { ...original.data },
+          blocks: (original.blocks ?? []).map((b) => ({ ...b, id: crypto.randomUUID(), data: { ...b.data } })),
+        };
         const sections = [...page.sections];
         sections.splice(idx + 1, 0, newSection);
         return { ...page, sections };
@@ -148,6 +190,127 @@ export function builderReducer(state, action) {
             s.id === sectionId ? { ...s, data: { ...s.data, ...data } } : s
           ),
         })),
+      };
+    }
+
+    case ACTIONS.ADD_BLOCK: {
+      const { pageId, sectionId, block, index, parentPath } = action;
+      const path = parentPath ?? [];
+      return {
+        ...state,
+        pages: updateSection(state.pages, pageId, sectionId, (s) =>
+          mapBlockContainer(s, path, (blocks) => {
+            const next = [...blocks];
+            next.splice(clampInsertIndex(next.length, index), 0, block);
+            return next;
+          })
+        ),
+        selection: { id: blockSelId(sectionId, [...path, block.id]) },
+      };
+    }
+
+    case ACTIONS.REMOVE_BLOCK: {
+      const { pageId, sectionId, blockId, parentPath } = action;
+      const path = parentPath ?? [];
+      const wasSelected = state.selection.id === blockSelId(sectionId, [...path, blockId]);
+      return {
+        ...state,
+        pages: updateSection(state.pages, pageId, sectionId, (s) =>
+          mapBlockContainer(s, path, (blocks) => blocks.filter((b) => b.id !== blockId))
+        ),
+        selection: wasSelected ? { id: blockSelId(sectionId, path) } : state.selection,
+      };
+    }
+
+    case ACTIONS.DUPLICATE_BLOCK: {
+      const { pageId, sectionId, blockId, newId, parentPath } = action;
+      const path = parentPath ?? [];
+      let found = false;
+      const pages = updateSection(state.pages, pageId, sectionId, (s) =>
+        mapBlockContainer(s, path, (blocks) => {
+          const idx = blocks.findIndex((b) => b.id === blockId);
+          if (idx === -1) return blocks;
+          found = true;
+          const orig = blocks[idx];
+          const copy = {
+            ...orig,
+            id: newId,
+            data: { ...orig.data },
+            ...(orig.blocks ? { blocks: orig.blocks.map((c) => ({ ...c, id: crypto.randomUUID(), data: { ...c.data } })) } : {}),
+          };
+          const next = [...blocks];
+          next.splice(idx + 1, 0, copy);
+          return next;
+        })
+      );
+      return found ? { ...state, pages, selection: { id: blockSelId(sectionId, [...path, newId]) } } : state;
+    }
+
+    case ACTIONS.MOVE_BLOCK: {
+      const { pageId, sectionId, blockId, direction, parentPath } = action; // -1 | 1
+      return {
+        ...state,
+        pages: updateSection(state.pages, pageId, sectionId, (s) =>
+          mapBlockContainer(s, parentPath ?? [], (blocks) => {
+            const next = [...blocks];
+            const idx = next.findIndex((b) => b.id === blockId);
+            const target = idx + direction;
+            if (idx === -1 || target < 0 || target >= next.length) return blocks;
+            [next[idx], next[target]] = [next[target], next[idx]];
+            return next;
+          })
+        ),
+      };
+    }
+
+    case ACTIONS.REORDER_BLOCKS: {
+      const { pageId, sectionId, orderedIds, parentPath } = action;
+      return {
+        ...state,
+        pages: updateSection(state.pages, pageId, sectionId, (s) =>
+          mapBlockContainer(s, parentPath ?? [], (blocks) => {
+            const byId = new Map(blocks.map((b) => [b.id, b]));
+            return orderedIds.map((id) => byId.get(id)).filter(Boolean);
+          })
+        ),
+      };
+    }
+
+    // Moves a block from one container to another (any depth, including into
+    // or out of a group) — the sidebar layers tree's cross-group drag. Removes
+    // from the source container then inserts into the destination container;
+    // a no-op (returns the same section) if the block isn't found at `fromParentPath`.
+    case ACTIONS.MOVE_BLOCK_TO_PATH: {
+      const { pageId, sectionId, blockId, fromParentPath, toParentPath, toIndex } = action;
+      return {
+        ...state,
+        pages: updateSection(state.pages, pageId, sectionId, (s) => {
+          let moved = null;
+          const withoutBlock = mapBlockContainer(s, fromParentPath ?? [], (blocks) => {
+            const idx = blocks.findIndex((b) => b.id === blockId);
+            if (idx === -1) return blocks;
+            moved = blocks[idx];
+            return blocks.filter((b) => b.id !== blockId);
+          });
+          if (!moved) return s;
+          return mapBlockContainer(withoutBlock, toParentPath ?? [], (blocks) => {
+            const next = [...blocks];
+            next.splice(clampInsertIndex(next.length, toIndex), 0, moved);
+            return next;
+          });
+        }),
+      };
+    }
+
+    case ACTIONS.UPDATE_BLOCK_DATA: {
+      const { pageId, sectionId, blockId, data, parentPath } = action;
+      return {
+        ...state,
+        pages: updateSection(state.pages, pageId, sectionId, (s) =>
+          mapBlockContainer(s, parentPath ?? [], (blocks) =>
+            blocks.map((b) => (b.id === blockId ? { ...b, data: { ...b.data, ...data } } : b))
+          )
+        ),
       };
     }
 

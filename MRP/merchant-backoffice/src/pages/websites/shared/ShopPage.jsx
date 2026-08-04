@@ -1,13 +1,19 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 
 const PAGE_SIZE = 16;
 
-const SORT_OPTIONS = [
-  { id: 'newest',     label: 'Newest to Oldest' },
-  { id: 'oldest',     label: 'Oldest to Newest' },
-  { id: 'price_asc',  label: 'Price: Low to High' },
-  { id: 'price_desc', label: 'Price: High to Low' },
-];
+const SORT_OPTION_IDS = ['newest', 'oldest', 'price_asc', 'price_desc'];
+const SORT_LABEL_KEYS = {
+  newest: 'website:shop.sort.newest',
+  oldest: 'website:shop.sort.oldest',
+  price_asc: 'website:shop.sort.priceAsc',
+  price_desc: 'website:shop.sort.priceDesc',
+};
+
+function getSortOptions(t) {
+  return SORT_OPTION_IDS.map(id => ({ id, label: t(SORT_LABEL_KEYS[id]) }));
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -41,6 +47,7 @@ function CategorySidebar({
   priceMin, priceMax, onPriceChange,
   priceFilterOpen, onTogglePriceFilter,
 }) {
+  const { t } = useTranslation();
   const [categoriesOpen, setCategoriesOpen] = useState(true);
 
   const chevron = (open) => (
@@ -75,7 +82,7 @@ function CategorySidebar({
           onClick={() => onSelect('all')}
           style={{ cursor: 'pointer', fontWeight: String(selected) === 'all' ? 700 : 400 }}
         >
-          All Categories
+          {t('website:shop.allCategories')}
         </span>
         <span onClick={() => setCategoriesOpen(o => !o)} style={{ cursor: 'pointer', display: 'flex' }}>
           {chevron(categoriesOpen)}
@@ -85,7 +92,7 @@ function CategorySidebar({
       {/* Expandable category list — indented */}
       {categoriesOpen && (
         <div style={{ paddingBottom: '8px' }}>
-          {[{ id: 'all', name: 'All' }, ...categories].map(cat => {
+          {[{ id: 'all', name: t('website:shop.all') }, ...categories].map(cat => {
             const active = String(selected) === String(cat.id);
             return (
               <div
@@ -124,19 +131,19 @@ function CategorySidebar({
           }}
         >
           {accentBar}
-          <span>Price Filter</span>
+          <span>{t('website:shop.priceFilter.label')}</span>
           {chevron(priceFilterOpen)}
         </div>
 
         {priceFilterOpen && (
           <div style={{ padding: '4px 16px 20px 20px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
             <PriceInput
-              placeholder="Lowest Price"
+              placeholder={t('website:shop.priceFilter.lowest')}
               value={priceMin}
               onChange={v => onPriceChange({ min: v, max: priceMax })}
             />
             <PriceInput
-              placeholder="Highest Price"
+              placeholder={t('website:shop.priceFilter.highest')}
               value={priceMax}
               onChange={v => onPriceChange({ min: priceMin, max: v })}
             />
@@ -181,6 +188,7 @@ function PriceInput({ placeholder, value, onChange }) {
 // ─── ProductCard ──────────────────────────────────────────────────────────────
 
 function ProductCard({ product, onAction, onOpenDetail, enableCheckout, accentColor = '#006BFF' }) {
+  const { t } = useTranslation();
   return (
     <div
       onClick={onOpenDetail ? () => onOpenDetail(product) : undefined}
@@ -222,7 +230,7 @@ function ProductCard({ product, onAction, onOpenDetail, enableCheckout, accentCo
               display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
               boxShadow: '0 2px 6px rgba(0,0,0,0.12)',
             }}
-            aria-label="Add to cart"
+            aria-label={t('website:shop.addToCart')}
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={accentColor} strokeWidth="1.8">
               <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/>
@@ -257,16 +265,18 @@ function MobileShopHeader({
   sortKey, onSortChange, accentColor,
   priceMin, priceMax, onPriceChange,
 }) {
+  const { t } = useTranslation();
   const [catOpen,   setCatOpen]   = useState(false);
   const [sortOpen,  setSortOpen]  = useState(false);
   const [priceOpen, setPriceOpen] = useState(false);
   const catRef  = useRef(null);
   const sortRef = useRef(null);
 
-  const allWithAll = [{ id: 'all', name: 'All' }, ...categories];
+  const sortOptions = getSortOptions(t);
+  const allWithAll = [{ id: 'all', name: t('website:shop.all') }, ...categories];
   const activeCat  = allWithAll.find(c => String(c.id) === String(selectedCategory));
-  const catLabel   = activeCat?.name || 'All';
-  const activeSort = SORT_OPTIONS.find(o => o.id === sortKey) || SORT_OPTIONS[0];
+  const catLabel   = activeCat?.name || t('website:shop.all');
+  const activeSort = sortOptions.find(o => o.id === sortKey) || sortOptions[0];
 
   useEffect(() => {
     function handler(e) {
@@ -304,12 +314,12 @@ function MobileShopHeader({
 
       {/* Count */}
       <div style={{ textAlign: 'center', fontSize: '13px', color: '#6B7280', marginBottom: '6px' }}>
-        {total === 0 ? 'No products found' : `${from}- ${to} from ${total} products`}
+        {total === 0 ? t('website:shop.noProductsFound') : t('website:shop.countSummary', { from, to, total })}
       </div>
 
       {/* Category selector row */}
       <div ref={catRef} style={{ position: 'relative', textAlign: 'center', marginBottom: '12px' }}>
-        <span style={{ fontSize: '14px', color: '#374151' }}>Category </span>
+        <span style={{ fontSize: '14px', color: '#374151' }}>{t('website:shop.category')} </span>
         <span
           onClick={() => { setCatOpen(o => !o); setSortOpen(false); setPriceOpen(false); }}
           style={{ fontSize: '14px', fontWeight: 700, color: '#111827', cursor: 'pointer',
@@ -357,7 +367,7 @@ function MobileShopHeader({
 
           {sortOpen && (
             <div style={{ ...dropdownBase, left: 0 }}>
-              {SORT_OPTIONS.map(opt => (
+              {sortOptions.map(opt => (
                 <div
                   key={opt.id}
                   onClick={() => { onSortChange(opt.id); setSortOpen(false); }}
@@ -380,7 +390,7 @@ function MobileShopHeader({
             cursor: 'pointer', fontSize: '13px', color: '#111827',
             background: '#FFFFFF', userSelect: 'none' }}
         >
-          Price Filter
+          {t('website:shop.priceFilter.label')}
           {chevronSvg(priceOpen)}
         </div>
       </div>
@@ -388,9 +398,9 @@ function MobileShopHeader({
       {/* Price filter inline expansion */}
       {priceOpen && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '16px' }}>
-          <PriceInput placeholder="Lowest Price"  value={priceMin}
+          <PriceInput placeholder={t('website:shop.priceFilter.lowest')}  value={priceMin}
             onChange={v => onPriceChange({ min: v, max: priceMax })} />
-          <PriceInput placeholder="Highest Price" value={priceMax}
+          <PriceInput placeholder={t('website:shop.priceFilter.highest')} value={priceMax}
             onChange={v => onPriceChange({ min: priceMin, max: v })} />
         </div>
       )}
@@ -401,9 +411,11 @@ function MobileShopHeader({
 // ─── ShopTopBar ───────────────────────────────────────────────────────────────
 
 function ShopTopBar({ from, to, total, sortKey, onSortChange, accentColor = '#006BFF' }) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
-  const activeSort = SORT_OPTIONS.find(o => o.id === sortKey) || SORT_OPTIONS[0];
+  const sortOptions = getSortOptions(t);
+  const activeSort = sortOptions.find(o => o.id === sortKey) || sortOptions[0];
 
   useEffect(() => {
     function handleOutside(e) {
@@ -420,8 +432,8 @@ function ShopTopBar({ from, to, total, sortKey, onSortChange, accentColor = '#00
     }}>
       <span style={{ fontSize: '13px', color: '#6B7280' }}>
         {total === 0
-          ? 'No products found'
-          : `${from}- ${to} from ${total} products`}
+          ? t('website:shop.noProductsFound')
+          : t('website:shop.countSummary', { from, to, total })}
       </span>
 
       <div ref={ref} style={{ position: 'relative' }}>
@@ -434,7 +446,7 @@ function ShopTopBar({ from, to, total, sortKey, onSortChange, accentColor = '#00
             display: 'flex', alignItems: 'center', gap: '6px',
           }}
         >
-          <span style={{ color: '#6B7280', fontWeight: 400 }}>Sort by</span>
+          <span style={{ color: '#6B7280', fontWeight: 400 }}>{t('website:shop.sortBy')}</span>
           {activeSort.label}
           <svg
             width="10" height="6" viewBox="0 0 10 6" fill="none"
@@ -452,7 +464,7 @@ function ShopTopBar({ from, to, total, sortKey, onSortChange, accentColor = '#00
             minWidth: '200px', padding: '4px 0',
             fontFamily: "'Lato', sans-serif",
           }}>
-            {SORT_OPTIONS.map(opt => (
+            {sortOptions.map(opt => (
               <div
                 key={opt.id}
                 onClick={() => { onSortChange(opt.id); setOpen(false); }}
@@ -569,6 +581,7 @@ export default function ShopPage({
   sortKey: sortKeyProp,
   initialCategory = 'all',
 }) {
+  const { t } = useTranslation();
   const [selectedCategory, setSelectedCategory] = useState(initialCategory);
   const [priceMin, setPriceMin]       = useState('');
   const [priceMax, setPriceMax]       = useState('');
@@ -714,16 +727,16 @@ export default function ShopPage({
                   <path d="M16 10a4 4 0 0 1-8 0"/>
                 </svg>
                 <div style={{ fontSize: '15px', fontWeight: 700, color: '#374151', marginBottom: '6px' }}>
-                  Catalog not available
+                  {t('website:shop.catalogNotAvailable')}
                 </div>
                 <div style={{ fontSize: '13px', color: '#9CA3AF' }}>
-                  This seller doesn't have any products listed at the moment.
+                  {t('website:shop.catalogNotAvailableDesc')}
                 </div>
               </div>
             )
             : (
               <div style={{ textAlign: 'center', padding: '80px 0', color: '#9CA3AF', fontSize: '14px' }}>
-                No products found.
+                {t('website:shop.noProductsFoundPeriod')}
               </div>
             )
         )}

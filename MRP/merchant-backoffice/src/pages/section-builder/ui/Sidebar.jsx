@@ -9,15 +9,16 @@ import {
   useSensors,
 } from '@dnd-kit/core';
 import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
-import { Image as ImageIcon, Palette } from 'lucide-react';
+import { Image as ImageIcon, Palette, PanelLeft, Plus } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Tabs, IconBtn } from '../../../ce-ui';
 import { useCompactSidebar } from '../hooks/useCompactSidebar';
 import SectionListItem from './SectionListItem';
-import AddSectionList from './AddSectionList';
 import PagesPanel from './PagesPanel';
 import { MAX_SECTIONS_PER_PAGE } from '../state/builderReducer';
 
 function GlobalRow({ label, hidden, onToggleHidden, selected, onSelect }) {
+  const { t } = useTranslation();
   return (
     <div
       className={
@@ -26,14 +27,14 @@ function GlobalRow({ label, hidden, onToggleHidden, selected, onSelect }) {
       }
     >
       <button type="button" onClick={onSelect} className="min-w-0 flex-1 truncate text-left">
-        {label} {hidden && <span className="text-gray-400">(hidden)</span>}
+        {label} {hidden && <span className="text-gray-400">{t('sectionBuilder:editor.sidebar.hiddenSuffix')}</span>}
       </button>
       <button
         type="button"
         onClick={onToggleHidden}
         className="rounded px-2 py-0.5 text-xs text-gray-500 hover:bg-gray-100"
       >
-        {hidden ? 'Show' : 'Hide'}
+        {hidden ? t('sectionBuilder:editor.sidebar.show') : t('sectionBuilder:editor.sidebar.hide')}
       </button>
     </div>
   );
@@ -51,7 +52,10 @@ export default function Sidebar({
   onSelect,
   onToggleGlobalHidden,
   onReorder,
-  onAdd,
+  onSelectBlock,
+  onAddBlock,
+  onMoveBlock,
+  onRequestAddSection,
   onOpenTheme,
   onOpenMedia,
   pages,
@@ -64,6 +68,7 @@ export default function Sidebar({
   onUpdatePageSeo,
   onTogglePageNavHidden,
 }) {
+  const { t } = useTranslation();
   const isCompact = useCompactSidebar();
   const [overlayOpen, setOverlayOpen] = useState(false);
   const [tab, setTab] = useState('sections');
@@ -92,8 +97,8 @@ export default function Sidebar({
     <div className="border-b border-gray-100">
       <Tabs
         tabs={[
-          { id: 'sections', label: 'Sections', count: sections.length },
-          { id: 'pages', label: 'Pages', count: pages.length },
+          { id: 'sections', label: t('sectionBuilder:editor.sidebar.sectionsTab'), count: sections.length },
+          { id: 'pages', label: t('sectionBuilder:editor.sidebar.pagesTab'), count: pages.length },
         ]}
         activeTab={tab}
         onChange={setTab}
@@ -101,7 +106,7 @@ export default function Sidebar({
       <div className="flex items-center justify-between px-3 py-2">
         {tab === 'sections' ? (
           <span className="text-xs text-gray-400">
-            {sections.length}/{MAX_SECTIONS_PER_PAGE} sections
+            {t('sectionBuilder:editor.sidebar.sectionCount', { n: sections.length, max: MAX_SECTIONS_PER_PAGE })}
           </span>
         ) : (
           <span />
@@ -111,14 +116,14 @@ export default function Sidebar({
             icon={<ImageIcon size={16} />}
             variant="ghost"
             size="sm"
-            aria-label="Media library"
+            aria-label={t('sectionBuilder:editor.sidebar.mediaLibraryAriaLabel')}
             onClick={onOpenMedia}
           />
           <IconBtn
             icon={<Palette size={16} />}
             variant="ghost"
             size="sm"
-            aria-label="Theme settings"
+            aria-label={t('sectionBuilder:editor.sidebar.themeSettingsAriaLabel')}
             onClick={onOpenTheme}
           />
         </div>
@@ -128,10 +133,10 @@ export default function Sidebar({
 
   const sectionsBody = (
     <>
-      <div className="flex-1 overflow-y-auto p-2">
-        <p className="px-2 pb-1 text-[11px] font-medium uppercase tracking-wide text-gray-400">Global</p>
+      <div className="min-h-0 flex-1 overflow-y-auto p-2">
+        <p className="px-2 pb-1 text-[11px] font-medium uppercase tracking-wide text-gray-400">{t('sectionBuilder:editor.sidebar.globalHeading')}</p>
         <GlobalRow
-          label="Header"
+          label={t('sectionBuilder:editor.sidebar.header')}
           hidden={header.hidden}
           onToggleHidden={() => onToggleGlobalHidden('header')}
           selected={selectedId === 'header'}
@@ -141,7 +146,7 @@ export default function Sidebar({
         <div className="my-2 border-t border-gray-100" />
 
         {sections.length === 0 ? (
-          <p className="p-3 text-sm text-gray-500">Add your first section below</p>
+          <p className="p-3 text-sm text-gray-500">{t('sectionBuilder:editor.sidebar.emptySections')}</p>
         ) : (
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
             <SortableContext items={sections.map((s) => s.id)} strategy={verticalListSortingStrategy}>
@@ -150,8 +155,11 @@ export default function Sidebar({
                   <SectionListItem
                     key={section.id}
                     section={section}
-                    selected={selectedId === section.id}
+                    selectedId={selectedId}
                     onSelect={() => onSelect(section.id)}
+                    onSelectBlock={onSelectBlock}
+                    onAddBlock={onAddBlock}
+                    onMoveBlock={onMoveBlock}
                   />
                 ))}
               </ul>
@@ -159,22 +167,30 @@ export default function Sidebar({
           </DndContext>
         )}
 
+        {onRequestAddSection && (
+          <button
+            type="button"
+            onClick={onRequestAddSection}
+            className="mt-1 flex w-full items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50"
+          >
+            <Plus size={16} /> {t('sectionBuilder:editor.sidebar.addSection', 'Add section')}
+          </button>
+        )}
+
         <div className="my-2 border-t border-gray-100" />
         <GlobalRow
-          label="Footer"
+          label={t('sectionBuilder:editor.sidebar.footer')}
           hidden={footer.hidden}
           onToggleHidden={() => onToggleGlobalHidden('footer')}
           selected={selectedId === 'footer'}
           onSelect={() => onSelect('footer')}
         />
       </div>
-
-      <AddSectionList sectionCount={sections.length} onAdd={onAdd} />
     </>
   );
 
   const body = (
-    <div className="flex h-full w-full flex-col">
+    <div className="flex h-full min-h-0 w-full flex-col">
       {tabBar}
       {tab === 'sections' ? (
         sectionsBody
@@ -203,12 +219,12 @@ export default function Sidebar({
       <div className="flex flex-col items-center gap-2 py-3">
         <button
           type="button"
-          title="Sections"
-          aria-label="Sections"
+          title={t('sectionBuilder:editor.sidebar.sectionsHeadingCompact')}
+          aria-label={t('sectionBuilder:editor.sidebar.sectionsHeadingCompact')}
           onClick={() => setOverlayOpen(true)}
           className="flex h-9 w-9 items-center justify-center rounded-md text-gray-600 hover:bg-gray-100"
         >
-          ▤
+          <PanelLeft size={18} />
         </button>
       </div>
 

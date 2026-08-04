@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { NumberField, Popup } from '../../ce-ui';
 
 // ─── Availability toggle card (Show on Website / Fragile Handling) ────────────
@@ -52,13 +53,16 @@ function NumInput({ value, onChange, placeholder, unit, error }) {
   );
 }
 
-const DELIVERY_FIELD_LABELS = { weight: 'Total Weight', length: 'Length', width: 'Width', height: 'Height' };
+function getDeliveryFieldLabels(t) {
+  return { weight: t('catalog:delivery.totalWeightLabel'), length: t('catalog:common.lengthLabel'), width: t('catalog:common.widthLabel'), height: t('catalog:common.heightLabel') };
+}
 
-function validateDeliveryForm(form) {
+function validateDeliveryForm(form, t) {
+  const fieldLabels = getDeliveryFieldLabels(t);
   const errors = {};
-  Object.keys(DELIVERY_FIELD_LABELS).forEach(field => {
+  Object.keys(fieldLabels).forEach(field => {
     if (form[field] !== '' && Number(form[field]) <= 0) {
-      errors[field] = `${DELIVERY_FIELD_LABELS[field]} must be greater than 0`;
+      errors[field] = t('catalog:delivery.mustBeGreaterThanZero', { label: fieldLabels[field] });
     }
   });
   return errors;
@@ -67,6 +71,7 @@ function validateDeliveryForm(form) {
 // ─── Delivery Properties edit modal ─────────────────────────────────────────────
 // Holds a local draft seeded from `initial`; changes are only committed via onSave.
 export function DeliveryPropertiesModal({ initial, onClose, onSave, onLearnMore }) {
+  const { t } = useTranslation();
   const [form, setForm] = useState(initial);
   const [errors, setErrors] = useState({});
   const onChange = (field, value) => {
@@ -74,7 +79,7 @@ export function DeliveryPropertiesModal({ initial, onClose, onSave, onLearnMore 
     setErrors(e => ({ ...e, [field]: undefined }));
   };
   const handleSave = () => {
-    const nextErrors = validateDeliveryForm(form);
+    const nextErrors = validateDeliveryForm(form, t);
     if (Object.keys(nextErrors).length > 0) {
       setErrors(nextErrors);
       return;
@@ -86,35 +91,35 @@ export function DeliveryPropertiesModal({ initial, onClose, onSave, onLearnMore 
       open
       onClose={onClose}
       platform="desktop"
-      title="Delivery Properties"
-      primaryAction={{ label: 'Save', onClick: handleSave }}
+      title={t('catalog:delivery.modalTitle')}
+      primaryAction={{ label: t('catalog:common.save'), onClick: handleSave }}
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', fontFamily: "'Lato', sans-serif" }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
             <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: '#282828', lineHeight: '20px', letterSpacing: '0.096px' }}>
-              <span style={{ color: '#D0021B' }}>*</span> Total Weight
+              <span style={{ color: '#D0021B' }}>*</span> {t('catalog:delivery.totalWeightLabel')}
             </p>
             <p style={{ margin: 0, fontSize: '12px', color: '#7E7E7E', lineHeight: '18px', letterSpacing: '0.0825px' }}>
-              Make sure the weight includes packaging
+              {t('catalog:delivery.weightHint')}
             </p>
           </div>
-          <NumInput value={form.weight} onChange={v => onChange('weight', v)} placeholder="Input weight" unit="gr" error={errors.weight} />
+          <NumInput value={form.weight} onChange={v => onChange('weight', v)} placeholder={t('catalog:bulkEdit.placeholders.weight')} unit="gr" error={errors.weight} />
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
             <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: '#282828', lineHeight: '20px', letterSpacing: '0.096px' }}>
-              <span style={{ color: '#D0021B' }}>*</span> Volume
+              <span style={{ color: '#D0021B' }}>*</span> {t('catalog:common.volumeLabel')}
             </p>
             <p style={{ margin: 0, fontSize: '12px', color: '#7E7E7E', lineHeight: '18px', letterSpacing: '0.0825px' }}>
-              Ensure catalog dimensions after packaging are used to calculate volumetric weight.{' '}
-              <span onClick={onLearnMore} style={{ color: '#006BFF', cursor: 'pointer' }}>Learn More</span>
+              {t('catalog:delivery.volumeHint')}{' '}
+              <span onClick={onLearnMore} style={{ color: '#006BFF', cursor: 'pointer' }}>{t('catalog:common.learnMore')}</span>
             </p>
           </div>
           <div style={{ display: 'flex', gap: '12px' }}>
-            <NumInput value={form.length} onChange={v => onChange('length', v)} placeholder="Length" unit="cm" error={errors.length} />
-            <NumInput value={form.width} onChange={v => onChange('width', v)} placeholder="Width" unit="cm" error={errors.width} />
-            <NumInput value={form.height} onChange={v => onChange('height', v)} placeholder="Height" unit="cm" error={errors.height} />
+            <NumInput value={form.length} onChange={v => onChange('length', v)} placeholder={t('catalog:common.lengthLabel')} unit="cm" error={errors.length} />
+            <NumInput value={form.width} onChange={v => onChange('width', v)} placeholder={t('catalog:common.widthLabel')} unit="cm" error={errors.width} />
+            <NumInput value={form.height} onChange={v => onChange('height', v)} placeholder={t('catalog:common.heightLabel')} unit="cm" error={errors.height} />
           </div>
         </div>
       </div>
@@ -124,14 +129,15 @@ export function DeliveryPropertiesModal({ initial, onClose, onSave, onLearnMore 
 
 // ─── "How to Calculate Size" info modal ─────────────────────────────────────────
 export function HowToCalculateSizeModal({ onClose }) {
+  const { t } = useTranslation();
   return (
     <Popup
       open
       onClose={onClose}
       platform="tablet"
-      title="How to Calculate Size"
-      description="Make sure to measure the catalog after it is packaged to avoid weight discrepancies with the shipping courier, which can result in additional shipping costs."
-      primaryAction={{ label: 'Okay, Got it', onClick: onClose }}
+      title={t('catalog:delivery.howToCalculateTitle')}
+      description={t('catalog:delivery.howToCalculateDesc')}
+      primaryAction={{ label: t('catalog:common.okayGotIt'), onClick: onClose }}
     >
       <div style={{ display: 'flex', justifyContent: 'center' }}>
         <svg width="180" height="170" viewBox="0 0 180 170" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -141,9 +147,9 @@ export function HowToCalculateSizeModal({ onClose }) {
           <path d="M40 62 L90 82 L90 138 L40 118 Z" fill="#C98E52" />
           <path d="M140 62 L90 82 L90 138 L140 118 Z" fill="#D9A066" />
           <path d="M90 42 L108 49 L58 69 L40 62 Z" fill="#F0C6A0" />
-          <text x="20" y="92" fill="#7E7E7E" fontSize="10" fontFamily="Lato, sans-serif">Height</text>
-          <text x="46" y="160" fill="#7E7E7E" fontSize="10" fontFamily="Lato, sans-serif">Length</text>
-          <text x="120" y="160" fill="#7E7E7E" fontSize="10" fontFamily="Lato, sans-serif">Width</text>
+          <text x="20" y="92" fill="#7E7E7E" fontSize="10" fontFamily="Lato, sans-serif">{t('catalog:common.heightLabel')}</text>
+          <text x="46" y="160" fill="#7E7E7E" fontSize="10" fontFamily="Lato, sans-serif">{t('catalog:common.lengthLabel')}</text>
+          <text x="120" y="160" fill="#7E7E7E" fontSize="10" fontFamily="Lato, sans-serif">{t('catalog:common.widthLabel')}</text>
         </svg>
       </div>
     </Popup>

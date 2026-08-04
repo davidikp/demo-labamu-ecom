@@ -13,7 +13,7 @@ function parseCombinedPhone(combined) {
   return { dialCode: match.dialCode, national: combined.slice(match.dialCode.length).trim() };
 }
 
-function FooterPhoneField({ value, onChange }) {
+function FooterPhoneField({ value, onChange, t }) {
   const [{ dialCode, national }, setState] = React.useState(() => parseCombinedPhone(value));
 
   const emit = (nextDialCode, nextNational) => {
@@ -22,7 +22,7 @@ function FooterPhoneField({ value, onChange }) {
 
   return (
     <PhoneField
-      label="Phone"
+      label={t('studio.common.phone')}
       dialCode={dialCode}
       value={national}
       onChange={(e) => {
@@ -86,7 +86,7 @@ const BusinessPanel = React.memo(({
                 label={`${t('studio.editor.banner')} (${banners.length}/3)`}
                 maxItems={3}
                 maxSizeMB={5}
-                items={banners.map((imgUrl, idx) => ({ id: String(idx), type: 'image', src: imgUrl, name: `Banner ${idx + 1}` }))}
+                items={banners.map((imgUrl, idx) => ({ id: String(idx), type: 'image', src: imgUrl, name: t('studio.panelContent.business.bannerItemLabel', { index: idx + 1 }) }))}
                 onAdd={(payload) => handleBannerFileSelect(fileFromPayload(payload))}
                 onReplace={(id, payload) => {
                   handleBannerRemove(Number(id));
@@ -101,31 +101,31 @@ const BusinessPanel = React.memo(({
 
       {/* ── Footer ── */}
       <div>
-        <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#111827', margin: '0 0 4px 0' }}>Footer</h3>
-        <p style={{ fontSize: '13px', color: '#9CA3AF', margin: '0 0 20px 0' }}>Contact details and description displayed at the bottom of your website.</p>
+        <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#111827', margin: '0 0 4px 0' }}>{t('studio.panelContent.business.footerTitle')}</h3>
+        <p style={{ fontSize: '13px', color: '#9CA3AF', margin: '0 0 20px 0' }}>{t('studio.panelContent.business.footerDesc')}</p>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
           <div>
             <TextField
-              label="Business Name"
+              label={t('studio.panelContent.business.businessNameLabel')}
               value={businessName}
               onChange={(e) => updateSharedConfig('businessName', e.target.value)}
-              placeholder={companyData?.businessName || 'Your business name'}
+              placeholder={companyData?.businessName || t('studio.panelContent.business.businessNamePlaceholder')}
             />
           </div>
           <div>
-            <FooterPhoneField value={footerPhone} onChange={val => updateSharedConfig('footerPhone', val)} />
+            <FooterPhoneField value={footerPhone} onChange={val => updateSharedConfig('footerPhone', val)} t={t} />
           </div>
           <div style={{ gridColumn: '1 / -1' }}>
             <TextField
-              label="Email"
+              label={t('studio.common.email')}
               value={footerEmail}
               onChange={(e) => updateSharedConfig('footerEmail', e.target.value)}
-              placeholder={companyData?.email || 'email@yourbusiness.com'}
+              placeholder={companyData?.email || t('studio.panelContent.business.emailPlaceholder')}
             />
           </div>
         </div>
         <LangPillsBar {...langBarProps} />
-        <InputField label="Footer Description" value={footerDesc} onChange={val => updateConfig('footerDesc', val)} placeholder={t('template_houzez.footer.desc')} isTextarea />
+        <InputField label={t('studio.panelContent.business.footerDescriptionLabel')} value={footerDesc} onChange={val => updateConfig('footerDesc', val)} placeholder={t('template_houzez.footer.desc')} isTextarea />
       </div>
     </div>
   );

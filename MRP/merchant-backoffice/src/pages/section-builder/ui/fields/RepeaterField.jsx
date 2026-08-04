@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   DndContext,
   closestCenter,
@@ -22,6 +23,7 @@ function summaryFor(item, itemSchema) {
 }
 
 function RepeaterItem({ item, index, itemSchema, expanded, onToggle, onChange, onRemove, palette, mediaLibrary, onAddMedia, onOpenLibrary }) {
+  const { t } = useTranslation();
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id });
   const summary = summaryFor(item, itemSchema);
 
@@ -33,7 +35,7 @@ function RepeaterItem({ item, index, itemSchema, expanded, onToggle, onChange, o
     >
       <div className="flex items-center gap-2 px-2 py-1.5">
         <span
-          aria-label="Drag to reorder"
+          aria-label={t('sectionBuilder:fields.repeaterField.dragToReorder')}
           className="cursor-grab touch-none text-gray-300"
           {...attributes}
           {...listeners}
@@ -41,13 +43,13 @@ function RepeaterItem({ item, index, itemSchema, expanded, onToggle, onChange, o
           ⠿
         </span>
         <button type="button" onClick={onToggle} className="min-w-0 flex-1 truncate text-left text-sm text-gray-700">
-          {summary ?? `Item ${index + 1}`}
+          {summary ?? t('sectionBuilder:fields.repeaterField.itemLabel', { n: index + 1 })}
         </button>
         <IconBtn
           icon={<X size={14} />}
           variant="danger-ghost"
           size="sm"
-          aria-label="Remove item"
+          aria-label={t('sectionBuilder:fields.repeaterField.removeItem')}
           onClick={onRemove}
         />
       </div>
@@ -74,6 +76,7 @@ function RepeaterItem({ item, index, itemSchema, expanded, onToggle, onChange, o
 
 /** US-4.7 — add/remove/reorder items, each collapsible, sub-fields pre-filled with defaults. */
 export default function RepeaterField({ field, value, onChange, palette, mediaLibrary, onAddMedia, onOpenLibrary }) {
+  const { t } = useTranslation();
   const items = value ?? [];
   const [expandedIds, setExpandedIds] = useState(() => new Set(items.map((i) => i.id)));
 
@@ -136,7 +139,7 @@ export default function RepeaterField({ field, value, onChange, palette, mediaLi
       )}
 
       <MainBtn
-        label={atMax ? `Max ${field.maxItems} items reached` : 'Add item'}
+        label={atMax ? t('sectionBuilder:fields.repeaterField.maxItemsReached', { n: field.maxItems }) : t('sectionBuilder:fields.repeaterField.addItem')}
         leftIcon={atMax ? undefined : <Plus size={16} />}
         variant="secondary"
         size="sm"

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { getThemePanelGroups } from '../state/themeSchemaAdapter';
 import { THEME_PRESETS } from '../sections/themePresets';
 import ThemeSchemaField from './fields/ThemeSchemaField';
@@ -6,6 +7,7 @@ import ContrastBadge from './fields/ContrastBadge';
 import ConfirmDialog from './ConfirmDialog';
 
 function PresetCard({ preset, onApply }) {
+  const { t } = useTranslation();
   const swatchKeys = ['primary', 'accent', 'background', 'text_primary'];
   return (
     <div
@@ -23,13 +25,14 @@ function PresetCard({ preset, onApply }) {
         onClick={() => onApply(preset)}
         className="w-full rounded-md border border-gray-200 py-1 text-xs text-gray-700 hover:bg-gray-50"
       >
-        Apply
+        {t('sectionBuilder:editor.themePanel.apply')}
       </button>
     </div>
   );
 }
 
 function ButtonSample({ buttons }) {
+  const { t } = useTranslation();
   return (
     <button
       type="button"
@@ -46,7 +49,7 @@ function ButtonSample({ buttons }) {
       }}
       className="border border-gray-900 bg-gray-900 text-sm text-white"
     >
-      Add to cart
+      {t('sectionBuilder:editor.themePanel.addToCartSample')}
     </button>
   );
 }
@@ -58,15 +61,16 @@ function ButtonSample({ buttons }) {
  * no new panel code.
  */
 export default function ThemePanel({ theme, onFieldChange, onApplyPreset }) {
+  const { t } = useTranslation();
   const [pendingPreset, setPendingPreset] = useState(null);
   const groups = getThemePanelGroups();
 
   return (
     <aside className="w-[280px] min-w-[240px] shrink-0 overflow-y-auto border-l border-gray-200 bg-white p-4">
-      <h2 className="mb-3 text-sm font-semibold text-gray-900">Theme</h2>
+      <h2 className="mb-3 text-sm font-semibold text-gray-900">{t('sectionBuilder:editor.themePanel.heading')}</h2>
 
       <div className="mb-4">
-        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">Presets</p>
+        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">{t('sectionBuilder:editor.themePanel.presets')}</p>
         <div className="grid grid-cols-2 gap-2">
           {THEME_PRESETS.map((preset) => (
             <PresetCard key={preset.id} preset={preset} onApply={setPendingPreset} />
@@ -96,7 +100,7 @@ export default function ThemePanel({ theme, onFieldChange, onApplyPreset }) {
             ))}
             {group.key === 'buttons' && (
               <div>
-                <p className="mb-1 text-xs font-medium text-gray-700">Sample</p>
+                <p className="mb-1 text-xs font-medium text-gray-700">{t('sectionBuilder:editor.themePanel.sample')}</p>
                 <ButtonSample buttons={theme.buttons} />
               </div>
             )}
@@ -108,9 +112,9 @@ export default function ThemePanel({ theme, onFieldChange, onApplyPreset }) {
         open={Boolean(pendingPreset)}
         title={
           pendingPreset &&
-          `Apply ${pendingPreset.name}? This will replace your current fonts and colors. Your section content won't change.`
+          t('sectionBuilder:editor.themePanel.applyPresetConfirmTitle', { name: pendingPreset.name })
         }
-        confirmLabel="Apply"
+        confirmLabel={t('sectionBuilder:editor.themePanel.apply')}
         onConfirm={() => {
           onApplyPreset(pendingPreset);
           setPendingPreset(null);

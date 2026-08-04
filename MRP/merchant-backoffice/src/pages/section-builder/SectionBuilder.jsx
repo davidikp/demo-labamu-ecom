@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { LocaleProvider, Snackbar } from '../../ce-ui';
 import { useSectionBuilder } from './state/useSectionBuilder';
 import { ACTIONS } from './state/builderReducer';
@@ -23,6 +24,18 @@ import { countEntitiesUsingSlot } from './sections/themeHelpers';
 import { createInitialCheckState, allChecksPass } from './sections/publishChecks';
 import { schemaForType } from './sections/index';
 import { defaultsForSchema } from './sections/schemaDefaults';
+import {
+  seedBlocks,
+  makeBlock,
+  blockTypeDef,
+  blockSelectionId,
+  parseBlockSelection,
+  sectionSupportsBlocks,
+  isAtBlockMax,
+  resolveBlockPath,
+} from './sections/blockHelpers';
+import BlockList from './ui/BlockList';
+import SectionPickerModal from './ui/SectionPickerModal';
 
 registerBuilderMocks();
 
@@ -43,6 +56,7 @@ const THEME_PANEL_SELECTION = 'theme-settings';
 const MEDIA_PANEL_SELECTION = 'media-library';
 
 export default function SectionBuilder() {
+  const { t } = useTranslation();
   const { storeId } = useParams();
   const {
     state,
@@ -65,6 +79,8 @@ export default function SectionBuilder() {
   const [publishDrawerOpen, setPublishDrawerOpen] = useState(false);
   const [publishCheckState, setPublishCheckState] = useState(createInitialCheckState);
   const [discardConfirmOpen, setDiscardConfirmOpen] = useState(false);
+  const [deleteTargetId, setDeleteTargetId] = useState(null);
+  const [sectionPickerIndex, setSectionPickerIndex] = useState(null);
   const [publishToastOpen, setPublishToastOpen] = useState(false);
   const [mediaPicker, setMediaPicker] = useState(null); // { onPick } | null
 
@@ -78,12 +94,24 @@ export default function SectionBuilder() {
   const sections = useMemo(() => activePage?.sections ?? [], [activePage]);
   const selectedId = state.selection.id;
 
-  const selectedEntity =
-    selectedId === 'header'
-      ? state.header
-      : selectedId === 'footer'
-      ? state.footer
-      : sections.find((s) => s.id === selectedId) ?? null;
+  const blockSel = parseBlockSelection(selectedId);
+  const selectedEntity = blockSel
+    ? null
+    : selectedId === 'header'
+    ? state.header
+    : selectedId === 'footer'
+    ? state.footer
+    : sections.find((s) => s.id === selectedId) ?? null;
+
+  const selectedBlockSection = blockSel ? sections.find((s) => s.id === blockSel.sectionId) ?? null : null;
+  // `blockChain` resolves the full ancestor chain (top-level block → deepest
+  // nested block) addressed by the selection path, so a group nested inside a
+  // group inside a group is still reachable, not just one level.
+  const blockChain = blockSel ? resolveBlockPath(selectedBlockSection?.blocks, blockSel.path) : null;
+  const selectedBlock = blockChain?.length ? blockChain[blockChain.length - 1] : null;
+  // Path to the immediate container (group) holding `selectedBlock` — [] for
+  // a top-level block, otherwise the ids of every ancestor group above it.
+  const blockParentPath = blockSel ? blockSel.path.slice(0, -1) : [];
 
   // US-10.2 — Canvas wraps each section's Renderer in React.memo so editing
   // one section doesn't re-render its siblings. That only pays off if the
@@ -103,7 +131,14 @@ export default function SectionBuilder() {
     dispatch({
       type: ACTIONS.TOGGLE_GLOBAL_HIDDEN,
       which,
-      meta: { label: `${state[which].hidden ? 'Show' : 'Hide'} ${labelForType(which)}` },
+      meta: {
+        label: t(
+          state[which].hidden
+            ? 'sectionBuilder:editor.sectionBuilder.actions.show'
+            : 'sectionBuilder:editor.sectionBuilder.actions.hide',
+          { label: labelForType(which) }
+        ),
+      },
     });
 
   const handleReorder = (orderedIds) =>
@@ -111,19 +146,41 @@ export default function SectionBuilder() {
       type: ACTIONS.REORDER_SECTIONS,
       pageId: activePage.id,
       orderedIds,
-      meta: { label: 'Reorder sections' },
+      meta: { label: t('sectionBuilder:editor.sectionBuilder.actions.reorderSections') },
     });
 
-  const handleAdd = (type) => {
-    const currentIndex = sections.findIndex((s) => s.id === selectedId);
-    dispatch({
-      type: ACTIONS.ADD_SECTION,
-      pageId: activePage.id,
-      section: { id: createSectionId(type), type, data: defaultsForSchema(schemaForType(type)) },
-      index: currentIndex === -1 ? undefined : currentIndex + 1,
-      meta: { label: `Add ${labelForType(type)}` },
-    });
-  };
+  const handleAddSectionAt = useCallback(
+    (type, index) =>
+      dispatch({
+        type: ACTIONS.ADD_SECTION,
+        pageId: activePageId,
+        section: { id: createSectionId(type), type, data: defaultsForSchema(schemaForType(type)), blocks: seedBlocks(type) },
+        index,
+        meta: { label: t('sectionBuilder:editor.sectionBuilder.actions.addSection', { type: labelForType(type) }) },
+      }),
+    [activePageId, dispatch, t]
+  );
+
+  // Inline, on-canvas text edits (Shopify-style). Routed through the same
+  // field coalescer as the settings panel so a burst of keystrokes collapses
+  // into a single undo entry. `entityId` is a section id, or 'header'/'footer'.
+  const handleInlineEdit = useCallback(
+    (entityId, key, value) => {
+      const isGlobal = entityId === 'header' || entityId === 'footer';
+      const type = isGlobal ? entityId : sectionsRef.current.find((s) => s.id === entityId)?.type;
+      const meta = {
+        label: t('sectionBuilder:editor.sectionBuilder.actions.fieldChange', {
+          type: labelForType(type),
+          field: key,
+        }),
+      };
+      const action = isGlobal
+        ? { type: ACTIONS.UPDATE_GLOBAL_DATA, which: entityId, data: { [key]: value }, meta }
+        : { type: ACTIONS.UPDATE_SECTION_DATA, pageId: activePageId, sectionId: entityId, data: { [key]: value }, meta };
+      commitField(`${entityId}:${key}`, action);
+    },
+    [activePageId, commitField, t]
+  );
 
   const handleMoveSection = useCallback(
     (sectionId, direction) =>
@@ -132,7 +189,7 @@ export default function SectionBuilder() {
         pageId: activePageId,
         sectionId,
         direction,
-        meta: { label: 'Reorder sections' },
+        meta: { label: t('sectionBuilder:editor.sectionBuilder.actions.reorderSections') },
       }),
     [activePageId, dispatch]
   );
@@ -145,11 +202,13 @@ export default function SectionBuilder() {
         pageId: activePageId,
         sectionId,
         newId: createSectionId('copy'),
-        meta: { label: `Duplicate ${labelForType(original?.type)}` },
+        meta: { label: t('sectionBuilder:editor.sectionBuilder.actions.duplicateSection', { type: labelForType(original?.type) }) },
       });
     },
     [activePageId, dispatch]
   );
+
+  const requestDeleteSection = useCallback((sectionId) => setDeleteTargetId(sectionId), []);
 
   const handleDeleteSection = useCallback(
     (sectionId) => {
@@ -158,15 +217,133 @@ export default function SectionBuilder() {
         type: ACTIONS.REMOVE_SECTION,
         pageId: activePageId,
         sectionId,
-        meta: { label: `Delete ${labelForType(target?.type)}` },
+        meta: { label: t('sectionBuilder:editor.sectionBuilder.actions.deleteSection', { type: labelForType(target?.type) }) },
       });
     },
     [activePageId, dispatch]
   );
 
+  // ── Blocks ────────────────────────────────────────────────────────────
+  const handleAddBlock = useCallback(
+    (sectionId, blockType, index, parentPath) => {
+      const section = sectionsRef.current.find((s) => s.id === sectionId);
+      const def = blockTypeDef(section?.type, blockType);
+      dispatch({
+        type: ACTIONS.ADD_BLOCK,
+        pageId: activePageId,
+        sectionId,
+        block: makeBlock(section?.type, blockType),
+        index,
+        parentPath,
+        meta: { label: t('sectionBuilder:editor.sectionBuilder.actions.addBlock', { type: def?.label ?? 'Block' }) },
+      });
+    },
+    [activePageId, dispatch, t]
+  );
+
+  const handleRemoveBlock = useCallback(
+    (sectionId, blockId, parentPath) =>
+      dispatch({
+        type: ACTIONS.REMOVE_BLOCK,
+        pageId: activePageId,
+        sectionId,
+        blockId,
+        parentPath,
+        meta: { label: t('sectionBuilder:editor.sectionBuilder.actions.removeBlock') },
+      }),
+    [activePageId, dispatch, t]
+  );
+
+  const handleReorderBlocks = useCallback(
+    (sectionId, orderedIds, parentPath) =>
+      dispatch({
+        type: ACTIONS.REORDER_BLOCKS,
+        pageId: activePageId,
+        sectionId,
+        orderedIds,
+        parentPath,
+        meta: { label: t('sectionBuilder:editor.sectionBuilder.actions.reorderBlocks') },
+      }),
+    [activePageId, dispatch, t]
+  );
+
+  // Cross-container move (the sidebar layers tree's drag-and-drop) — moves a
+  // block from one container to another at any depth, including into or out
+  // of a group, in one undo step.
+  const handleMoveBlockToPath = useCallback(
+    (sectionId, blockId, fromParentPath, toParentPath, toIndex) =>
+      dispatch({
+        type: ACTIONS.MOVE_BLOCK_TO_PATH,
+        pageId: activePageId,
+        sectionId,
+        blockId,
+        fromParentPath,
+        toParentPath,
+        toIndex,
+        meta: { label: t('sectionBuilder:editor.sectionBuilder.actions.reorderBlocks') },
+      }),
+    [activePageId, dispatch, t]
+  );
+
+  const handleSelectBlock = useCallback(
+    (sectionId, path) => select(blockSelectionId(sectionId, path)),
+    [select]
+  );
+
+  // Field change for the currently-selected block; text-like fields coalesce
+  // into one undo entry, same as section/inline edits.
+  const handleBlockFieldChange = (key, value, field) => {
+    if (!blockSel || !selectedBlock) return;
+    const meta = {
+      label: t('sectionBuilder:editor.sectionBuilder.actions.fieldChange', {
+        type: blockTypeDef(selectedBlockSection?.type, selectedBlock?.type)?.label ?? 'Block',
+        field: field.label,
+      }),
+    };
+    const action = {
+      type: ACTIONS.UPDATE_BLOCK_DATA,
+      pageId: activePageId,
+      sectionId: blockSel.sectionId,
+      blockId: selectedBlock.id,
+      parentPath: blockParentPath,
+      data: { [key]: value },
+      meta,
+    };
+    if (TEXT_LIKE_FIELD_TYPES.has(field.type)) {
+      commitField(`${blockSel.sectionId}:${selectedBlock.id}:${key}`, action);
+    } else {
+      dispatch(action);
+    }
+  };
+
+  // On-canvas inline text edit targeting a specific block, addressed by its
+  // full path (top-level block id → … → target block id) within the section.
+  const handleBlockInlineEdit = useCallback(
+    (sectionId, path, key, value) => {
+      const blockId = path[path.length - 1];
+      const parentPath = path.slice(0, -1);
+      const action = {
+        type: ACTIONS.UPDATE_BLOCK_DATA,
+        pageId: activePageId,
+        sectionId,
+        blockId,
+        parentPath,
+        data: { [key]: value },
+        meta: { label: t('sectionBuilder:editor.sectionBuilder.actions.fieldChange', { type: 'Block', field: key }) },
+      };
+      commitField(`${sectionId}:${path.join('>')}:${key}`, action);
+    },
+    [activePageId, commitField, t]
+  );
+
   const handleFieldChange = (key, value, field) => {
     const isGlobal = selectedId === 'header' || selectedId === 'footer';
-    const meta = { label: `${labelForType(selectedEntity?.type)} → ${field.label}` };
+    const meta = {
+      label: t('sectionBuilder:editor.sectionBuilder.actions.fieldChange', {
+        type: labelForType(selectedEntity?.type),
+        field: field.label,
+      }),
+    };
     const action = isGlobal
       ? { type: ACTIONS.UPDATE_GLOBAL_DATA, which: selectedId, data: { [key]: value }, meta }
       : { type: ACTIONS.UPDATE_SECTION_DATA, pageId: activePage.id, sectionId: selectedId, data: { [key]: value }, meta };
@@ -184,17 +361,17 @@ export default function SectionBuilder() {
     dispatch({
       type: ACTIONS.ADD_PAGE,
       page: { id: createPageId(slug), name, type: 'custom', slug: `/${slug}`, sections: [], seo: {}, hiddenFromNav: false },
-      meta: { label: `Add page — ${name}` },
+      meta: { label: t('sectionBuilder:editor.sectionBuilder.actions.addPage', { name }) },
     });
 
   const handleRenamePage = (pageId, name) =>
-    dispatch({ type: ACTIONS.RENAME_PAGE, pageId, name, meta: { label: 'Rename page' } });
+    dispatch({ type: ACTIONS.RENAME_PAGE, pageId, name, meta: { label: t('sectionBuilder:editor.sectionBuilder.actions.renamePage') } });
   const handleDeletePage = (pageId) =>
-    dispatch({ type: ACTIONS.DELETE_PAGE, pageId, meta: { label: 'Delete page' } });
+    dispatch({ type: ACTIONS.DELETE_PAGE, pageId, meta: { label: t('sectionBuilder:editor.sectionBuilder.actions.deletePage') } });
   const handleUpdatePageSeo = (pageId, seo) =>
-    dispatch({ type: ACTIONS.UPDATE_PAGE_SEO, pageId, seo, meta: { label: 'Update page SEO' } });
+    dispatch({ type: ACTIONS.UPDATE_PAGE_SEO, pageId, seo, meta: { label: t('sectionBuilder:editor.sectionBuilder.actions.updatePageSeo') } });
   const handleTogglePageNavHidden = (pageId) =>
-    dispatch({ type: ACTIONS.TOGGLE_PAGE_NAV_HIDDEN, pageId, meta: { label: 'Toggle page navigation visibility' } });
+    dispatch({ type: ACTIONS.TOGGLE_PAGE_NAV_HIDDEN, pageId, meta: { label: t('sectionBuilder:editor.sectionBuilder.actions.togglePageNav') } });
 
   const handleOpenTheme = () => select(THEME_PANEL_SELECTION);
   const handleOpenMedia = () => select(MEDIA_PANEL_SELECTION);
@@ -220,7 +397,7 @@ export default function SectionBuilder() {
       type: ACTIONS.APPLY_THEME_PRESET,
       colors: preset.colors,
       typography: preset.typography,
-      meta: { label: `Theme preset → ${preset.name}` },
+      meta: { label: t('sectionBuilder:editor.sectionBuilder.actions.themePreset', { name: preset.name }) },
     });
 
   const handlePreview = () => {
@@ -294,7 +471,10 @@ export default function SectionBuilder() {
           onSelect={select}
           onToggleGlobalHidden={handleToggleGlobalHidden}
           onReorder={handleReorder}
-          onAdd={handleAdd}
+          onSelectBlock={handleSelectBlock}
+          onAddBlock={handleAddBlock}
+          onMoveBlock={handleMoveBlockToPath}
+          onRequestAddSection={() => setSectionPickerIndex(sections.length)}
           onOpenTheme={handleOpenTheme}
           onOpenMedia={handleOpenMedia}
           pages={state.pages}
@@ -317,7 +497,12 @@ export default function SectionBuilder() {
           onDeselect={deselect}
           onMoveSection={handleMoveSection}
           onDuplicateSection={handleDuplicateSection}
-          onDeleteSection={handleDeleteSection}
+          onDeleteSection={requestDeleteSection}
+          onRequestAddSection={setSectionPickerIndex}
+          onInlineEdit={handleInlineEdit}
+          onSelectBlock={handleSelectBlock}
+          onAddBlock={handleAddBlock}
+          onBlockInlineEdit={handleBlockInlineEdit}
           theme={state.theme}
           mediaLibrary={state.mediaLibrary}
         />
@@ -337,6 +522,34 @@ export default function SectionBuilder() {
               onDelete={handleDeleteMedia}
             />
           </aside>
+        ) : blockSel && selectedBlock ? (
+          <SettingsPanel
+            entity={{ type: selectedBlock.type, data: selectedBlock.data }}
+            schema={blockTypeDef(null, selectedBlock.type)?.fields ?? {}}
+            title={blockTypeDef(null, selectedBlock.type)?.label ?? 'Block'}
+            onBack={() => select(blockParentPath.length ? blockSelectionId(blockSel.sectionId, blockParentPath) : blockSel.sectionId)}
+            palette={state.theme.colors}
+            onFieldChange={handleBlockFieldChange}
+            mediaLibrary={state.mediaLibrary}
+            onAddMedia={handleAddMedia}
+            onOpenLibrary={handleOpenLibraryPicker}
+            footer={
+              blockTypeDef(null, selectedBlock.type)?.container ? (
+                <BlockList
+                  sectionType={selectedBlockSection?.type}
+                  addTypes={blockTypeDef(null, selectedBlock.type)?.childTypes}
+                  blocks={selectedBlock.blocks}
+                  atMax={false}
+                  onAdd={(blockType) => handleAddBlock(blockSel.sectionId, blockType, undefined, [...blockParentPath, selectedBlock.id])}
+                  onRemove={(childId) => handleRemoveBlock(blockSel.sectionId, childId, [...blockParentPath, selectedBlock.id])}
+                  onReorder={(orderedIds) => handleReorderBlocks(blockSel.sectionId, orderedIds, [...blockParentPath, selectedBlock.id])}
+                  onSelect={(childId) => handleSelectBlock(blockSel.sectionId, [...blockParentPath, selectedBlock.id, childId])}
+                />
+              ) : null
+            }
+            onRemove={() => handleRemoveBlock(blockSel.sectionId, selectedBlock.id, blockParentPath)}
+            removeLabel={t('sectionBuilder:editor.blockList.remove', 'Remove block')}
+          />
         ) : (
           <SettingsPanel
             entity={selectedEntity}
@@ -345,6 +558,24 @@ export default function SectionBuilder() {
             mediaLibrary={state.mediaLibrary}
             onAddMedia={handleAddMedia}
             onOpenLibrary={handleOpenLibraryPicker}
+            footer={
+              selectedEntity && sectionSupportsBlocks(selectedEntity.type) ? (
+                <BlockList
+                  sectionType={selectedEntity.type}
+                  blocks={selectedEntity.blocks}
+                  atMax={isAtBlockMax(selectedEntity.type, selectedEntity.blocks)}
+                  onAdd={(blockType) => handleAddBlock(selectedId, blockType)}
+                  onRemove={(blockId) => handleRemoveBlock(selectedId, blockId)}
+                  onReorder={(orderedIds) => handleReorderBlocks(selectedId, orderedIds)}
+                  onSelect={(blockId) => handleSelectBlock(selectedId, blockId)}
+                />
+              ) : null
+            }
+            onRemove={
+              selectedId && selectedId !== 'header' && selectedId !== 'footer' && sections.some((s) => s.id === selectedId)
+                ? () => requestDeleteSection(selectedId)
+                : undefined
+            }
           />
         )}
       </div>
@@ -357,10 +588,34 @@ export default function SectionBuilder() {
         onClose={() => setPublishDrawerOpen(false)}
       />
 
+      <SectionPickerModal
+        open={sectionPickerIndex !== null}
+        onClose={() => setSectionPickerIndex(null)}
+        onPick={(type) => {
+          handleAddSectionAt(type, sectionPickerIndex);
+          setSectionPickerIndex(null);
+        }}
+        theme={state.theme}
+        mediaLibrary={state.mediaLibrary}
+      />
+
+      <ConfirmDialog
+        open={deleteTargetId !== null}
+        title={t('sectionBuilder:editor.canvas.deleteConfirm.heading', 'Delete this section?')}
+        description={t('sectionBuilder:editor.canvas.deleteConfirm.message', "This can't be undone.")}
+        confirmLabel={t('sectionBuilder:editor.common.delete')}
+        danger
+        onConfirm={() => {
+          handleDeleteSection(deleteTargetId);
+          setDeleteTargetId(null);
+        }}
+        onCancel={() => setDeleteTargetId(null)}
+      />
+
       <ConfirmDialog
         open={discardConfirmOpen}
-        title="Discard all unpublished changes? Your store will revert to the last published version. This can't be undone."
-        confirmLabel="Discard"
+        title={t('sectionBuilder:editor.sectionBuilder.discardConfirm.title')}
+        confirmLabel={t('sectionBuilder:editor.sectionBuilder.discardConfirm.confirmLabel')}
         danger
         onConfirm={confirmDiscard}
         onCancel={() => setDiscardConfirmOpen(false)}
@@ -368,9 +623,9 @@ export default function SectionBuilder() {
 
       {publishToastOpen && (
         <Snackbar
-          message="Your store is live!"
+          message={t('sectionBuilder:editor.sectionBuilder.publishSuccess.message')}
           variant="success"
-          action={{ label: 'View live store →', onClick: handleViewLiveStore }}
+          action={{ label: t('sectionBuilder:editor.sectionBuilder.publishSuccess.viewLiveStore'), onClick: handleViewLiveStore }}
           onClose={() => setPublishToastOpen(false)}
         />
       )}

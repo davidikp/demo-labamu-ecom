@@ -12,6 +12,7 @@ import { Dropdown as CeDropdown, TextField, NumberField } from '../../../../ce-u
 import useRegions from '../../../../hooks/useRegions';
 import { fetchZipCode } from '../../../../services/regions';
 import StaticMapPreview from '../../../../components/StaticMapPreview';
+import lalamoveLogo from '../../../../assets/delivery/lalamove-logo.png';
 import { MapContainer, TileLayer, Marker } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -76,8 +77,7 @@ const CUSTOMER_PLACE_SUGGESTIONS = [
 ];
 
 const LALAMOVE_DELIVERY_OPTIONS = [
-  { id: 'instant', label: 'Instant Delivery', guarantee: 'Arrival guarantee: Today (9 Jul)', cost: 24000 },
-  { id: 'scheduled', label: 'Scheduled Delivery', guarantee: 'Arrival guarantee: 12-14 Sep', cost: 16000 },
+  { id: 'lalamove', label: 'Lalamove', cost: 24000 },
 ];
 
 // Demo-only Lalamove coverage check — no real courier coverage API wired up yet.
@@ -160,7 +160,7 @@ export function HouzezPreview({
   const [orderNotesEnabled, setOrderNotesEnabled] = useState(false);
   const [orderNotesText, setOrderNotesText] = useState('');
   const [shippingMethod, setShippingMethod] = useState('delivery'); // 'delivery' | 'pickup'
-  const [deliveryOption, setDeliveryOption] = useState(null); // null | 'instant' | 'scheduled'
+  const [deliveryOption, setDeliveryOption] = useState(null); // null | 'lalamove'
   const [customerInfo, setCustomerInfo] = useState(null); // { name, phone, email, address, ... } | null
   const [customerModalStep, setCustomerModalStep] = useState(null); // null | 'phone' | 'detail'
   const [customerPhoneInput, setCustomerPhoneInput] = useState('');
@@ -172,6 +172,7 @@ export function HouzezPreview({
   const [customerPinpointOptions, setCustomerPinpointOptions] = useState([]);
   const [customerPinpointLoading, setCustomerPinpointLoading] = useState(false);
   const [customerSelectedPlace, setCustomerSelectedPlace] = useState(null);
+  const [, setPickupLocationRetryCount] = useState(0);
   const customerPinpointTimeoutRef = useRef(null);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [detailQty, setDetailQty] = useState(1);
@@ -821,6 +822,10 @@ export function HouzezPreview({
         errors[field] = hpT('checkout.customer.fieldRequired', 'Field cannot be empty');
       }
     });
+    const draftPhone = String(customerDetailDraft?.phone || '').trim();
+    if (!errors.phone && draftPhone && draftPhone !== customerInfo?.phone && MOCK_CUSTOMERS_DB[draftPhone]) {
+      errors.phone = hpT('checkout.customer.phoneAlreadyRegistered', 'This phone number is already registered');
+    }
     setCustomerDetailErrors(errors);
     if (Object.keys(errors).length > 0) return;
     setCustomerInfo({ ...customerDetailDraft, fullAddress: buildFullAddress(customerDetailDraft) });
@@ -1534,14 +1539,14 @@ export function HouzezPreview({
                         {builderConfig?.contact?.requiredFields?.salutation && (
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                             <label style={{ fontSize: '13px', fontWeight: 600, color: '#374151' }}>
-                              Salutation
+                              {t('website:shop.salutation')}
                               <span style={{ color: '#EF4444', marginLeft: '4px' }}>*</span>
                             </label>
                             <Dropdown
                               options={SALUTATION_OPTIONS}
                               selected={salutationVal}
                               onSelect={setSalutationVal}
-                              placeholder="Select salutation"
+                              placeholder={t('website:shop.selectSalutation')}
                               hideSearch
                               style={{ height: '48px', borderRadius: '8px' }}
                             />
@@ -1718,7 +1723,7 @@ export function HouzezPreview({
                                   <div style={{ flex: 1, minWidth: 0 }}>
                                     <div style={{ fontSize: '14px', fontWeight: 600, color: '#111827' }}>{item.product.name}</div>
                                     <div style={{ fontSize: '12px', color: '#6B7280', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                      <span>Qty: {item.qty}</span>
+                                      <span>{t('website:shop.qty')} {item.qty}</span>
                                       {item.notes && <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '160px' }}>· {item.notes}</span>}
                                       {item.files?.length > 0 && (
                                         <span style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
@@ -2205,9 +2210,17 @@ export function HouzezPreview({
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                 <h4 style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: '#374151' }}>{hpT('checkout.customer.title', 'Customer Information')}</h4>
                 {customerInfo && (
-                  <button onClick={openCustomerModal} style={{ background: 'none', border: 'none', color: '#16894B', fontSize: '12px', fontWeight: 600, cursor: 'pointer', padding: 0 }}>
-                    {hpT('checkout.customer.change', 'Change')}
-                  </button>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <button
+                      onClick={() => { setCustomerInfo(null); setDeliveryOption(null); setShippingCalculatedSignature(null); }}
+                      style={{ background: 'none', border: 'none', color: '#DC2626', fontSize: '12px', fontWeight: 600, cursor: 'pointer', padding: 0 }}
+                    >
+                      {hpT('checkout.customer.reset', 'Reset')}
+                    </button>
+                    <button onClick={openCustomerModal} style={{ background: 'none', border: 'none', color: '#16894B', fontSize: '12px', fontWeight: 600, cursor: 'pointer', padding: 0 }}>
+                      {hpT('checkout.customer.edit', 'Edit')}
+                    </button>
+                  </div>
                 )}
               </div>
               {customerInfo ? (
@@ -2215,6 +2228,12 @@ export function HouzezPreview({
                   <p style={{ margin: '0 0 4px', fontSize: '14px', fontWeight: 700, color: '#1A1A1A' }}>{customerInfo.name}</p>
                   <p style={{ margin: '0 0 4px', fontSize: '13px', color: '#4B5563' }}>+62{customerInfo.phone}{customerInfo.email ? ` | ${customerInfo.email}` : ''}</p>
                   {(customerInfo.fullAddress || customerInfo.address) && <p style={{ margin: '0 0 4px', fontSize: '13px', color: '#6B7280' }}>{customerInfo.fullAddress || customerInfo.address}</p>}
+                  {customerInfo.pinpointAddress && (
+                    <p style={{ margin: '0 0 4px', fontSize: '13px', color: '#374151', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0 }}><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                      {hpT('checkout.customer.pinnedLabel', 'Pinpoint Address')}
+                    </p>
+                  )}
                   {customerInfo.notes && <p style={{ margin: 0, fontSize: '13px', color: '#6B7280' }}>{hpT('checkout.customer.notesLabel', 'Notes')}: {customerInfo.notes}</p>}
                 </div>
               ) : (
@@ -2259,9 +2278,11 @@ export function HouzezPreview({
                   </button>
                 </div>
                 {shippingMethod === 'delivery' && !customerInfo && (
-                  <p style={{ margin: '12px 0 0', fontSize: '12px', color: '#9CA3AF' }}>
-                    {hpT('checkout.shipping.courierNeedsCustomer', 'Add customer information to see courier options.')}
-                  </p>
+                  <div style={{ marginTop: '12px', border: '1.5px dashed #D1D5DB', borderRadius: '8px', padding: '20px 14px', display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
+                    <p style={{ margin: 0, fontSize: '13px', color: '#9CA3AF' }}>
+                      {hpT('checkout.shipping.courierNeedsCustomer', 'Add customer information to see courier options.')}
+                    </p>
+                  </div>
                 )}
                 {shippingMethod === 'delivery' && customerInfo && isOutOfLalamoveCoverage && (
                   <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start', background: '#FFF7ED', border: '1px solid #FDBA74', borderRadius: '8px', padding: '12px', marginTop: '12px' }}>
@@ -2272,32 +2293,26 @@ export function HouzezPreview({
                   </div>
                 )}
                 {shippingMethod === 'delivery' && customerInfo && !isOutOfLalamoveCoverage && (
-                  <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column' }}>
                     {LALAMOVE_DELIVERY_OPTIONS.map(option => (
                       <button
                         key={option.id}
                         onClick={() => setDeliveryOption(option.id)}
                         style={{
-                          display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '10px',
-                          padding: '12px', borderRadius: '8px', textAlign: 'left', cursor: 'pointer',
-                          border: deliveryOption === option.id ? '1.5px solid #1A1A1A' : '1px solid #E5E7EB',
-                          background: '#FFF',
+                          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px',
+                          padding: '10px 2px', textAlign: 'left', cursor: 'pointer',
+                          border: 'none', borderTop: '1px solid #F3F4F6', background: 'none',
                         }}
                       >
-                        <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                           <span style={{
-                            marginTop: '3px', width: '14px', height: '14px', borderRadius: '50%', flexShrink: 0,
+                            width: '14px', height: '14px', borderRadius: '50%', flexShrink: 0,
                             border: '1.5px solid #1A1A1A', display: 'flex', alignItems: 'center', justifyContent: 'center',
                           }}>
                             {deliveryOption === option.id && <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#1A1A1A' }} />}
                           </span>
-                          <div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
-                              <span style={{ fontSize: '11px', fontWeight: 800, color: '#EE4D2D', letterSpacing: '0.02em' }}>⚡LALAMOVE</span>
-                              <span style={{ fontSize: '13px', fontWeight: 700, color: '#1A1A1A' }}>{option.label}</span>
-                            </div>
-                            <p style={{ margin: 0, fontSize: '12px', color: '#6B7280' }}>{option.guarantee}</p>
-                          </div>
+                          <img src={lalamoveLogo} alt="Lalamove" style={{ height: '16px', width: 'auto', objectFit: 'contain' }} />
+                          <span style={{ fontSize: '13px', fontWeight: 700, color: '#1A1A1A' }}>{option.label}</span>
                         </div>
                         <span style={{ fontSize: '13px', fontWeight: 700, color: '#1A1A1A', whiteSpace: 'nowrap' }}>{formatRp(deliveryOptionCosts[option.id])}</span>
                       </button>
@@ -2305,13 +2320,32 @@ export function HouzezPreview({
                   </div>
                 )}
                 {shippingMethod === 'pickup' && (
-                  <div style={{ marginTop: '12px', display: 'flex', gap: '10px', alignItems: 'flex-start', background: '#F9FAFB', borderRadius: '8px', padding: '12px' }}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6B7280" strokeWidth="2" style={{ flexShrink: 0, marginTop: '2px' }}><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
-                    <div>
-                      <p style={{ margin: 0, fontSize: '12px', color: '#6B7280' }}>{hpT('checkout.shipping.pickupLocationLabel', 'Pick Up Purchase in Store')}</p>
-                      <p style={{ margin: '2px 0 0', fontSize: '13px', fontWeight: 700, color: '#1A1A1A' }}>{builderConfig?.storeAddress || hpT('checkout.shipping.pickupLocationDefault', 'Store address not set')}</p>
+                  builderConfig?.storeAddress ? (
+                    <div style={{ marginTop: '12px', display: 'flex', gap: '10px', alignItems: 'flex-start', background: '#F9FAFB', borderRadius: '8px', padding: '12px' }}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6B7280" strokeWidth="2" style={{ flexShrink: 0, marginTop: '2px' }}><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                      <div>
+                        <p style={{ margin: 0, fontSize: '12px', color: '#6B7280' }}>{hpT('checkout.shipping.pickupLocationLabel', 'Pick Up Purchase in Store')}</p>
+                        <p style={{ margin: '2px 0 0', fontSize: '13px', fontWeight: 700, color: '#1A1A1A' }}>{builderConfig.storeAddress}</p>
+                      </div>
                     </div>
-                  </div>
+                  ) : (
+                    <div style={{ marginTop: '12px' }}>
+                      <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', background: '#FFF', border: '1px solid #DC2626', borderRadius: '8px', padding: '12px' }}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6B7280" strokeWidth="2" style={{ flexShrink: 0, marginTop: '2px' }}><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                        <div>
+                          <p style={{ margin: 0, fontSize: '12px', color: '#6B7280' }}>{hpT('checkout.shipping.pickupLocationLabel', 'Pick Up Purchase in Store')}</p>
+                          <p style={{ margin: '2px 0 0', fontSize: '13px', fontWeight: 700, color: '#DC2626' }}>{hpT('checkout.shipping.pickupLocationError', 'Unable to load pickup location')}</p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => setPickupLocationRetryCount(c => c + 1)}
+                        style={{ marginTop: '10px', display: 'flex', alignItems: 'center', gap: '6px', background: 'none', border: 'none', color: '#374151', fontSize: '13px', fontWeight: 600, cursor: 'pointer', padding: 0 }}
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 12a9 9 0 1 1 3 6.7"/><path d="M3 16v-4h4"/></svg>
+                        {hpT('checkout.shipping.reloadLocation', 'Reload Location')}
+                      </button>
+                    </div>
+                  )
                 )}
               </div>
 
@@ -2514,7 +2548,7 @@ export function HouzezPreview({
                       allowNegative={false}
                       decimalPlaces={0}
                       disabled={customerZipLoading}
-                      placeholder={customerZipLoading ? hpT('checkout.customer.field.zipLoading', 'Loading...') : 'e.g. 12345'}
+                      placeholder={customerZipLoading ? hpT('checkout.customer.field.zipLoading', 'Loading...') : hpT('checkout.customer.field.zipPlaceholder', 'e.g. 12345')}
                       value={customerDetailDraft?.zip || ''}
                       onChange={e => updateCustomerDraft('zip', e.target.value)}
                       errorText={customerDetailErrors.zip}
@@ -2550,6 +2584,9 @@ export function HouzezPreview({
                   />
 
                   {customerSelectedPlace && customerSelectedPlace.lat != null && customerSelectedPlace.lng != null && (
+                    <div>
+                      <p style={{ margin: '0 0 4px', fontSize: '14px', fontWeight: 700, color: '#1A1A1A' }}>{hpT('checkout.customer.pinInstructionTitle', 'Pin the right point')}</p>
+                      <p style={{ margin: '0 0 10px', fontSize: '12px', color: '#6B7280' }}>{hpT('checkout.customer.pinInstructionSubtitle', "We'll deliver to the map address. Please verify the point and adjust if necessary.")}</p>
                     <div style={{ position: 'relative', borderRadius: '8px', overflow: 'hidden' }}>
                       <StaticMapPreview lat={customerSelectedPlace.lat} lng={customerSelectedPlace.lng} width={592} height={200} />
                       <div
@@ -2562,6 +2599,7 @@ export function HouzezPreview({
                         <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: '#1A1A1A' }}>{hpT('checkout.customer.pinTitle', 'Pinned location')}</p>
                         <p style={{ margin: '2px 0 0', fontSize: '12px', color: '#4B5563' }}>{customerSelectedPlace.label}</p>
                       </div>
+                    </div>
                     </div>
                   )}
                   </>)}
@@ -2590,7 +2628,7 @@ export function HouzezPreview({
                     {hpT('checkout.customer.back', 'Back')}
                   </button>
                   <button onClick={handleCustomerDetailSave} style={{ padding: '10px 22px', borderRadius: '8px', border: 'none', background: '#1A1A1A', color: '#FFF', fontSize: '14px', fontWeight: 600, cursor: 'pointer' }}>
-                    {hpT('checkout.customer.save', 'Save')}
+                    {isEditingCustomer ? hpT('checkout.customer.saveChanges', 'Save Changes') : hpT('checkout.customer.save', 'Save')}
                   </button>
                 </div>
               </div>
@@ -2633,7 +2671,9 @@ export function HouzezPreview({
   );
 }
 
-const ProductGroup = ({ id, title, items, onDemo, onQuickAdd, onSeeAll, seeAllLabel, isMobile }) => (
+const ProductGroup = ({ id, title, items, onDemo, onQuickAdd, onSeeAll, seeAllLabel, isMobile }) => {
+  const { t } = useTranslation();
+  return (
   <section id={id} style={{ padding: isMobile ? '16px 16px' : '30px 0', maxWidth: '1280px', margin: '0 auto', width: isMobile ? '100%' : 'calc(100% - 80px)', overflow: 'hidden' }}>
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
       <h2 style={{ fontSize: isMobile ? '20px' : '24px', fontWeight: 700, color: '#1A1A1A' }}>{title}</h2>
@@ -2682,7 +2722,7 @@ const ProductGroup = ({ id, title, items, onDemo, onQuickAdd, onSeeAll, seeAllLa
                   display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
                   boxShadow: '0 2px 6px rgba(0,0,0,0.12)',
                 }}
-                aria-label="Add to cart"
+                aria-label={t('website:shop.addToCart')}
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1A1A1A" strokeWidth="1.8">
                   <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/>
@@ -2702,6 +2742,7 @@ const ProductGroup = ({ id, title, items, onDemo, onQuickAdd, onSeeAll, seeAllLa
       ))}
     </div>
   </section>
-);
+  );
+};
 
 export default HouzezPreview;

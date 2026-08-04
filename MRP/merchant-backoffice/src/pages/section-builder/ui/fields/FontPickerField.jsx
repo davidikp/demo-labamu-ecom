@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Dropdown } from '../../../../ce-ui';
 
 /**
@@ -12,6 +13,7 @@ import { Dropdown } from '../../../../ce-ui';
  * list.
  */
 export default function FontPickerField({ field, value, onChange }) {
+  const { t } = useTranslation();
   const current = value ?? field.default;
 
   return (
@@ -25,7 +27,7 @@ export default function FontPickerField({ field, value, onChange }) {
         size="md"
       />
       <p className="mt-2 rounded-md bg-gray-50 p-2 text-sm" style={{ fontFamily: current }}>
-        My Store — the quick brown fox jumps over the lazy dog
+        {t('sectionBuilder:fields.fontPickerField.sampleText')}
       </p>
       {field.helpText && <p className="mt-1 text-xs text-gray-400">{field.helpText}</p>}
     </div>

@@ -1,4 +1,5 @@
 import { useParams, useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { loadDraft } from './state/storage';
 import Canvas from './ui/Canvas';
 
@@ -9,6 +10,7 @@ import Canvas from './ui/Canvas';
  * token issuance/verification once a backend exists).
  */
 export default function PreviewLive() {
+  const { t } = useTranslation();
   const { storeId } = useParams();
   const [searchParams] = useSearchParams();
   const token = searchParams.get('token');
@@ -16,7 +18,7 @@ export default function PreviewLive() {
   if (!token) {
     return (
       <div className="flex h-screen items-center justify-center text-sm text-gray-500">
-        This preview link is invalid or has expired.
+        {t('sectionBuilder:editor.previewLive.invalidLink')}
       </div>
     );
   }

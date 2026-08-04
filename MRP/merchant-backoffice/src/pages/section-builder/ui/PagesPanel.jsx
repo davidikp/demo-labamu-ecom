@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { ChevronDown, ChevronRight, Pencil, X } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { slugify, isSlugTaken, defaultMetaTitle } from '../sections/pageHelpers';
 import { shouldShowCounter } from './fields/fieldHelpers';
 import ConfirmDialog from './ConfirmDialog';
@@ -17,6 +19,7 @@ function CharCounter({ value, max }) {
 }
 
 function AddPageForm({ pages, onAdd }) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState('');
   const [slug, setSlug] = useState('');
@@ -45,7 +48,7 @@ function AddPageForm({ pages, onAdd }) {
         onClick={() => setOpen(true)}
         className="mt-2 w-full rounded-md border border-dashed border-gray-300 py-1.5 text-sm text-gray-600 hover:bg-gray-50"
       >
-        + Add page
+        {t('sectionBuilder:editor.pagesPanel.addPage')}
       </button>
     );
   }
@@ -53,7 +56,7 @@ function AddPageForm({ pages, onAdd }) {
   return (
     <div className="mt-2 space-y-2 rounded-md border border-gray-200 p-2">
       <div>
-        <label className="mb-1 block text-xs font-medium text-gray-700">Page name</label>
+        <label className="mb-1 block text-xs font-medium text-gray-700">{t('sectionBuilder:editor.pagesPanel.pageNameLabel')}</label>
         <input
           autoFocus
           type="text"
@@ -62,12 +65,12 @@ function AddPageForm({ pages, onAdd }) {
             setName(e.target.value);
             if (!slugEdited) setSlug(slugify(e.target.value));
           }}
-          placeholder="About Us"
+          placeholder={t('sectionBuilder:editor.pagesPanel.pageNamePlaceholder')}
           className="w-full rounded-md border border-gray-200 px-2 py-1.5 text-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
         />
       </div>
       <div>
-        <label className="mb-1 block text-xs font-medium text-gray-700">URL slug</label>
+        <label className="mb-1 block text-xs font-medium text-gray-700">{t('sectionBuilder:editor.pagesPanel.slugLabel')}</label>
         <input
           type="text"
           value={effectiveSlug}
@@ -77,11 +80,11 @@ function AddPageForm({ pages, onAdd }) {
           }}
           className="w-full rounded-md border border-gray-200 px-2 py-1.5 text-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
         />
-        {taken && <p className="mt-1 text-xs text-red-600">This slug is already in use.</p>}
+        {taken && <p className="mt-1 text-xs text-red-600">{t('sectionBuilder:editor.pagesPanel.slugInUse')}</p>}
       </div>
       <div className="flex justify-end gap-2">
         <button type="button" onClick={reset} className="rounded-md border border-gray-200 px-2 py-1 text-xs text-gray-600 hover:bg-gray-50">
-          Cancel
+          {t('sectionBuilder:editor.common.cancel')}
         </button>
         <button
           type="button"
@@ -89,7 +92,7 @@ function AddPageForm({ pages, onAdd }) {
           onClick={submit}
           className="rounded-md bg-gray-900 px-2 py-1 text-xs font-medium text-white hover:bg-gray-800 disabled:opacity-40"
         >
-          Create
+          {t('sectionBuilder:editor.pagesPanel.create')}
         </button>
       </div>
     </div>
@@ -97,6 +100,7 @@ function AddPageForm({ pages, onAdd }) {
 }
 
 function SeoFields({ page, storeName, onUpdateSeo }) {
+  const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
   const metaTitle = page.seo?.metaTitle ?? '';
   const metaDescription = page.seo?.metaDescription ?? '';
@@ -104,13 +108,13 @@ function SeoFields({ page, storeName, onUpdateSeo }) {
 
   return (
     <div className="mt-1 border-t border-gray-100 pt-1">
-      <button type="button" onClick={() => setExpanded((v) => !v)} className="text-[11px] font-medium text-gray-500 hover:text-gray-700">
-        {expanded ? '▾' : '▸'} SEO
+      <button type="button" onClick={() => setExpanded((v) => !v)} className="flex items-center gap-1 text-[11px] font-medium text-gray-500 hover:text-gray-700">
+        {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />} {t('sectionBuilder:editor.pagesPanel.seoHeading')}
       </button>
       {expanded && (
         <div className="mt-2 space-y-2">
           <div>
-            <label className="mb-1 block text-[11px] font-medium text-gray-700">Meta title</label>
+            <label className="mb-1 block text-[11px] font-medium text-gray-700">{t('sectionBuilder:editor.pagesPanel.metaTitleLabel')}</label>
             <input
               type="text"
               value={metaTitle}
@@ -122,12 +126,12 @@ function SeoFields({ page, storeName, onUpdateSeo }) {
             <CharCounter value={metaTitle} max={META_TITLE_MAX} />
           </div>
           <div>
-            <label className="mb-1 block text-[11px] font-medium text-gray-700">Meta description</label>
+            <label className="mb-1 block text-[11px] font-medium text-gray-700">{t('sectionBuilder:editor.pagesPanel.metaDescriptionLabel')}</label>
             <textarea
               rows={2}
               value={metaDescription}
               maxLength={META_DESCRIPTION_MAX}
-              placeholder="Describe this page in 1-2 sentences"
+              placeholder={t('sectionBuilder:editor.pagesPanel.metaDescriptionPlaceholder')}
               onChange={(e) => onUpdateSeo(page.id, { metaDescription: e.target.value })}
               className="w-full rounded-md border border-gray-200 px-2 py-1 text-xs focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
             />
@@ -137,7 +141,7 @@ function SeoFields({ page, storeName, onUpdateSeo }) {
             <p className="truncate text-[11px] text-blue-800">{displayTitle}</p>
             <p className="truncate text-[10px] text-green-700">yourstore.com{page.slug}</p>
             <p className="line-clamp-2 text-[10px] text-gray-500">
-              {metaDescription || 'Describe this page in 1-2 sentences'}
+              {metaDescription || t('sectionBuilder:editor.pagesPanel.metaDescriptionPlaceholder')}
             </p>
           </div>
         </div>
@@ -147,6 +151,7 @@ function SeoFields({ page, storeName, onUpdateSeo }) {
 }
 
 function PageRow({ page, active, isSystem, storeName, onSelect, onRename, onDelete, onUpdateSeo, onToggleNavHidden }) {
+  const { t } = useTranslation();
   const [editing, setEditing] = useState(false);
   const [draftName, setDraftName] = useState(page.name);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
@@ -177,22 +182,22 @@ function PageRow({ page, active, isSystem, storeName, onSelect, onRename, onDele
         <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] text-gray-500">{page.type}</span>
 
         {!isSystem && !editing && (
-          <button type="button" aria-label="Rename" onClick={() => setEditing(true)} className="text-gray-400 hover:text-gray-700">
-            ✎
+          <button type="button" aria-label={t('sectionBuilder:editor.pagesPanel.rename')} onClick={() => setEditing(true)} className="text-gray-400 hover:text-gray-700">
+            <Pencil size={13} />
           </button>
         )}
         {isSystem ? (
           <button
             type="button"
-            title={page.hiddenFromNav ? 'Show in navigation' : 'Hide from navigation'}
+            title={page.hiddenFromNav ? t('sectionBuilder:editor.pagesPanel.showNav') : t('sectionBuilder:editor.pagesPanel.hideNav')}
             onClick={() => onToggleNavHidden(page.id)}
             className="text-[11px] text-gray-500 hover:text-gray-700"
           >
-            {page.hiddenFromNav ? 'Show' : 'Hide'}
+            {page.hiddenFromNav ? t('sectionBuilder:editor.pagesPanel.showNav') : t('sectionBuilder:editor.pagesPanel.hideNav')}
           </button>
         ) : (
-          <button type="button" aria-label="Delete" onClick={() => setConfirmingDelete(true)} className="text-gray-400 hover:text-red-600">
-            ✕
+          <button type="button" aria-label={t('sectionBuilder:editor.common.delete')} onClick={() => setConfirmingDelete(true)} className="text-gray-400 hover:text-red-600">
+            <X size={14} />
           </button>
         )}
       </div>
@@ -201,8 +206,9 @@ function PageRow({ page, active, isSystem, storeName, onSelect, onRename, onDele
 
       <ConfirmDialog
         open={confirmingDelete}
-        title={`Delete ${page.name}? Shoppers visiting this URL will see a 404. This can't be undone.`}
-        confirmLabel="Delete"
+        title={t('sectionBuilder:editor.pagesPanel.deleteConfirmHeading', 'Delete page?')}
+        description={t('sectionBuilder:editor.pagesPanel.deleteConfirmTitle', { name: page.name })}
+        confirmLabel={t('sectionBuilder:editor.common.delete')}
         danger
         onConfirm={() => {
           onDelete(page.id);
@@ -216,18 +222,19 @@ function PageRow({ page, active, isSystem, storeName, onSelect, onRename, onDele
 
 /** Pages tab (US-6.1..US-6.6). */
 export default function PagesPanel({ pages, activePageId, storeName, onSelectPage, onAddPage, onRenamePage, onDeletePage, onUpdateSeo, onToggleNavHidden }) {
+  const { t } = useTranslation();
   const systemPages = pages.filter((p) => p.type === 'system');
   const customPages = pages.filter((p) => p.type === 'custom');
 
   return (
-    <div className="flex h-full w-full flex-col">
+    <div className="flex min-h-0 flex-1 w-full flex-col">
       <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
-        <h2 className="text-sm font-semibold text-gray-900">Pages</h2>
-        <span className="text-xs text-gray-400">{pages.length} pages</span>
+        <h2 className="text-sm font-semibold text-gray-900">{t('sectionBuilder:editor.pagesPanel.heading')}</h2>
+        <span className="text-xs text-gray-400">{t('sectionBuilder:editor.pagesPanel.pageCount', { n: pages.length })}</span>
       </div>
 
       <div className="flex-1 overflow-y-auto p-2">
-        <p className="px-2 pb-1 text-[11px] font-medium uppercase tracking-wide text-gray-400">System pages</p>
+        <p className="px-2 pb-1 text-[11px] font-medium uppercase tracking-wide text-gray-400">{t('sectionBuilder:editor.pagesPanel.systemPages')}</p>
         <ul className="space-y-1">
           {systemPages.map((page) => (
             <PageRow
@@ -245,9 +252,9 @@ export default function PagesPanel({ pages, activePageId, storeName, onSelectPag
           ))}
         </ul>
 
-        <p className="mt-3 px-2 pb-1 text-[11px] font-medium uppercase tracking-wide text-gray-400">Custom pages</p>
+        <p className="mt-3 px-2 pb-1 text-[11px] font-medium uppercase tracking-wide text-gray-400">{t('sectionBuilder:editor.pagesPanel.customPages')}</p>
         {customPages.length === 0 ? (
-          <p className="p-3 text-sm text-gray-500">No custom pages yet. Create one below.</p>
+          <p className="p-3 text-sm text-gray-500">{t('sectionBuilder:editor.pagesPanel.noCustomPages')}</p>
         ) : (
           <ul className="space-y-1">
             {customPages.map((page) => (

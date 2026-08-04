@@ -21,6 +21,28 @@
     "maxLength": "Maksimal {{max}} karakter"
   },
   "action": {
-    "oke": "Oke"
+    "oke": "Oke",
+    "save": "Simpan"
+  },
+  "layout": {
+    "brandSuffix": "E-commerce",
+    "byLabamu": "oleh Labamu",
+    "expandSidebar": "buka sidebar",
+    "collapseSidebar": "tutup sidebar",
+    "userNamePlaceholder": "Budi Santoso",
+    "userRolePlaceholder": "Admin",
+    "userMenuAriaLabel": "menu pengguna",
+    "companyProfile": "Profil Usaha",
+    "langIndonesia": "Indonesia",
+    "langEnglish": "Inggris"
+  },
+  "errorBoundary": {
+    "title": "Ada yang tidak beres pada pratinjau",
+    "description": "Terjadi kesalahan pada mesin pratinjau saat mengubah urutan. Coba muat ulang atau lanjutkan editanmu.",
+    "retryButton": "Coba Pratinjau Lagi"
+  },
+  "imageCropModal": {
+    "defaultTitle": "Pratinjau Gambar",
+    "defaultSubtitle": "Pastikan gambar terlihat penuh dan berada dalam area ya."
   }
 }

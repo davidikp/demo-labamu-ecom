@@ -37,6 +37,8 @@
         "saveSuccess": "Perubahan berhasil disimpan",
         "saveError": "Gagal menyimpan data",
         "savingBtn": "Menyimpan...",
+        "logoAlt": "Logo",
+        "dataUnavailable": "Data usaha belum tersedia.",
         "membership": {
             "basic": "Basic Member",
             "pro": "Pro Member",
@@ -130,17 +132,75 @@
         "title": "Selamat Datang",
         "messagePrefix": "Anda berhasil masuk ke ",
         "messageStrong": "Labamu Ecommerce",
-        "messageSuffix": ". Dashboard lengkap akan segera hadir."
+        "messageSuffix": ". Dashboard lengkap akan segera hadir.",
+        "iconAlt": "Ikon Labamu"
     },
     "ecommerceMismatchBanner": {
         "message": "Ecommerce Anda terhubung ke modul yang berbeda. Sinkronisasi data mungkin tidak mencerminkan titik akses Anda saat ini.",
         "dismiss": "Tutup"
     },
     "catalog": {
+        "title": "Katalog",
+        "searchPlaceholder": "Cari",
+        "errorTitle": "Gagal memuat katalog",
+        "retry": "Coba Lagi",
+        "columns": {
+            "catalogName": "Nama Katalog",
+            "category": "Kategori",
+            "weight": "Berat",
+            "volume": "Volume",
+            "sellingPrice": "Harga Jual",
+            "websiteVisibility": "Visibilitas Website"
+        },
+        "emptyFiltered": "Hasil Pencarian Tidak Ditemukan",
+        "emptyFilteredSub": "Coba cari dengan kata kunci lain, ya?",
+        "emptyDefault": "Belum Ada Katalog",
+        "emptyDefaultSub": "Tidak dapat menemukan katalog apapun dari tokomu.",
         "filter": {
             "searchPlaceholder": "Cari",
             "removeFilter": "Hapus Filter",
             "noResults": "Tidak ada hasil ditemukan."
+        }
+    },
+    "modifier": {
+        "free": "Gratis",
+        "loadError": "Gagal memuat modifier",
+        "connectedCatalog": "Katalog Terhubung",
+        "connected": {
+            "title": "Modifier Terhubung",
+            "ruleRequired": "Min 1, Maks {{max}}",
+            "ruleOptional": "Opsional, Maks {{max}}",
+            "collapse": "tutup",
+            "expand": "buka",
+            "catalogDetailFallback": "Detail Katalog",
+            "emptyTitle": "Belum Ada Modifier Terhubung",
+            "emptyDescription": "Katalog ini belum memiliki modifier yang terhubung."
+        },
+        "list": {
+            "colName": "Nama Modifier",
+            "colOptions": "Opsi Modifier",
+            "emptyTitleSearch": "Hasil Pencarian Tidak Ditemukan",
+            "emptyTitleDefault": "Belum Ada Modifier",
+            "emptyDescSearch": "Coba cari dengan kata kunci lain, ya?",
+            "emptyDescDefault": "Kami belum menemukan modifier dari tokomu yang terhubung.",
+            "footerLoading": "Memuat...",
+            "footerNoResults": "Tidak ada hasil",
+            "footerRows": "dari {{total}} baris"
+        },
+        "detail": {
+            "close": "tutup",
+            "deactivateWarningTitle": "Layanan yang terkait dengan modifier ini akan menjadi tidak tersedia",
+            "deactivateWarningDesc": "Modifier ini harus dipilih minimal {{min}} item.",
+            "deactivateBtn": "Nonaktifkan Modifier",
+            "loadError": "Gagal memuat modifier",
+            "toggleFailed": "Gagal mengubah modifier",
+            "enabledMsg": "Modifier telah diaktifkan",
+            "disabledMsg": "Modifier telah dinonaktifkan",
+            "availabilityTitle": "Ketersediaan Modifier",
+            "availabilityDesc": "Klik toggle untuk mengatur ketersediaan",
+            "minActiveInfo": "Minimal {{min}} opsi harus aktif untuk mengaktifkan modifier ini.",
+            "notFound": "Modifier tidak ditemukan",
+            "noConnectedCatalog": "Belum ada katalog terhubung"
         }
     }
 }

@@ -1,23 +1,22 @@
 import { memo } from 'react';
-import { resolveColor } from '../../ui/fields/colorValue';
+import BlockStream from '../../ui/BlockStream';
 
-// TODO(security): sanitize `data.content` (e.g. via sanitize-html) before
-// this renders on the public storefront — react-simple-wysiwyg's own docs
-// call this out as the consumer's responsibility. Low risk in the builder
-// itself (only the merchant authoring their own content sees it), but a
-// real XSS vector once shoppers load the published page.
-function RichTextRenderer({ data, theme }) {
-  const bg = resolveColor(data.background_color, theme.colors);
-  const text = resolveColor(data.text_color, theme.colors);
+function RichTextRenderer({ data, blocks = [], theme, mediaLibrary, blockCtx }) {
   const width = data.content_width ?? '680';
+  const centered = data.text_alignment === 'center';
 
   return (
-    <div style={{ backgroundColor: bg, color: text, textAlign: data.text_alignment ?? 'left' }} className="px-6 py-10">
-      <div
-        style={{ maxWidth: `${width}px`, margin: data.text_alignment === 'center' ? '0 auto' : undefined }}
-        className="prose prose-sm"
-        dangerouslySetInnerHTML={{ __html: data.content || '<p>Add content to this section.</p>' }}
-      />
+    <div style={{ textAlign: data.text_alignment ?? 'left' }} className="px-6">
+      <div style={{ maxWidth: `${width}px`, margin: centered ? '0 auto' : undefined }}>
+        <BlockStream
+          sectionType="rich_text"
+          blocks={blocks}
+          theme={theme}
+          mediaLibrary={mediaLibrary}
+          blockCtx={blockCtx}
+          className="flex flex-col gap-4"
+        />
+      </div>
     </div>
   );
 }

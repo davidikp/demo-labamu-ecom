@@ -70,7 +70,7 @@ export default function WebsiteTemplates() {
     if (id === 'houzez') {
       navigate(`/templates-edit/${id}`);
     } else {
-      alert("Editor Coming Soon!");
+      alert(t('website:studio.editorComingSoon'));
     }
   }
 

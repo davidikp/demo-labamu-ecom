@@ -36,6 +36,8 @@
         "cancelBtn": "Cancel",
         "saveSuccess": "Changes saved successfully",
         "saveError": "Failed to update profile",
+        "logoAlt": "Logo",
+        "dataUnavailable": "Company data is unavailable.",
         "membership": {
             "basic": "Basic Member",
             "pro": "Pro Member",
@@ -129,17 +131,75 @@
         "title": "Welcome",
         "messagePrefix": "You have successfully logged in to ",
         "messageStrong": "Labamu Ecommerce",
-        "messageSuffix": ". The full dashboard will be coming soon."
+        "messageSuffix": ". The full dashboard will be coming soon.",
+        "iconAlt": "Labamu Icon"
     },
     "ecommerceMismatchBanner": {
         "message": "Your Ecommerce is connected to a different module. Data syncing may not reflect your current access point.",
         "dismiss": "Dismiss"
     },
     "catalog": {
+        "title": "Catalog",
+        "searchPlaceholder": "Search",
+        "errorTitle": "Failed to load catalog",
+        "retry": "Retry",
+        "columns": {
+            "catalogName": "Catalog Name",
+            "category": "Category",
+            "weight": "Weight",
+            "volume": "Volume",
+            "sellingPrice": "Selling Price",
+            "websiteVisibility": "Website Visibility"
+        },
+        "emptyFiltered": "No Search Results Found",
+        "emptyFilteredSub": "Try searching with a different term, okay?",
+        "emptyDefault": "No Catalog Yet",
+        "emptyDefaultSub": "We couldn't find any catalog from your store.",
         "filter": {
             "searchPlaceholder": "Search",
             "removeFilter": "Remove Filter",
             "noResults": "No results found."
+        }
+    },
+    "modifier": {
+        "free": "Free",
+        "loadError": "Failed to load modifiers",
+        "connectedCatalog": "Connected Catalog",
+        "connected": {
+            "title": "Connected Modifier",
+            "ruleRequired": "Min 1, Max {{max}}",
+            "ruleOptional": "Optional, Max {{max}}",
+            "collapse": "Collapse",
+            "expand": "Expand",
+            "catalogDetailFallback": "Catalog Detail",
+            "emptyTitle": "No Connected Modifiers",
+            "emptyDescription": "This catalog doesn't have any modifiers connected yet."
+        },
+        "list": {
+            "colName": "Modifier Name",
+            "colOptions": "Modifier Options",
+            "emptyTitleSearch": "No Search Results Found",
+            "emptyTitleDefault": "No Modifier Yet",
+            "emptyDescSearch": "Try searching with a different term, okay?",
+            "emptyDescDefault": "We couldn't find any modifier from your connected store.",
+            "footerLoading": "Loading…",
+            "footerNoResults": "No results",
+            "footerRows": "from {{total}} rows"
+        },
+        "detail": {
+            "close": "Close",
+            "deactivateWarningTitle": "Services connected to this modifier will become unavailable",
+            "deactivateWarningDesc": "This modifier must be selected at least {{min}}.",
+            "deactivateBtn": "Deactivate Modifier",
+            "loadError": "Failed to load modifier",
+            "toggleFailed": "Failed to update modifier",
+            "enabledMsg": "Modifier has been enabled",
+            "disabledMsg": "Modifier has been disabled",
+            "availabilityTitle": "Modifier Availability",
+            "availabilityDesc": "Click the toggle to set availability",
+            "minActiveInfo": "At least {{min}} options must be active to enable this modifier.",
+            "notFound": "Modifier not found",
+            "noConnectedCatalog": "No connected catalog"
         }
     }
 }

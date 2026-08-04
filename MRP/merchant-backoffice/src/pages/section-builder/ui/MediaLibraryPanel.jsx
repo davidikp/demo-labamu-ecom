@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { X } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { MediaUploadField } from '../../../ce-ui';
 import { matchesSearch, findUsages } from '../sections/mediaHelpers';
 import { labelForType } from '../sections/registry';
@@ -25,15 +27,16 @@ function probeDimensions(dataUrl) {
  * enforcement — same caveat as ui/fields/ImageField.jsx.
  */
 function UploadZone({ onUpload }) {
+  const { t } = useTranslation();
   const [error, setError] = useState(null);
 
   const handleAdd = async (payload) => {
     if (!ACCEPTED_TYPES.includes(payload.file.type)) {
-      setError('Unsupported file type — use JPG, PNG, WebP, or SVG.');
+      setError(t('sectionBuilder:editor.mediaLibraryPanel.unsupportedFileType'));
       return;
     }
     if (payload.file.size > MAX_BYTES) {
-      setError('File too large — max 10MB. Try compressing your image.');
+      setError(t('sectionBuilder:editor.mediaLibraryPanel.fileTooLarge'));
       return;
     }
     setError(null);
@@ -63,6 +66,7 @@ function UploadZone({ onUpload }) {
  * library") exposes selection instead.
  */
 export default function MediaLibraryPanel({ mode, mediaLibrary, state, onUpload, onDelete, onPick, onClose }) {
+  const { t } = useTranslation();
   const [query, setQuery] = useState('');
   const [pendingDelete, setPendingDelete] = useState(null);
 
@@ -76,12 +80,12 @@ export default function MediaLibraryPanel({ mode, mediaLibrary, state, onUpload,
   const visible = mediaLibrary.filter((item) => matchesSearch(item, query));
 
   return (
-    <div role={mode === 'picker' ? 'dialog' : undefined} aria-label={mode === 'picker' ? 'Choose an image' : undefined} className="flex h-full w-full flex-col">
+    <div role={mode === 'picker' ? 'dialog' : undefined} aria-label={mode === 'picker' ? t('sectionBuilder:editor.mediaLibraryPanel.chooseImage') : undefined} className="flex h-full w-full flex-col">
       <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
-        <h2 className="text-sm font-semibold text-gray-900">Media library</h2>
+        <h2 className="text-sm font-semibold text-gray-900">{t('sectionBuilder:editor.mediaLibraryPanel.heading')}</h2>
         {onClose && (
-          <button type="button" onClick={onClose} aria-label="Close" className="text-gray-400 hover:text-gray-700">
-            ✕
+          <button type="button" onClick={onClose} aria-label={t('sectionBuilder:editor.common.close')} className="text-gray-400 hover:text-gray-700">
+            <X size={14} />
           </button>
         )}
       </div>
@@ -92,16 +96,16 @@ export default function MediaLibraryPanel({ mode, mediaLibrary, state, onUpload,
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search by filename"
+          placeholder={t('sectionBuilder:editor.mediaLibraryPanel.searchPlaceholder')}
           className="w-full rounded-md border border-gray-200 px-2 py-1.5 text-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
         />
       </div>
 
       <div className="flex-1 overflow-y-auto p-3 pt-0">
         {mediaLibrary.length === 0 ? (
-          <p className="p-3 text-sm text-gray-500">No images yet. Upload your first image above.</p>
+          <p className="p-3 text-sm text-gray-500">{t('sectionBuilder:editor.mediaLibraryPanel.emptyState')}</p>
         ) : visible.length === 0 ? (
-          <p className="p-3 text-sm text-gray-500">No images match '{query}'. Try a different name.</p>
+          <p className="p-3 text-sm text-gray-500">{t('sectionBuilder:editor.mediaLibraryPanel.noSearchResults', { query })}</p>
         ) : (
           <div className="grid grid-cols-2 gap-2">
             {visible.map((item) => (
@@ -122,7 +126,7 @@ export default function MediaLibraryPanel({ mode, mediaLibrary, state, onUpload,
                 {mode === 'manage' && (
                   <button
                     type="button"
-                    aria-label="Delete"
+                    aria-label={t('sectionBuilder:editor.common.delete')}
                     onClick={() => setPendingDelete(item)}
                     className="absolute right-1 top-1 hidden h-6 w-6 items-center justify-center rounded-full bg-white/90 text-xs text-gray-700 shadow hover:bg-white group-hover:flex"
                   >
@@ -139,11 +143,11 @@ export default function MediaLibraryPanel({ mode, mediaLibrary, state, onUpload,
         <ConfirmDialog
           open
           danger
-          confirmLabel={findUsages(state, pendingDelete.id).length > 0 ? 'Delete anyway' : 'Delete'}
+          confirmLabel={findUsages(state, pendingDelete.id).length > 0 ? t('sectionBuilder:editor.mediaLibraryPanel.deleteAnyway') : t('sectionBuilder:editor.common.delete')}
           title={
             findUsages(state, pendingDelete.id).length > 0
-              ? `This image is used in ${findUsages(state, pendingDelete.id).map(labelForType).join(', ')}. Deleting it will leave a broken image in your store — continue?`
-              : `Delete ${pendingDelete.filename}? This can't be undone.`
+              ? t('sectionBuilder:editor.mediaLibraryPanel.usedInWarning', { sections: findUsages(state, pendingDelete.id).map(labelForType).join(', ') })
+              : t('sectionBuilder:editor.mediaLibraryPanel.deleteConfirmTitle', { filename: pendingDelete.filename })
           }
           onConfirm={() => {
             onDelete(pendingDelete.id);

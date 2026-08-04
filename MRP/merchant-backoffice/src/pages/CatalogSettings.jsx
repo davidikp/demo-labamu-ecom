@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { fetchCategories, fetchProducts, fetchUnits } from '../services/catalogService';
 import { useSnackbar } from '../contexts/SnackbarContext';
 import Button from '../components/ui/Button';
@@ -87,13 +88,13 @@ const FOOTER_STYLE = { display: 'flex', alignItems: 'center', justifyContent: 's
 const FOOTER_TEXT = { fontSize: '14px', color: '#282828', opacity: 0.5, whiteSpace: 'nowrap' };
 
 // ─── Full footer with rows selector + pagination (unit tab) ───────────────────
-function PagedFooter({ size, onSizeChange, total, page, totalPages, onPage }) {
+function PagedFooter({ size, onSizeChange, total, page, totalPages, onPage, t }) {
   const pageList = buildPageList(page, totalPages);
   return (
     <div style={FOOTER_STYLE}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
         <RowsSelector size={size} onChange={onSizeChange} />
-        <span style={FOOTER_TEXT}>{total === 0 ? 'No results' : `from ${total} rows`}</span>
+        <span style={FOOTER_TEXT}>{total === 0 ? t('catalog:common.noResults') : t('catalog:common.fromRows', { count: total })}</span>
       </div>
       {totalPages > 1 && (
         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -116,6 +117,7 @@ function PagedFooter({ size, onSizeChange, total, page, totalPages, onPage }) {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 export default function CatalogSettings() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { showSnackbar } = useSnackbar();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -160,7 +162,7 @@ export default function CatalogSettings() {
         (prodRes.data || []).forEach(p => { counts[p.category_id] = (counts[p.category_id] || 0) + 1; });
         setProductCounts(counts);
       } catch (e) {
-        setCatError(e.message || 'Failed to load categories');
+        setCatError(e.message || t('catalog:settings.failedLoadCategories'));
       } finally {
         setCatLoading(false);
       }
@@ -176,7 +178,7 @@ export default function CatalogSettings() {
         const res = await fetchUnits();
         setAllUnits(res.data || []);
       } catch (e) {
-        setUnitError(e.message || 'Failed to load units');
+        setUnitError(e.message || t('catalog:settings.failedLoadUnits'));
       } finally {
         setUnitLoading(false);
       }
@@ -228,7 +230,7 @@ export default function CatalogSettings() {
     setReordering(false);
     setReorderList([]);
     dragIndex.current = null;
-    showSnackbar('Category order updated', 'success');
+    showSnackbar(t('catalog:settings.categoryOrderUpdated'), 'success');
   }
   function handleDrop(targetIdx) {
     const from = dragIndex.current;
@@ -253,8 +255,8 @@ export default function CatalogSettings() {
         {/* Page header (static) */}
         <div style={{ marginBottom: '20px', flexShrink: 0 }}>
           <Breadcrumbs
-            title="Catalog Settings"
-            breadcrumbs={[{ name: 'Catalog', onClick: () => navigate('/catalog') }]}
+            title={t('catalog:settings.title')}
+            breadcrumbs={[{ name: t('catalog:common.catalogLabel'), onClick: () => navigate('/catalog') }]}
             onBack={() => navigate('/catalog')}
           />
         </div>
@@ -265,14 +267,14 @@ export default function CatalogSettings() {
           {/* Tabs + search (static) */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px', borderBottom: '1px solid #E9E9E9', gap: '12px', flexShrink: 0 }}>
             <Tabs
-              tabs={[{ id: 'category', label: 'Category' }, { id: 'unit', label: 'Unit' }]}
+              tabs={[{ id: 'category', label: t('catalog:common.category') }, { id: 'unit', label: t('catalog:common.unit') }]}
               activeTab={tab}
               onChange={next => { if (!reordering) setTab(next); }}
             />
             <div style={{ width: '240px', flexShrink: 0 }}>
               {tab === 'category'
-                ? <SearchBar value={catSearch} onChange={e => setCatSearch(e.target.value)} placeholder="Search category name…" size="sm" />
-                : <SearchBar value={unitSearch} onChange={e => { setUnitSearch(e.target.value); setUnitPage(1); }} placeholder="Search unit name…" size="sm" />}
+                ? <SearchBar value={catSearch} onChange={e => setCatSearch(e.target.value)} placeholder={t('catalog:settings.searchCategoryPlaceholder')} size="sm" />
+                : <SearchBar value={unitSearch} onChange={e => { setUnitSearch(e.target.value); setUnitPage(1); }} placeholder={t('catalog:settings.searchUnitPlaceholder')} size="sm" />}
             </div>
           </div>
 
@@ -282,12 +284,12 @@ export default function CatalogSettings() {
               {/* Banner + action (static) */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', padding: '16px 20px 0', flexShrink: 0 }}>
                 <Infobox variant="info" message={reordering
-                  ? 'Click, hold, and drag the category to the position you want.'
-                  : 'Changing category orders will also change the display of your Online Catalog.'} />
+                  ? t('catalog:settings.dragInstructions')
+                  : t('catalog:settings.reorderWarning')} />
                 {reordering ? (
                   <div style={{ display: 'flex', gap: '12px', flexShrink: 0 }}>
-                    <Button variant="secondary" size="small" onClick={cancelReorder}>Cancel</Button>
-                    <Button variant="primary" size="small" onClick={saveReorder}>Save Category Order</Button>
+                    <Button variant="secondary" size="small" onClick={cancelReorder}>{t('catalog:common.cancel')}</Button>
+                    <Button variant="primary" size="small" onClick={saveReorder}>{t('catalog:settings.saveCategoryOrder')}</Button>
                   </div>
                 ) : (
                   <button onClick={startReorder} disabled={catLoading || filteredCategories.length === 0}
@@ -295,7 +297,7 @@ export default function CatalogSettings() {
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
                     </svg>
-                    Change Category Order
+                    {t('catalog:settings.changeCategoryOrder')}
                   </button>
                 )}
               </div>
@@ -311,8 +313,8 @@ export default function CatalogSettings() {
                     <thead style={{ position: 'sticky', top: 0, zIndex: 1 }}>
                       <tr>
                         {reordering && <th style={{ ...THEAD, width: '56px', padding: '16px 0 16px 20px' }} />}
-                        <th style={THEAD}>Category Name</th>
-                        <th style={THEAD}>Total Products</th>
+                        <th style={THEAD}>{t('catalog:settings.columns.categoryName')}</th>
+                        <th style={THEAD}>{t('catalog:settings.columns.totalProducts')}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -323,8 +325,8 @@ export default function CatalogSettings() {
                           <td colSpan={2} style={{ padding: 0, borderBottom: 'none' }}>
                             <EmptyState
                               illustration={<EmptyIllustration />}
-                              title={catSearch ? 'No Search Results Found' : 'No Category Yet'}
-                              description={catSearch ? 'Try searching with a different term, okay?' : 'No catalog categories were found in your connected store. Sync your store to import the latest categories.'}
+                              title={catSearch ? t('catalog:common.noSearchResultsTitle') : t('catalog:settings.noCategoryTitle')}
+                              description={catSearch ? t('catalog:common.noSearchResultsSub') : t('catalog:settings.noCategorySub')}
                             />
                           </td>
                         </tr>
@@ -363,7 +365,7 @@ export default function CatalogSettings() {
               {/* Footer — row count only (no pagination; drag reorder needs all rows) */}
               {!catError && !catLoading && catRows.length > 0 && (
                 <div style={FOOTER_STYLE}>
-                  <span style={FOOTER_TEXT}>{`Show ${filteredCategories.length} from ${allCategories.length} rows`}</span>
+                  <span style={FOOTER_TEXT}>{t('catalog:common.showFromRows', { shown: filteredCategories.length, total: allCategories.length })}</span>
                 </div>
               )}
             </>
@@ -381,11 +383,11 @@ export default function CatalogSettings() {
                   <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', fontSize: '14px' }}>
                     <thead style={{ position: 'sticky', top: 0, zIndex: 1 }}>
                       <tr>
-                        <th style={THEAD}>Unit</th>
+                        <th style={THEAD}>{t('catalog:common.unit')}</th>
                         <th style={{ ...THEAD, cursor: 'pointer' }}
                           onClick={() => { setUnitSortDir(d => d === 'asc' ? 'desc' : d === 'desc' ? null : 'asc'); setUnitPage(1); }}>
                           <span style={{ display: 'inline-flex', alignItems: 'center' }}>
-                            Number of Catalog
+                            {t('catalog:settings.columns.numberOfCatalog')}
                             <SortIcon active={!!unitSortDir} dir={unitSortDir} />
                           </span>
                         </th>
@@ -399,8 +401,8 @@ export default function CatalogSettings() {
                           <td colSpan={2} style={{ padding: 0, borderBottom: 'none' }}>
                             <EmptyState
                               illustration={<EmptyIllustration />}
-                              title={unitSearch ? 'No Search Results Found' : 'No Unit Yet'}
-                              description={unitSearch ? 'Try searching with a different term, okay?' : 'No catalog units were found in your connected store. Sync your store to import the latest units.'}
+                              title={unitSearch ? t('catalog:common.noSearchResultsTitle') : t('catalog:settings.noUnitTitle')}
+                              description={unitSearch ? t('catalog:common.noSearchResultsSub') : t('catalog:settings.noUnitSub')}
                             />
                           </td>
                         </tr>
@@ -423,6 +425,7 @@ export default function CatalogSettings() {
                 <PagedFooter
                   size={unitSize} onSizeChange={v => { setUnitSize(Number(v)); setUnitPage(1); }}
                   total={filteredUnits.length} page={unitPage} totalPages={unitTotalPages} onPage={setUnitPage}
+                  t={t}
                 />
               )}
             </>

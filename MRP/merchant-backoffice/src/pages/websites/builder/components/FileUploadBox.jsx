@@ -1,7 +1,10 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import DeleteIconButton from './DeleteIconButton';
 
-const FileUploadBox = React.memo(({ label, onUpload, onRemove, value, index }) => (
+const FileUploadBox = React.memo(({ label, onUpload, onRemove, value, index }) => {
+  const { t } = useTranslation();
+  return (
   <div style={{ marginBottom: '24px', position: 'relative' }}>
     <label style={{ display: 'block', fontSize: '14px', fontWeight: 600, color: '#111827', marginBottom: '12px' }}>{label}</label>
     <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
@@ -24,14 +27,15 @@ const FileUploadBox = React.memo(({ label, onUpload, onRemove, value, index }) =
       )}
       {!value && (
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: '15px', fontWeight: 600, color: '#374151', marginBottom: '4px' }}>Drag and drop or click to upload image</div>
-          <div style={{ fontSize: '13px', color: '#9CA3AF', marginBottom: '2px' }}>Accepted formats: JPG, JPEG &amp; PNG</div>
-          <div style={{ fontSize: '13px', color: '#9CA3AF' }}>(Max 5MB)</div>
+          <div style={{ fontSize: '15px', fontWeight: 600, color: '#374151', marginBottom: '4px' }}>{t('website:studio.upload.dragDrop')}</div>
+          <div style={{ fontSize: '13px', color: '#9CA3AF', marginBottom: '2px' }}>{t('website:studio.upload.acceptedFormats')}</div>
+          <div style={{ fontSize: '13px', color: '#9CA3AF' }}>{t('website:studio.upload.maxSize')}</div>
         </div>
       )}
-      {value && <div style={{ flex: 1 }}><div style={{ fontSize: '14px', color: '#6B7280' }}>{label} uploaded</div></div>}
+      {value && <div style={{ flex: 1 }}><div style={{ fontSize: '14px', color: '#6B7280' }}>{t('website:studio.upload.uploadedSuffix', { label })}</div></div>}
     </div>
   </div>
-));
+  );
+});
 
 export default FileUploadBox;

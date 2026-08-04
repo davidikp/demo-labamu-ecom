@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { X } from 'lucide-react';
 import { MainBtn, IconBtn } from '../../../ce-ui';
 import { PUBLISH_CHECKS, allChecksPass } from '../sections/publishChecks';
@@ -11,6 +12,7 @@ import { PUBLISH_CHECKS, allChecksPass } from '../sections/publishChecks';
  * link flips it to simulate resolving it.
  */
 export default function PublishDrawer({ open, checkState, onToggleCheck, onPublishAnyway, onClose }) {
+  const { t } = useTranslation();
   useEffect(() => {
     if (!open) return;
     const handler = (e) => e.key === 'Escape' && onClose();
@@ -23,8 +25,8 @@ export default function PublishDrawer({ open, checkState, onToggleCheck, onPubli
   return (
     <div role="region" aria-label="Before you publish" className="fixed inset-y-0 right-0 z-40 w-80 border-l border-gray-200 bg-white shadow-xl">
       <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
-        <h2 className="text-sm font-semibold text-gray-900">Before you publish</h2>
-        <IconBtn icon={<X size={16} />} variant="ghost" size="sm" aria-label="Close" onClick={onClose} />
+        <h2 className="text-sm font-semibold text-gray-900">{t('sectionBuilder:editor.publishDrawer.heading')}</h2>
+        <IconBtn icon={<X size={16} />} variant="ghost" size="sm" aria-label={t('sectionBuilder:editor.common.close')} onClick={onClose} />
       </div>
 
       <div className="space-y-3 p-4">
@@ -52,9 +54,9 @@ export default function PublishDrawer({ open, checkState, onToggleCheck, onPubli
 
       <div className="absolute inset-x-0 bottom-0 border-t border-gray-100 p-4">
         {!allChecksPass(checkState) && (
-          <p className="mb-2 text-xs text-amber-700">Your store may not work correctly for shoppers.</p>
+          <p className="mb-2 text-xs text-amber-700">{t('sectionBuilder:editor.publishDrawer.warning')}</p>
         )}
-        <MainBtn label="Publish anyway" variant="primary" size="md" onClick={onPublishAnyway} className="w-full" />
+        <MainBtn label={t('sectionBuilder:editor.publishDrawer.publishAnyway')} variant="primary" size="md" onClick={onPublishAnyway} className="w-full" />
       </div>
     </div>
   );

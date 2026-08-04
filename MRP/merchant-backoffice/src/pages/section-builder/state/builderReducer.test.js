@@ -205,3 +205,102 @@ describe('builderReducer', () => {
     expect(state.selection.id).toBeNull();
   });
 });
+
+describe('builderReducer — blocks', () => {
+  function stateWithSection() {
+    let state = makeState();
+    state = builderReducer(state, {
+      type: ACTIONS.ADD_SECTION,
+      pageId: 'home',
+      section: { id: 'sec1', type: 'testimonials', data: {}, blocks: [] },
+      index: 0,
+    });
+    return state;
+  }
+  const block = (id) => ({ id, type: 'quote', data: { quote: id } });
+
+  it('adds a block at an index and selects it (compound id)', () => {
+    let state = stateWithSection();
+    state = builderReducer(state, { type: ACTIONS.ADD_BLOCK, pageId: 'home', sectionId: 'sec1', block: block('b1') });
+    expect(state.pages[0].sections[0].blocks).toHaveLength(1);
+    expect(state.selection.id).toBe('sec1::b1');
+  });
+
+  it('removes a block and clears block selection back to the section', () => {
+    let state = stateWithSection();
+    state = builderReducer(state, { type: ACTIONS.ADD_BLOCK, pageId: 'home', sectionId: 'sec1', block: block('b1') });
+    state = builderReducer(state, { type: ACTIONS.REMOVE_BLOCK, pageId: 'home', sectionId: 'sec1', blockId: 'b1' });
+    expect(state.pages[0].sections[0].blocks).toHaveLength(0);
+    expect(state.selection.id).toBe('sec1');
+  });
+
+  it('reorders and updates block data', () => {
+    let state = stateWithSection();
+    state = builderReducer(state, { type: ACTIONS.ADD_BLOCK, pageId: 'home', sectionId: 'sec1', block: block('b1') });
+    state = builderReducer(state, { type: ACTIONS.ADD_BLOCK, pageId: 'home', sectionId: 'sec1', block: block('b2') });
+    state = builderReducer(state, { type: ACTIONS.REORDER_BLOCKS, pageId: 'home', sectionId: 'sec1', orderedIds: ['b2', 'b1'] });
+    expect(state.pages[0].sections[0].blocks.map((b) => b.id)).toEqual(['b2', 'b1']);
+    state = builderReducer(state, { type: ACTIONS.UPDATE_BLOCK_DATA, pageId: 'home', sectionId: 'sec1', blockId: 'b1', data: { quote: 'edited' } });
+    expect(state.pages[0].sections[0].blocks.find((b) => b.id === 'b1').data.quote).toBe('edited');
+  });
+
+  it('adds/removes/reorders blocks inside a group (parentPath)', () => {
+    let state = stateWithSection();
+    // top-level group block
+    state = builderReducer(state, { type: ACTIONS.ADD_BLOCK, pageId: 'home', sectionId: 'sec1', block: { id: 'g1', type: 'group', data: {}, blocks: [] } });
+    // add two children into the group
+    state = builderReducer(state, { type: ACTIONS.ADD_BLOCK, pageId: 'home', sectionId: 'sec1', parentPath: ['g1'], block: { id: 'c1', type: 'heading', data: {} } });
+    state = builderReducer(state, { type: ACTIONS.ADD_BLOCK, pageId: 'home', sectionId: 'sec1', parentPath: ['g1'], block: { id: 'c2', type: 'text', data: {} } });
+    const group = () => state.pages[0].sections[0].blocks.find((b) => b.id === 'g1');
+    expect(group().blocks.map((b) => b.id)).toEqual(['c1', 'c2']);
+    expect(state.selection.id).toBe('sec1::g1::c2');
+    // reorder children
+    state = builderReducer(state, { type: ACTIONS.REORDER_BLOCKS, pageId: 'home', sectionId: 'sec1', parentPath: ['g1'], orderedIds: ['c2', 'c1'] });
+    expect(group().blocks.map((b) => b.id)).toEqual(['c2', 'c1']);
+    // update a child's data
+    state = builderReducer(state, { type: ACTIONS.UPDATE_BLOCK_DATA, pageId: 'home', sectionId: 'sec1', parentPath: ['g1'], blockId: 'c1', data: { text: 'Hi' } });
+    expect(group().blocks.find((b) => b.id === 'c1').data.text).toBe('Hi');
+    // remove a child -> selection falls back to the group
+    state = builderReducer(state, { type: ACTIONS.SELECT, id: 'sec1::g1::c1' });
+    state = builderReducer(state, { type: ACTIONS.REMOVE_BLOCK, pageId: 'home', sectionId: 'sec1', parentPath: ['g1'], blockId: 'c1' });
+    expect(group().blocks.map((b) => b.id)).toEqual(['c2']);
+    expect(state.selection.id).toBe('sec1::g1');
+  });
+
+  it('supports a group nested inside a group (multi-level nesting)', () => {
+    let state = stateWithSection();
+    state = builderReducer(state, { type: ACTIONS.ADD_BLOCK, pageId: 'home', sectionId: 'sec1', block: { id: 'g1', type: 'group', data: {}, blocks: [] } });
+    state = builderReducer(state, { type: ACTIONS.ADD_BLOCK, pageId: 'home', sectionId: 'sec1', parentPath: ['g1'], block: { id: 'g2', type: 'group', data: {}, blocks: [] } });
+    state = builderReducer(state, { type: ACTIONS.ADD_BLOCK, pageId: 'home', sectionId: 'sec1', parentPath: ['g1', 'g2'], block: { id: 'c1', type: 'heading', data: {} } });
+
+    const inner = () => state.pages[0].sections[0].blocks.find((b) => b.id === 'g1').blocks.find((b) => b.id === 'g2');
+    expect(inner().blocks.map((b) => b.id)).toEqual(['c1']);
+    expect(state.selection.id).toBe('sec1::g1::g2::c1');
+
+    state = builderReducer(state, { type: ACTIONS.UPDATE_BLOCK_DATA, pageId: 'home', sectionId: 'sec1', parentPath: ['g1', 'g2'], blockId: 'c1', data: { text: 'Deep' } });
+    expect(inner().blocks.find((b) => b.id === 'c1').data.text).toBe('Deep');
+
+    // move c1 out of g2 to the section's top level
+    state = builderReducer(state, {
+      type: ACTIONS.MOVE_BLOCK_TO_PATH,
+      pageId: 'home',
+      sectionId: 'sec1',
+      blockId: 'c1',
+      fromParentPath: ['g1', 'g2'],
+      toParentPath: [],
+      toIndex: 0,
+    });
+    expect(inner().blocks).toHaveLength(0);
+    expect(state.pages[0].sections[0].blocks.map((b) => b.id)).toEqual(['c1', 'g1']);
+  });
+
+  it('duplicates a section with fresh block ids', () => {
+    let state = stateWithSection();
+    state = builderReducer(state, { type: ACTIONS.ADD_BLOCK, pageId: 'home', sectionId: 'sec1', block: block('b1') });
+    state = builderReducer(state, { type: ACTIONS.DUPLICATE_SECTION, pageId: 'home', sectionId: 'sec1', newId: 'sec2' });
+    const [orig, copy] = state.pages[0].sections;
+    expect(copy.blocks).toHaveLength(1);
+    expect(copy.blocks[0].id).not.toBe(orig.blocks[0].id);
+    expect(copy.blocks[0].data.quote).toBe('b1');
+  });
+});

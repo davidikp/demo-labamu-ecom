@@ -258,7 +258,7 @@ export default function Dropdown({
                 ref={inputRef}
                 type="text"
                 autoComplete="off"
-                placeholder="Search..."
+                placeholder={t('dropdown.search')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 onClick={(e) => e.stopPropagation()}

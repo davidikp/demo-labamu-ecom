@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Undo2, Redo2, MoreVertical } from 'lucide-react';
 import { MainBtn, IconBtn, Tooltip } from '../../../ce-ui';
 import ViewportToggle from './ViewportToggle';
@@ -22,6 +23,7 @@ export default function TopBar({
   onPublish,
   onDiscard,
 }) {
+  const { t } = useTranslation();
   const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
@@ -34,12 +36,12 @@ export default function TopBar({
   return (
     <header className="flex h-14 shrink-0 items-center justify-between border-b border-gray-200 bg-white px-4">
       <div className="flex items-center gap-3 min-w-0">
-        <span className="font-semibold text-gray-900 truncate">Storefront Builder</span>
+        <span className="font-semibold text-gray-900 truncate">{t('sectionBuilder:editor.topBar.title')}</span>
         <span className="text-gray-300">/</span>
         <span className="text-gray-700 truncate">{pageName}</span>
         {dirty && (
           <span
-            title="You have unsaved changes"
+            title={t('sectionBuilder:editor.topBar.unsavedChanges')}
             className="ml-1 inline-block h-2 w-2 rounded-full bg-amber-500"
             aria-label="Unsaved changes"
           />
@@ -50,37 +52,37 @@ export default function TopBar({
         <ViewportToggle viewport={viewport} onChange={onViewportChange} />
 
         <div className="flex items-center gap-1">
-          <Tooltip content={undoLabel ? `Undo: ${undoLabel}` : 'Undo'}>
+          <Tooltip content={undoLabel ? `${t('sectionBuilder:editor.topBar.undo')}: ${undoLabel}` : t('sectionBuilder:editor.topBar.undo')}>
             <IconBtn
               icon={<Undo2 size={16} />}
               variant="ghost"
               size="sm"
-              aria-label="Undo"
+              aria-label={t('sectionBuilder:editor.topBar.undo')}
               disabled={!canUndo}
               onClick={onUndo}
             />
           </Tooltip>
-          <Tooltip content={redoLabel ? `Redo: ${redoLabel}` : 'Redo'}>
+          <Tooltip content={redoLabel ? `${t('sectionBuilder:editor.topBar.redo')}: ${redoLabel}` : t('sectionBuilder:editor.topBar.redo')}>
             <IconBtn
               icon={<Redo2 size={16} />}
               variant="ghost"
               size="sm"
-              aria-label="Redo"
+              aria-label={t('sectionBuilder:editor.topBar.redo')}
               disabled={!canRedo}
               onClick={onRedo}
             />
           </Tooltip>
         </div>
 
-        <MainBtn label="Preview" variant="secondary" size="sm" onClick={onPreview} />
-        <MainBtn label="Publish" variant="primary" size="sm" onClick={onPublish} />
+        <MainBtn label={t('sectionBuilder:editor.topBar.preview')} variant="secondary" size="sm" onClick={onPreview} />
+        <MainBtn label={t('sectionBuilder:editor.topBar.publish')} variant="primary" size="sm" onClick={onPublish} />
 
         <div className="relative">
           <IconBtn
             icon={<MoreVertical size={16} />}
             variant="ghost"
             size="sm"
-            aria-label="More options"
+            aria-label={t('sectionBuilder:editor.topBar.moreOptions')}
             aria-haspopup="menu"
             aria-expanded={menuOpen}
             onClick={() => setMenuOpen((v) => !v)}
@@ -98,7 +100,7 @@ export default function TopBar({
                   }}
                   className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50"
                 >
-                  Discard changes
+                  {t('sectionBuilder:editor.topBar.discardChanges')}
                 </button>
               </div>
             </>

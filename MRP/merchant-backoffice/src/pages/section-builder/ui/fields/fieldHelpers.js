@@ -18,7 +18,7 @@ export function isFieldVisible(field, data) {
   return Array.isArray(expected) ? expected.includes(actual) : actual === expected;
 }
 
-const GROUP_ORDER = ['content', 'media', 'layout', 'color'];
+const GROUP_ORDER = ['content', 'media', 'layout', 'color', 'mobile'];
 
 /**
  * US-4.2 — groups fields into the fixed content → media → layout → color

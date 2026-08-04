@@ -1,8 +1,10 @@
 import { memo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { resolveColor } from '../../ui/fields/colorValue';
 
 /** US-11.H4 — transparent background is intentional; the section below shows through. */
 function DividerSpacerRenderer({ data, theme, isBuilder }) {
+  const { t } = useTranslation();
   const height = data.height ?? 40;
 
   if (data.type_variant === 'divider') {
@@ -18,7 +20,7 @@ function DividerSpacerRenderer({ data, theme, isBuilder }) {
     <div style={{ height: `${height}px` }} className="relative">
       {isBuilder && (
         <span className="absolute inset-0 flex items-center justify-center text-[10px] text-gray-300">
-          Spacer ({height}px)
+          {t('sectionBuilder:sections.dividerSpacer.label', { height })}
         </span>
       )}
     </div>

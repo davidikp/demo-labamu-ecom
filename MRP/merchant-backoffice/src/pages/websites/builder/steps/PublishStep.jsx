@@ -60,7 +60,7 @@ const PublishStep = React.memo(({
           </div>
         ))}
       </div>
-      <Button variant="secondary" onClick={() => alert('Domain connection initiated (mock)')} style={{ width: '100%', justifyContent: 'center' }}>
+      <Button variant="secondary" onClick={() => alert(t('studio.domainConnectMock'))} style={{ width: '100%', justifyContent: 'center' }}>
         {t('studio.publish.customDomain.connectDomain')}
       </Button>
     </div>

@@ -80,7 +80,7 @@ export default function DashboardPage() {
         gap: '16px',
         padding: '48px 24px',
       }}>
-        <img src="/favicon.ico" alt="Labamu Icon" style={{ width: '64px', height: '64px' }} />
+        <img src="/favicon.ico" alt={t('dashboard:welcome.iconAlt')} style={{ width: '64px', height: '64px' }} />
         <h1 style={{ margin: 0, fontSize: '22px', fontWeight: 'var(--font-weight-bold)', color: 'var(--neutral-on-surface-primary)' }}>
           {t('dashboard:welcome.title')}{companyData?.brandName ? `, ${companyData.brandName}` : ''}
         </h1>

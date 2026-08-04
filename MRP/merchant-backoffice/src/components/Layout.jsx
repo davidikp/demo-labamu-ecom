@@ -10,8 +10,8 @@ import Button from './ui/Button';
 import labamuMark from '../assets/labamu-mark.svg';
 
 const LANG_OPTIONS = [
-  { id: 'id', flag: '🇮🇩', shortLabel: 'ID', label: 'Indonesia' },
-  { id: 'en', flag: '🇬🇧', shortLabel: 'EN', label: 'English' },
+  { id: 'id', flag: '🇮🇩', shortLabel: 'ID', labelKey: 'common:layout.langIndonesia', label: 'Indonesia' },
+  { id: 'en', flag: '🇬🇧', shortLabel: 'EN', labelKey: 'common:layout.langEnglish', label: 'English' },
 ];
 
 const MENU_ITEMS = [
@@ -129,10 +129,10 @@ export default function Layout() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', lineHeight: 1 }}>
               <span style={{ fontSize: '17px', fontWeight: 800, whiteSpace: 'nowrap' }}>
                 <span style={{ color: '#006BFF' }}>Labamu</span>
-                <span style={{ color: '#9CA3AF' }}>Ecommerce</span>
+                <span style={{ color: '#9CA3AF' }}>{t('common:layout.brandSuffix')}</span>
               </span>
               <span style={{ fontSize: '11px', fontWeight: 500, color: '#9CA3AF', whiteSpace: 'nowrap' }}>
-                by Labamu
+                {t('common:layout.byLabamu')}
               </span>
             </div>
           )}
@@ -327,7 +327,7 @@ export default function Layout() {
             <button
               type="button"
               onClick={() => setIsSidebarCollapsed((prev) => !prev)}
-              aria-label={isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              aria-label={isSidebarCollapsed ? t('common:layout.expandSidebar') : t('common:layout.collapseSidebar')}
               style={{
                 width: '36px',
                 height: '36px',
@@ -395,7 +395,7 @@ export default function Layout() {
                         fontWeight: isActiveLanguage ? 700 : 500,
                         color: isActiveLanguage ? 'var(--feature-brand-primary)' : 'var(--neutral-on-surface-primary)',
                       }}>
-                        {option.label}
+                        {t(option.labelKey, option.label)}
                       </span>
                       {isActiveLanguage && <Check size={14} color="var(--feature-brand-primary)" />}
                     </button>
@@ -476,7 +476,10 @@ export default function Layout() {
             variant="secondary"
             size="small"
             leftIcon={<Pencil size={16} />}
-            onClick={() => navigate('/websites')}
+            // TODO: route to the template picker (/websites) once the new
+            // section-builder is the default entry point for new stores too;
+            // for now it goes straight to the section-builder prototype.
+            onClick={() => navigate('/section-builder/demo')}
           >
             {t('dashboard:header.editWebsite')}
           </Button>
@@ -496,12 +499,12 @@ export default function Layout() {
             <button 
               onClick={() => setUserMenuOpen(!userMenuOpen)}
               style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 8px', borderRadius: '8px', outline: 'none' }}
-              aria-label="User menu"
+              aria-label={t('common:layout.userMenuAriaLabel')}
               aria-expanded={userMenuOpen}
             >
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0px' }}>
-                <span style={{ fontSize: '15px', fontWeight: 800, color: '#1B1B1B', fontFamily: "'Inter', 'Lato', sans-serif", letterSpacing: '-0.3px', lineHeight: '18px' }}>John Doe</span>
-                <span style={{ fontSize: '13px', fontWeight: 500, color: '#6A7282', fontFamily: "'Inter', 'Lato', sans-serif" }}>Admin</span>
+                <span style={{ fontSize: '15px', fontWeight: 800, color: '#1B1B1B', fontFamily: "'Inter', 'Lato', sans-serif", letterSpacing: '-0.3px', lineHeight: '18px' }}>{t('common:layout.userNamePlaceholder')}</span>
+                <span style={{ fontSize: '13px', fontWeight: 500, color: '#6A7282', fontFamily: "'Inter', 'Lato', sans-serif" }}>{t('common:layout.userRolePlaceholder')}</span>
               </div>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style={{ marginLeft: '4px', transform: userMenuOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', color: '#1B1B1B' }}>
                 <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
@@ -520,7 +523,7 @@ export default function Layout() {
                     <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path>
                     <circle cx="12" cy="7" r="4"></circle>
                   </svg>
-                  Company Profile
+                  {t('common:layout.companyProfile')}
                 </button>
                 <div style={{ height: '1px', background: '#F3F4F6' }} />
                 <button 

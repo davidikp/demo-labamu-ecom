@@ -1,33 +1,60 @@
 import { memo } from 'react';
-import { resolveColor } from '../../ui/fields/colorValue';
+import { useTranslation } from 'react-i18next';
+import { resolveSectionScheme } from '../shared/sectionChrome';
 import { themedButtonStyle } from '../shared/themedButtonStyle';
+import BlockStream from '../../ui/BlockStream';
+import EditableText from '../../ui/EditableText';
 
 // TODO(backend): submission/validation/rate-limiting/customer-list storage
 // (US-9.1's AC) needs a real endpoint — this renders the form only.
-function NewsletterSignupRenderer({ data, theme }) {
-  const bg = resolveColor(data.background_color, theme.colors);
-  const text = resolveColor(data.text_color, theme.colors);
+function NewsletterSignupRenderer({ data, blocks = [], theme, mediaLibrary, onEdit, blockCtx }) {
+  const { t } = useTranslation();
+  // Reused below as the subscribe button's text color (a white button whose
+  // label matches the section's own background reads correctly against it).
+  const { background: bg } = resolveSectionScheme(data.color_scheme, theme.colors);
   const isSplit = data.layout_style === 'split';
 
   return (
-    <section style={{ backgroundColor: bg, color: text }} className={`px-6 py-10 ${isSplit ? '' : 'text-center'}`}>
+    <section className={`px-6 ${isSplit ? '' : 'text-center'}`}>
       <div className={isSplit ? 'flex items-center justify-between gap-6' : 'mx-auto max-w-md'}>
-        <div>
-          <h2 className="text-xl font-semibold">{data.heading || 'Join our newsletter'}</h2>
-          {data.subtext && <p className="mt-1 text-sm opacity-90">{data.subtext}</p>}
-        </div>
+        <BlockStream
+          sectionType="newsletter_signup"
+          blocks={blocks}
+          theme={theme}
+          mediaLibrary={mediaLibrary}
+          blockCtx={blockCtx}
+          className="flex flex-col gap-1"
+        />
         <div className="mt-4 flex gap-2">
           <input
             disabled
-            placeholder="your@email.com"
+            placeholder={t('sectionBuilder:sections.newsletterSignup.emailPlaceholder')}
             className="flex-1 rounded-md border border-white/30 bg-white/10 px-3 py-2 text-sm placeholder:text-current/60"
           />
           <span style={themedButtonStyle(theme.buttons, { primary: '#ffffff', primaryText: bg })}>
-            {data.button_label || 'Subscribe'}
+            {onEdit ? (
+              <EditableText
+                value={data.button_label}
+                placeholder={t('sectionBuilder:sections.newsletterSignup.subscribeButton')}
+                onCommit={(v) => onEdit('button_label', v)}
+              />
+            ) : (
+              data.button_label || t('sectionBuilder:sections.newsletterSignup.subscribeButton')
+            )}
           </span>
         </div>
         {data.show_disclaimer !== false && (
-          <p className="mt-2 text-xs opacity-70">{data.disclaimer_text || 'No spam. Unsubscribe anytime.'}</p>
+          onEdit ? (
+            <EditableText
+              as="p"
+              className="mt-2 text-xs opacity-70"
+              value={data.disclaimer_text}
+              placeholder={t('sectionBuilder:sections.newsletterSignup.disclaimer')}
+              onCommit={(v) => onEdit('disclaimer_text', v)}
+            />
+          ) : (
+            <p className="mt-2 text-xs opacity-70">{data.disclaimer_text || t('sectionBuilder:sections.newsletterSignup.disclaimer')}</p>
+          )
         )}
       </div>
     </section>

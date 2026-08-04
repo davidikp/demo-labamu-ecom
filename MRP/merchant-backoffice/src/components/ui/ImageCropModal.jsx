@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { X } from 'lucide-react';
 
 const MAX_W = 302;
@@ -45,11 +46,14 @@ const CornerBrackets = () => {
 export default function ImageCropModal({
   imageSrc,
   aspectRatio = 216 / 68.77,
-  title = 'Preview Image',
-  subtitle = 'Make sure the image is fully visible and within the area.',
+  title,
+  subtitle,
   onSave,
   onClose,
 }) {
+  const { t } = useTranslation('common');
+  const resolvedTitle = title ?? t('imageCropModal.defaultTitle');
+  const resolvedSubtitle = subtitle ?? t('imageCropModal.defaultSubtitle');
   const imgRef = useRef(null);
   // dragRef: tracks the active drag gesture
   const dragRef = useRef({ on: false, sx: 0, sy: 0, sp: { x: 0, y: 0 } });
@@ -150,8 +154,8 @@ export default function ImageCropModal({
           <X size={18} />
         </button>
 
-        <h2 style={{ fontSize: 16, fontWeight: 700, color: '#111827', textAlign: 'center', margin: '0 0 6px' }}>{title}</h2>
-        <p style={{ fontSize: 12, color: '#9CA3AF', textAlign: 'center', margin: '0 0 16px', lineHeight: 1.5 }}>{subtitle}</p>
+        <h2 style={{ fontSize: 16, fontWeight: 700, color: '#111827', textAlign: 'center', margin: '0 0 6px' }}>{resolvedTitle}</h2>
+        <p style={{ fontSize: 12, color: '#9CA3AF', textAlign: 'center', margin: '0 0 16px', lineHeight: 1.5 }}>{resolvedSubtitle}</p>
 
         {/* Display area: image is STATIC, crop box MOVES */}
         <div style={{ width: dw, height: dh, position: 'relative', overflow: 'hidden', background: '#4A4A4A', borderRadius: 8, userSelect: 'none', margin: '0 auto' }}>
@@ -201,7 +205,7 @@ export default function ImageCropModal({
           onMouseOver={e => e.currentTarget.style.background = '#0057E0'}
           onMouseOut={e => e.currentTarget.style.background = '#006BFF'}
         >
-          Save
+          {t('action.save')}
         </button>
       </div>
     </div>

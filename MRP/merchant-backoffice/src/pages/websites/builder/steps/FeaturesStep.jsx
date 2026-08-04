@@ -23,8 +23,8 @@ const FeaturesStep = React.memo(({
       {featureOrder.map((id, index) => {
         const found = AVAILABLE_FEATURES.find(f => f.id === id);
         const feature = found ? { ...found, label: found.title } : {
-          id, label: customPages?.[id] ?? 'Custom Page',
-          description: 'Custom link on your menu', icon: LinkIcon, isCustom: true
+          id, label: customPages?.[id] ?? t('studio.customPage.defaultTitle'),
+          description: t('studio.customPage.defaultMenuLink'), icon: LinkIcon, isCustom: true
         };
         const isSelected = selectedFeatures.has(id);
 
@@ -83,7 +83,7 @@ const FeaturesStep = React.memo(({
                   <div style={{ width: '32px', height: '18px', borderRadius: '9px', background: enableCheckout ? '#006BFF' : '#E5E7EB', position: 'relative', transition: 'all 0.2s' }}>
                     <div style={{ width: '14px', height: '14px', borderRadius: '50%', background: 'white', position: 'absolute', top: '2px', left: enableCheckout ? '16px' : '2px', transition: 'all 0.2s', boxShadow: '0 1px 2px rgba(0,0,0,0.1)' }} />
                   </div>
-                  <span style={{ fontSize: '12px', fontWeight: 600, color: '#4B5563' }}>Online Checkout</span>
+                  <span style={{ fontSize: '12px', fontWeight: 600, color: '#4B5563' }}>{t('studio.features.onlineCheckout')}</span>
                 </div>
               )}
             </div>

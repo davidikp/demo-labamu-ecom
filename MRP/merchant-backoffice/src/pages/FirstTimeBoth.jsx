@@ -94,7 +94,7 @@ export default function FirstTimeBoth() {
               }}
             >
               <Sparkles size={16} />
-              First-time setup
+              {t('auth:firstTime.badge')}
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%', alignSelf: 'stretch', color: '#FFFFFF' }}>
@@ -102,19 +102,19 @@ export default function FirstTimeBoth() {
                 <Store size={36} />
               </div>
               <h1 style={{ margin: 0, fontSize: '36px', lineHeight: '44px', fontWeight: 800, letterSpacing: '-0.02em', color: '#FFFFFF', width: '100%' }}>
-                Let&apos;s get your storefront ready
+                {t('auth:firstTime.heading')}
               </h1>
               <p style={{ margin: 0, fontSize: '16px', lineHeight: '26px', color: 'rgba(255, 255, 255, 0.82)', width: '100%' }}>
-                You have access to both Labamu App and MRP. Choose your sync platform during setup to connect your storefront.
+                {t('auth:firstTime.both.body')}
               </p>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {[
-                'Confirm your business information',
-                'Choose your sync platform (Labamu App or MRP)',
-                'Choose your website template and style',
-                'Continue to your merchant dashboard',
+                t('auth:firstTime.steps.confirmBusiness'),
+                t('auth:firstTime.steps.chooseSyncPlatform'),
+                t('auth:firstTime.steps.chooseTemplate'),
+                t('auth:firstTime.steps.continueDashboard'),
               ].map((item) => (
                 <div
                   key={item}
@@ -152,10 +152,10 @@ export default function FirstTimeBoth() {
 
             <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <h2 style={{ margin: 0, fontSize: '28px', lineHeight: '34px', fontWeight: 800, color: 'var(--neutral-on-surface-primary)' }}>
-                Welcome to Labamu Ecommerce
+                {t('auth:firstTime.welcomeTitle')}
               </h2>
               <p style={{ margin: 0, fontSize: '16px', lineHeight: '26px', color: 'var(--neutral-on-surface-secondary)' }}>
-                You have access to both Labamu App and MRP. You&apos;ll choose your preferred sync platform during the setup.
+                {t('auth:firstTime.both.welcomeBody')}
               </p>
             </div>
 
@@ -176,10 +176,10 @@ export default function FirstTimeBoth() {
               </svg>
               <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: '4px' }}>
                 <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--feature-brand-on-container)' }}>
-                  Important: sync platform is permanent
+                  {t('auth:firstTime.both.importantTitle')}
                 </div>
                 <div style={{ fontSize: '13px', color: 'var(--neutral-on-surface-secondary)', lineHeight: '20px' }}>
-                  The sync platform you choose during setup cannot be changed afterwards. Choose carefully.
+                  {t('auth:firstTime.both.importantBody')}
                 </div>
               </div>
             </div>

@@ -1,21 +1,19 @@
 import { memo } from 'react';
-import { resolveColor } from '../../ui/fields/colorValue';
 import { resolveMedia } from '../../ui/fields/imageValue';
-import { themedButtonStyle } from '../shared/themedButtonStyle';
+import BlockStream from '../../ui/BlockStream';
 
 const ALIGN_CLASS = { left: 'items-start text-left', center: 'items-center text-center', right: 'items-end text-right' };
+const POSITION_CLASS = { top: 'justify-start', center: 'justify-center', bottom: 'justify-end' };
 
-function HeroBannerRenderer({ data, theme, mediaLibrary }) {
-  const bg = resolveColor(data.background_color, theme.colors);
-  const text = resolveColor(data.text_color, theme.colors);
+function HeroBannerRenderer({ data, blocks = [], theme, mediaLibrary, blockCtx }) {
   const image = resolveMedia(data.background_image, mediaLibrary);
   const align = ALIGN_CLASS[data.text_alignment] ?? ALIGN_CLASS.left;
+  const position = POSITION_CLASS[data.content_position] ?? POSITION_CLASS.center;
 
   return (
     <section
-      className="relative flex justify-center overflow-hidden bg-cover bg-center px-6 py-16"
+      className="relative flex justify-center overflow-hidden bg-cover bg-center px-6"
       style={{
-        backgroundColor: image ? undefined : bg,
         backgroundImage: image ? `url(${image.url})` : undefined,
         minHeight: `${data.min_height ?? 500}px`,
       }}
@@ -23,12 +21,15 @@ function HeroBannerRenderer({ data, theme, mediaLibrary }) {
       {image && (
         <div className="absolute inset-0" style={{ backgroundColor: `rgba(0,0,0,${(data.overlay_opacity ?? 0) / 100})` }} />
       )}
-      <div className={`relative z-10 flex max-w-lg flex-col justify-center gap-4 ${align}`} style={{ color: text }}>
-        <h1 className="text-3xl font-bold">{data.heading || 'Welcome to our store'}</h1>
-        {data.subtext && <p className="text-base opacity-90">{data.subtext}</p>}
-        <span style={themedButtonStyle(theme.buttons, { primary: resolveColor({ slot: 'primary' }, theme.colors), primaryText: resolveColor({ slot: 'primary_text' }, theme.colors) })}>
-          {data.button_label || 'Shop now'}
-        </span>
+      <div className={`relative z-10 flex max-w-lg flex-col ${position}`}>
+        <BlockStream
+          sectionType="hero_banner"
+          blocks={blocks}
+          theme={theme}
+          mediaLibrary={mediaLibrary}
+          blockCtx={blockCtx}
+          className={`flex flex-col gap-4 ${align}`}
+        />
       </div>
     </section>
   );

@@ -1,6 +1,7 @@
-/** US-11.D2 — Rich Text. */
+import { SECTION_CHROME_FIELDS } from '../shared/sectionChrome';
+
+/** US-11.D2 — Rich Text. Content is now blocks. */
 export const schema = {
-  content: { type: 'richtext', label: 'Content', group: 'content' },
   content_width: {
     type: 'select', label: 'Content width', default: '680', group: 'layout',
     options: [
@@ -13,6 +14,11 @@ export const schema = {
     type: 'select', label: 'Text alignment', default: 'left', group: 'layout',
     options: [{ value: 'left', label: 'Left' }, { value: 'center', label: 'Center' }],
   },
-  background_color: { type: 'color', label: 'Background color', default: { slot: 'background' }, group: 'color' },
-  text_color: { type: 'color', label: 'Text color', default: { slot: 'text_primary' }, group: 'color' },
+  ...SECTION_CHROME_FIELDS,
+};
+
+export const blockConfig = {
+  allowed: ['heading', 'text', 'button', 'group'],
+  presets: ['heading', 'text'],
+  max: 6,
 };

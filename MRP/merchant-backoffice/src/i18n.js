@@ -6,12 +6,18 @@ import enDashboard from './locales/en/dashboard.json';
 import enWebsite from './locales/en/website.json';
 import enCommon from './locales/en/common.json';
 import enDelivery from './locales/en/delivery.json';
+import enCatalog from './locales/en/catalog.json';
+import enSectionBuilder from './locales/en/sectionBuilder.json';
+import enOrders from './locales/en/orders.json';
 
 import idAuth from './locales/id/auth.json';
 import idDashboard from './locales/id/dashboard.json';
 import idWebsite from './locales/id/website.json';
 import idCommon from './locales/id/common.json';
 import idDelivery from './locales/id/delivery.json';
+import idCatalog from './locales/id/catalog.json';
+import idSectionBuilder from './locales/id/sectionBuilder.json';
+import idOrders from './locales/id/orders.json';
 
 const resources = {
   en: {
@@ -20,6 +26,9 @@ const resources = {
     website: enWebsite,
     common: enCommon,
     delivery: enDelivery,
+    catalog: enCatalog,
+    sectionBuilder: enSectionBuilder,
+    orders: enOrders,
   },
   id: {
     auth: idAuth,
@@ -27,6 +36,9 @@ const resources = {
     website: idWebsite,
     common: idCommon,
     delivery: idDelivery,
+    catalog: idCatalog,
+    sectionBuilder: idSectionBuilder,
+    orders: idOrders,
   }
 };
 

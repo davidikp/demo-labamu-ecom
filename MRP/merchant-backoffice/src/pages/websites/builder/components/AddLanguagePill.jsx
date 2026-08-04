@@ -1,8 +1,10 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
 import { Search } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 const AddLanguagePill = React.memo(({ options, onSelect, placeholder }) => {
+  const { t } = useTranslation();
   const [isOpen, setIsOpen] = React.useState(false);
   const [searchTerm, setSearchTerm] = React.useState('');
   const [menuPos, setMenuPos] = React.useState({ top: 0, left: 0, width: 0 });
@@ -84,7 +86,7 @@ const AddLanguagePill = React.memo(({ options, onSelect, placeholder }) => {
             <div style={{ display: 'flex', alignItems: 'center', background: '#F9FAFB', borderRadius: '6px', padding: '0 10px', height: '34px', border: '1px solid #E5E7EB' }}>
               <Search size={14} color="#9CA3AF" style={{ flexShrink: 0 }} />
               <input
-                ref={inputRef} type="text" autoComplete="off" placeholder="Search..."
+                ref={inputRef} type="text" autoComplete="off" placeholder={t('website:studio.search.placeholder')}
                 value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
                 onClick={(e) => e.stopPropagation()}
                 style={{ width: '100%', border: 'none', outline: 'none', fontSize: '13px', color: '#1B1B1B', background: 'transparent', padding: '0 8px', height: '100%' }}
@@ -104,7 +106,7 @@ const AddLanguagePill = React.memo(({ options, onSelect, placeholder }) => {
               </div>
             </div>
           )) : (
-            <div style={{ padding: '16px', fontSize: '14px', color: '#9CA3AF', textAlign: 'center' }}>No results</div>
+            <div style={{ padding: '16px', fontSize: '14px', color: '#9CA3AF', textAlign: 'center' }}>{t('website:studio.search.noResults')}</div>
           )}
         </div>,
         document.body

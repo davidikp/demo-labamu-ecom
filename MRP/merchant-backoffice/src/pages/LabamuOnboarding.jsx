@@ -290,10 +290,10 @@ function SyncPlatformConfirmModal({ open, onClose, onConfirm, selectedPlatform, 
     <ConfirmationModal
       open={open}
       onClose={onClose}
-      title="Confirm Sync Platform?"
-      description={`You're about to set ${platformLabel} as your sync platform. This choice is permanent and cannot be changed after onboarding.`}
-      confirmLabel={{ text: 'Yes, Continue', onClick: onConfirm }}
-      cancelLabel={{ text: 'Cancel', onClick: onClose }}
+      title={t('auth:onboarding.syncConfirm.title')}
+      description={t('auth:onboarding.syncConfirm.description', { platform: platformLabel })}
+      confirmLabel={{ text: t('auth:onboarding.syncConfirm.confirm'), onClick: onConfirm }}
+      cancelLabel={{ text: t('auth:onboarding.syncConfirm.cancel'), onClick: onClose }}
     />
   );
 }
@@ -381,7 +381,7 @@ export default function LabamuOnboarding() {
       items.push({
         id,
         title: content.currentConfig.customPages?.[id] || websiteT('studio.features.pageName'),
-        desc: 'Custom page content',
+        desc: t('auth:onboarding.studio.customPageDesc'),
         icon: LinkIcon,
         isCustom: true,
       });
@@ -594,7 +594,7 @@ export default function LabamuOnboarding() {
 
         return (
           <div style={{ padding: '40px 48px', textAlign: 'center', color: '#9CA3AF' }}>
-            Select a section to configure.
+            {t('auth:onboarding.studio.selectSection')}
           </div>
         );
     }
@@ -673,7 +673,7 @@ export default function LabamuOnboarding() {
                 <line x1="8" y1="21" x2="16" y2="21" />
                 <line x1="12" y1="17" x2="12" y2="21" />
               </svg>
-              Desktop
+              {t('auth:onboarding.studio.viewport.desktop')}
             </button>
             <button
               onClick={() => setViewport('mobile')}
@@ -697,7 +697,7 @@ export default function LabamuOnboarding() {
                 <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
                 <line x1="12" y1="18" x2="12.01" y2="18" />
               </svg>
-              Mobile
+              {t('auth:onboarding.studio.viewport.mobile')}
             </button>
           </div>
         </div>
@@ -830,8 +830,8 @@ export default function LabamuOnboarding() {
         >
           <div style={{ width: '25%', minWidth: '150px' }}>
             <div style={{ fontSize: '24px', lineHeight: '28px', fontWeight: 800, letterSpacing: '-0.02em' }}>
-              <span style={{ color: 'var(--feature-brand-primary)' }}>Labamu</span>
-              <span style={{ color: 'var(--neutral-on-surface-tertiary)' }}>Ecommerce</span>
+              <span style={{ color: 'var(--feature-brand-primary)' }}>{t('auth:onboarding.header.brandLabamu')}</span>
+              <span style={{ color: 'var(--neutral-on-surface-tertiary)' }}>{t('auth:onboarding.header.brandEcommerce')}</span>
             </div>
             <div style={{ marginTop: '4px', fontSize: '14px', lineHeight: '20px', color: 'var(--neutral-on-surface-secondary)' }}>
               {t('auth:onboarding.header.by')}
@@ -937,7 +937,7 @@ export default function LabamuOnboarding() {
                                   <path d="M8 6v3.5M8 11.5h.01" stroke="#B07D00" strokeWidth="1.4" strokeLinecap="round" />
                                 </svg>
                                 <p style={{ margin: 0, fontSize: '13px', lineHeight: '20px', color: '#7A5500' }}>
-                                  <strong>Important:</strong> The sync platform you select cannot be changed after you complete the onboarding.
+                                  <strong>{t('auth:onboarding.studio.importantLabel')}</strong> {t('auth:onboarding.studio.syncPlatformWarning')}
                                 </p>
                               </div>
                             )}
@@ -961,7 +961,7 @@ export default function LabamuOnboarding() {
                             required
                             value={content.sharedConfig.businessName}
                             onChange={(event) => content.updateSharedConfig('businessName', event.target.value)}
-                            placeholder="LB Business"
+                            placeholder={t('auth:onboarding.basic.businessNamePlaceholder')}
                             size="lg"
                           />
                         </div>
@@ -1092,8 +1092,8 @@ export default function LabamuOnboarding() {
                       value={currentLocale}
                       onChange={handleLanguageChange}
                       options={[
-                        { value: 'id', short: 'ID', label: 'Bahasa Indonesia', flag: '🇮🇩' },
-                        { value: 'en', short: 'EN', label: 'English', flag: '🇬🇧' },
+                        { value: 'id', short: 'ID', label: t('auth:onboarding.basic.languages.indonesian'), flag: '🇮🇩' },
+                        { value: 'en', short: 'EN', label: t('auth:onboarding.basic.languages.english'), flag: '🇬🇧' },
                       ]}
                     />
                   </div>
@@ -1128,8 +1128,8 @@ export default function LabamuOnboarding() {
                 <button
                   type="button"
                   onClick={() => setIsSidebarOpen((prev) => !prev)}
-                  title={isSidebarOpen ? 'Collapse Sidebar' : 'Expand Sidebar'}
-                  aria-label={isSidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'}
+                  title={isSidebarOpen ? t('auth:onboarding.studio.sidebar.collapse') : t('auth:onboarding.studio.sidebar.expand')}
+                  aria-label={isSidebarOpen ? t('auth:onboarding.studio.sidebar.collapseAria') : t('auth:onboarding.studio.sidebar.expandAria')}
                   style={{
                     position: 'absolute',
                     left: '0px',
@@ -1169,8 +1169,8 @@ export default function LabamuOnboarding() {
         <ImageCropModal
           imageSrc={content.cropModal.imageSrc}
           aspectRatio={content.cropModal.aspectRatio}
-          title="Preview Image"
-          subtitle="Make sure the image is fully visible and within the area."
+          title={t('auth:onboarding.studio.cropModal.title')}
+          subtitle={t('auth:onboarding.studio.cropModal.subtitle')}
           onSave={content.cropModal.onSave}
           onClose={content.closeCropModal}
         />
