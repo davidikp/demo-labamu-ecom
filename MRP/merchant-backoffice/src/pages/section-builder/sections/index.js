@@ -54,6 +54,10 @@ import { schema as mapEmbedSchema, blockConfig as mapEmbedBlocks } from './map_e
 import MapEmbedRenderer from './map_embed/Renderer';
 import { schema as dividerSpacerSchema } from './divider_spacer/schema';
 import DividerSpacerRenderer from './divider_spacer/Renderer';
+import { schema as cartSummarySchema } from './cart_summary/schema';
+import CartSummaryRenderer from './cart_summary/Renderer';
+import { schema as checkoutSummarySchema } from './checkout_summary/schema';
+import CheckoutSummaryRenderer from './checkout_summary/Renderer';
 
 export const SECTION_DEFINITIONS = {
   header: { schema: headerSchema, Renderer: HeaderRenderer },
@@ -81,6 +85,8 @@ export const SECTION_DEFINITIONS = {
   faq_accordion: { schema: faqAccordionSchema, blockConfig: faqAccordionBlocks, Renderer: FaqAccordionRenderer },
   map_embed: { schema: mapEmbedSchema, blockConfig: mapEmbedBlocks, Renderer: MapEmbedRenderer },
   divider_spacer: { schema: dividerSpacerSchema, Renderer: DividerSpacerRenderer },
+  cart_summary: { schema: cartSummarySchema, Renderer: CartSummaryRenderer },
+  checkout_summary: { schema: checkoutSummarySchema, Renderer: CheckoutSummaryRenderer },
 };
 
 export function schemaForType(type) {

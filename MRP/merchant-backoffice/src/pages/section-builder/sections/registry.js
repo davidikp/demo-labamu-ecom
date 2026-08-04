@@ -1,6 +1,6 @@
 /**
  * @module section-builder/sections/registry
- * @description Metadata for all 25 section types (Epic 10 companion PRD)
+ * @description Metadata for all 27 section types (Epic 10 companion PRD)
  * that power the "Add section" modal picker and sidebar/canvas labels. Each
  * type has a real `schema.js` + `Renderer.jsx` under `sections/<type>/`,
  * wired into `SECTION_DEFINITIONS` in `index.js`. This registry is just the
@@ -19,6 +19,7 @@ export const SECTION_CATEGORIES = {
   marketing: 'Marketing & Conversion',
   media: 'Media',
   utility: 'Utility',
+  commerce: 'Cart & Checkout',
 };
 
 export const SECTION_REGISTRY = [
@@ -45,6 +46,8 @@ export const SECTION_REGISTRY = [
   { type: 'faq_accordion', label: 'FAQ Accordion', category: 'utility', description: 'Expandable list of frequently asked questions.' },
   { type: 'map_embed', label: 'Map Embed', category: 'utility', description: 'Embedded map with your address, hours and phone.' },
   { type: 'divider_spacer', label: 'Divider / Spacer', category: 'utility', description: 'Add whitespace or a dividing line between sections.' },
+  { type: 'cart_summary', label: 'Cart Summary', category: 'commerce', description: 'Line items, subtotal and a checkout button for the Cart page.' },
+  { type: 'checkout_summary', label: 'Checkout Summary', category: 'commerce', description: 'Order summary with placeholder shipping and payment fields for the Checkout page.' },
 ];
 
 export const SECTION_LABELS = Object.fromEntries(SECTION_REGISTRY.map((s) => [s.type, s.label]));

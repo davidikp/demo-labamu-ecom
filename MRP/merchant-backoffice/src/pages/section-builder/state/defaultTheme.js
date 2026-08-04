@@ -2,6 +2,11 @@ import { rawSchema } from './themeSchemaAdapter';
 import { schema as headerSchema } from '../sections/header/schema';
 import { schema as footerSchema } from '../sections/footer/schema';
 import { defaultsForSchema } from '../sections/schemaDefaults';
+import { schemaForType } from '../sections/index';
+
+function defaultSection(id, type, overrides = {}) {
+  return { id, type, data: { ...defaultsForSchema(schemaForType(type)), ...overrides } };
+}
 
 /**
  * @module section-builder/state/defaultTheme
@@ -23,19 +28,43 @@ export const defaultTheme = {
 };
 
 /**
- * System pages (US-6.1). Only Home is section-editable in this builder —
- * Product/Collection/Cart/Checkout are rendered from the catalog, not from
- * a section stack, so they're listed (per the spec's page grouping) but
- * their `sections` stay permanently empty here. TODO(catalog integration):
- * these four need their own dedicated editors, not this section canvas.
+ * System pages (US-6.1). Product/Collection/Cart/Checkout are seeded with a
+ * starter section (a minimal PDP spotlight, a collection grid, and cart/
+ * checkout summaries) so they aren't blank, but they still pull from the
+ * mock catalog fixture (mocks/catalog.json), not a real backend — see
+ * TODO(catalog integration) notes in the section renderers themselves.
+ * All five pages are section-editable like Home; merchants can add, remove,
+ * or rearrange sections on any of them.
  */
 export function createDefaultPages() {
   return [
     { id: 'home', name: 'Home', type: 'system', slug: '/', sections: [], seo: {}, hiddenFromNav: false },
-    { id: 'product', name: 'Product', type: 'system', slug: '/products/:handle', sections: [], seo: {}, hiddenFromNav: false },
-    { id: 'collection', name: 'Collection', type: 'system', slug: '/collections/:handle', sections: [], seo: {}, hiddenFromNav: false },
-    { id: 'cart', name: 'Cart', type: 'system', slug: '/cart', sections: [], seo: {}, hiddenFromNav: false },
-    { id: 'checkout', name: 'Checkout', type: 'system', slug: '/checkout', sections: [], seo: {}, hiddenFromNav: false },
+    {
+      id: 'product', name: 'Product', type: 'system', slug: '/products/:handle', seo: {}, hiddenFromNav: false,
+      sections: [
+        defaultSection('product-default-spotlight', 'product_spotlight', {
+          show_variant_selector: false,
+          show_quantity_selector: false,
+        }),
+      ],
+    },
+    {
+      id: 'collection', name: 'Collection', type: 'system', slug: '/collections/:handle', seo: {}, hiddenFromNav: false,
+      sections: [
+        defaultSection('collection-default-grid', 'featured_products', {
+          heading: 'Collection',
+          show_view_all: false,
+        }),
+      ],
+    },
+    {
+      id: 'cart', name: 'Cart', type: 'system', slug: '/cart', seo: {}, hiddenFromNav: false,
+      sections: [defaultSection('cart-default-summary', 'cart_summary')],
+    },
+    {
+      id: 'checkout', name: 'Checkout', type: 'system', slug: '/checkout', seo: {}, hiddenFromNav: false,
+      sections: [defaultSection('checkout-default-summary', 'checkout_summary')],
+    },
   ];
 }
 
