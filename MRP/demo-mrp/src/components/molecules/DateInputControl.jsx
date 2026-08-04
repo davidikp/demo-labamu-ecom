@@ -170,7 +170,7 @@ export const DateInputControl = ({
             size={18}
             color={
               disabled
-                ? "var(--neutral-line-outline)"
+                ? "var(--neutral-on-surface-tertiary)"
                 : "var(--neutral-on-surface-secondary)"
             }
           />

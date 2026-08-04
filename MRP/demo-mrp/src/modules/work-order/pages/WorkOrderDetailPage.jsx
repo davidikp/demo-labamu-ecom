@@ -12,7 +12,7 @@ import { IconButton } from "../../../components/common/IconButton.jsx";
 import { StatusBadge } from "../../../components/common/StatusBadge.jsx";
 import { TableSearchField } from "../../../components/table/TableSearchField.jsx";
 import { Card, DateInputControl, DateRangeInputControl, DocumentTypeBadge, FormField, ImageUploadField, InputField, InputGroup, LabelValue, PhoneInputField, ProgressRing, ProofDocumentList, SectionCard, UploadDescriptionCard, UploadDropzone, UnifiedInputShell, focusInputFrame, blurInputFrame } from "../components/WorkOrderDetailWidgets.jsx";
-import { TextField } from "../../../ce-ui";
+import { Table, TextField } from "../../../ce-ui";
 import { Tooltip } from "../../../components/atoms/Tooltip.jsx";
 import { MOCK_COMPANY } from "../../../data/company.js";
 import { MOCK_VENDORS } from "../../../data/vendors.js";
@@ -34,6 +34,7 @@ import {
   baseInputBorderColor,
   fieldStyle,
 } from "../../purchase-order/styles/purchaseOrderInputStyles.js";
+import { WorkOrderEditDrawer } from "../components/WorkOrderEditDrawer.jsx";
 
 export let activityLogsCache = {};
 
@@ -522,14 +523,38 @@ const SearchableVendorSelect = ({
   );
 };
 
+const PRIORITY_BADGE_VARIANT = {
+  High: "red-light",
+  Medium: "yellow-light",
+  Low: "grey-light",
+};
+
 export const WorkOrderDetailPage = ({ onNavigate, isSidebarCollapsed, initialData }) => {
   const scrollToTop = () => {
     if (typeof window !== "undefined") {
       window.scrollTo({ top: 0, behavior: "auto" });
     }
   };
-  const TOTAL_QTY = initialData?.qty || 100;
-  
+  const [mainQty, setMainQty] = useState(initialData?.qty || 100);
+  const [product, setProduct] = useState(initialData?.product || "");
+  const [sku, setSku] = useState(initialData?.sku || "");
+  const [priority, setPriority] = useState(initialData?.priority || "Medium");
+  const [notes, setNotes] = useState(initialData?.notes || "");
+  const [orderType, setOrderType] = useState(initialData?.orderType || "Internal");
+  const [outputs, setOutputs] = useState(
+    initialData?.outputs?.length
+      ? initialData.outputs
+      : initialData?.materialId
+        ? [{ isMain: true, materialId: initialData.materialId, name: initialData?.product, sku: initialData?.sku, qty: initialData?.qty }]
+        : []
+  );
+  // Total Output = sum of every output's quantity (main + additional), not
+  // just the main output's qty — drives routing "Yet to Start" math below.
+  const TOTAL_QTY = outputs.length
+    ? outputs.reduce((sum, o) => sum + (Number(o.qty) || 0), 0)
+    : mainQty;
+  const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
+
   const [activeTab, setActiveTab] = useState("details");
   const [activityLogs, setActivityLogs] = useState(() => {
     if (initialData?.wo && activityLogsCache[initialData.wo]) {
@@ -934,14 +959,20 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
     const cached = initialData?.wo ? MOCK_WO_TABLE_DATA.find((w) => w.wo === initialData.wo) : null;
     return initialData?.postedToStock || cached?.postedToStock || false;
   });
-  const [postOutputForm, setPostOutputForm] = useState({
-    quantity: "",
-    costPerPcs: "",
-    storageLocation: "",
-    expiryDate: "",
-    notes: "",
-  });
+  const [postOutputForm, setPostOutputForm] = useState({ notes: "" });
+  // One row per work order output (Main + Additional) for the Confirm Stock
+  // Build cost-allocation table: percentage / allocatedCost / unitCost stay
+  // in sync with each other (see updateOutputCostRow), storageLocation and
+  // expiryDate are per-row since outputs may be stocked separately.
+  const [outputCostRows, setOutputCostRows] = useState([]);
   const [postOutputErrors, setPostOutputErrors] = useState({});
+  // Snapshot of outputCostRows taken at final confirmation, so the "Confirm
+  // Build Detail" tab can show exactly what was submitted even after the
+  // in-progress outputCostRows/postOutputForm state resets.
+  const [confirmedStockBuild, setConfirmedStockBuild] = useState(() => {
+    const cached = initialData?.wo ? MOCK_WO_TABLE_DATA.find((w) => w.wo === initialData.wo) : null;
+    return initialData?.confirmedStockBuild || cached?.confirmedStockBuild || null;
+  });
 
   // --- Request Material flow state ---
   const [materials, setMaterials] = useState(() => initialBomMaterials(initialData?.wo, initialData));
@@ -1396,6 +1427,21 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
       })
     );
   });
+  // Shared Total Actual COGS, used by both the Actual COGS tab and the
+  // Confirm Stock Build modal's cost-allocation table. Outsourcing cost is
+  // intentionally left out here (it needs the tab's own vendor-cost rows to
+  // compute) — material/labour/packing/shipping/overhead/other cover the
+  // common case.
+  const linkedBomForCogs = actualCogsBomId ? getBom(actualCogsBomId) : null;
+  const materialCostForCogs = requestHistory.length > 0 ? computeMaterialCost(linkedBomForCogs?.materials || []) : 0;
+  const totalActualCogsForModal =
+    materialCostForCogs +
+    fieldTotal(actualCogs.labour) +
+    fieldTotal(actualCogs.packing) +
+    fieldTotal(actualCogs.shipping) +
+    fieldTotal(actualCogs.overhead) +
+    fieldTotal(actualCogs.other);
+
   const [showActualMaterialBreakdown, setShowActualMaterialBreakdown] = useState(true);
   const [expandedActualCostMaterials, setExpandedActualCostMaterials] = useState({});
   const toggleActualCostMaterial = (materialId) =>
@@ -1557,9 +1603,18 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
         postedToStock,
         requestHistory,
         materials,
+        priority,
+        pBadge: PRIORITY_BADGE_VARIANT[priority] || "yellow-light",
+        notes,
+        orderType,
+        product,
+        sku,
+        qty: mainQty,
+        outputs,
+        confirmedStockBuild,
       };
     }
-  }, [vendors, routingStages, outsourceSteps, woStatus, displayStartDate, displayEndDate, actualCogsBomId, actualCogs, completedDate, postedToStock, requestHistory, materials]);
+  }, [vendors, routingStages, outsourceSteps, woStatus, displayStartDate, displayEndDate, actualCogsBomId, actualCogs, completedDate, postedToStock, requestHistory, materials, priority, notes, orderType, product, sku, mainQty, outputs, confirmedStockBuild]);
 
   const hasStages = routingStages.length > 0;
   const allStagesCompleted =
@@ -1604,39 +1659,91 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
   // step since they have no output-posting form to fill in.
   const openCompleteModal = () => {
     if (fulfillmentType === "StockBuild") {
-      const linkedBom = actualCogsBomId ? getBom(actualCogsBomId) : null;
-      const defaultCostPerPcs = linkedBom ? computeMaterialCost(linkedBom.materials || []) : 0;
-      setPostOutputForm({
-        quantity: String(TOTAL_QTY || ""),
-        costPerPcs: String(defaultCostPerPcs || ""),
-        storageLocation: "",
-        expiryDate: "",
-        notes: "",
+      const totalOutputQtyAll = outputs.reduce((sum, o) => sum + (Number(o.qty) || 0), 0) || 1;
+      const rows = outputs.map((o) => {
+        const material = MOCK_MATERIALS_DATA.find((m) => m.id === o.materialId);
+        const qty = Number(o.qty) || 0;
+        const percentage = (qty / totalOutputQtyAll) * 100;
+        const allocatedCost = totalActualCogsForModal * (percentage / 100);
+        const unitCost = qty > 0 ? allocatedCost / qty : 0;
+        return {
+          id: o.materialId,
+          materialId: o.materialId,
+          name: o.name || material?.name || "-",
+          sku: o.sku || material?.sku || "-",
+          unit: o.unit || material?.unit || "unit",
+          qty,
+          percentage: String(Number(percentage.toFixed(2))),
+          allocatedCost: String(Math.round(allocatedCost)),
+          unitCost: String(Math.round(unitCost)),
+          storageLocation: "",
+          expiryDate: "",
+          averageCost: material?.averageCost ?? null,
+        };
       });
-      setPostOutputErrors({});
+      setOutputCostRows(rows);
+      setPostOutputForm({ notes: "" });
       setIsStockBuildFormModalOpen(true);
     } else {
       setIsFinalCompleteModalOpen(true);
     }
   };
 
+  // Editing % / Allocated Cost / Unit Cost recalculates the other two so the
+  // formula relationship (allocated = total * %, unit = allocated / qty)
+  // stays intact no matter which field the user typed into.
+  const updateOutputCostRow = (materialId, field, rawValue) => {
+    setOutputCostRows((prev) =>
+      prev.map((row) => {
+        if (row.materialId !== materialId) return row;
+        const qty = Number(row.qty) || 0;
+        const total = totalActualCogsForModal;
+        if (field === "percentage") {
+          const pct = Number(rawValue) || 0;
+          const allocatedCost = total * (pct / 100);
+          const unitCost = qty > 0 ? allocatedCost / qty : 0;
+          return { ...row, percentage: rawValue, allocatedCost: String(Math.round(allocatedCost)), unitCost: String(Math.round(unitCost)) };
+        }
+        if (field === "allocatedCost") {
+          const alloc = Number(rawValue) || 0;
+          const percentage = total > 0 ? (alloc / total) * 100 : 0;
+          const unitCost = qty > 0 ? alloc / qty : 0;
+          return { ...row, allocatedCost: rawValue, percentage: String(Number(percentage.toFixed(2))), unitCost: String(Math.round(unitCost)) };
+        }
+        if (field === "unitCost") {
+          const uc = Number(rawValue) || 0;
+          const allocatedCost = uc * qty;
+          const percentage = total > 0 ? (allocatedCost / total) * 100 : 0;
+          return { ...row, unitCost: rawValue, allocatedCost: String(Math.round(allocatedCost)), percentage: String(Number(percentage.toFixed(2))) };
+        }
+        return { ...row, [field]: rawValue };
+      })
+    );
+  };
+
+  // Live (not just on-confirm) validation for the cost-allocation table:
+  // percentages must add up to 100%, and none of the three linked cost
+  // fields may be zero. Storage Location stays optional.
+  const outputCostPercentageTotal = outputCostRows.reduce((sum, row) => sum + (Number(row.percentage) || 0), 0);
+  const outputCostPercentageOver =
+    outputCostRows.length > 0 && outputCostPercentageTotal - 100 > 0.5;
+  const outputCostPercentageUnder =
+    outputCostRows.length > 0 && 100 - outputCostPercentageTotal > 0.5;
+  const outputCostPercentageMismatch = outputCostPercentageOver || outputCostPercentageUnder;
+  const getOutputCostRowErrors = (row) => ({
+    percentage: Number(row.percentage) <= 0 ? "Field must be greater than 0" : "",
+    allocatedCost: Number(row.allocatedCost) <= 0 ? "Field must be greater than 0" : "",
+    unitCost: Number(row.unitCost) <= 0 ? "Field must be greater than 0" : "",
+  });
+
   // Step 1 -> Step 2 for Stock Build: validates the form, then hands off to
   // the same final "Complete Work Order?" confirmation Product orders use.
   const handleStockBuildFormConfirm = () => {
-    const errors = {};
-    if (!postOutputForm.quantity || Number(postOutputForm.quantity) <= 0) {
-      errors.quantity = "This field cannot be empty";
-    }
-    if (!postOutputForm.costPerPcs || Number(postOutputForm.costPerPcs) < 0) {
-      errors.costPerPcs = "This field cannot be empty";
-    }
-    if (!postOutputForm.storageLocation) {
-      errors.storageLocation = "This field cannot be empty";
-    }
-    if (Object.keys(errors).length > 0) {
-      setPostOutputErrors(errors);
-      return;
-    }
+    const hasFieldErrors = outputCostRows.some((row) => {
+      const rowErrors = getOutputCostRowErrors(row);
+      return rowErrors.percentage || rowErrors.allocatedCost || rowErrors.unitCost;
+    });
+    if (hasFieldErrors || outputCostPercentageMismatch) return;
     setIsStockBuildFormModalOpen(false);
     setIsFinalCompleteModalOpen(true);
   };
@@ -1648,46 +1755,59 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
 
     if (fulfillmentType === "StockBuild") {
       const woId = initialData?.wo;
-      const qty = parseInt(String(postOutputForm.quantity).replace(/,/g, ""), 10) || 0;
-      const costPerUnit = parseInt(String(postOutputForm.costPerPcs).replace(/,/g, ""), 10) || 0;
-      const batchNo = `BN-${today.replace(/-/g, "")}-${Math.floor(Math.random() * 1000).toString().padStart(3, "0")}`;
 
-      addBatch({
-        id: `batch-${Date.now()}`,
-        materialId: targetMaterialId,
-        batchNo,
-        initialQty: qty,
-        currentQty: qty,
-        reservedQty: 0,
-        costPerUnit,
-        purchaseDate: today,
-        expiryDate: postOutputForm.expiryDate || "",
-        expectedDate: today,
-        receivedDate: today,
-        storageLocation: postOutputForm.storageLocation,
-        vendor: "Internal Production",
-        attachments: [],
-        status: "Received",
-        reference: woId,
-        notes: postOutputForm.notes || "",
-      });
+      outputCostRows.forEach((row, idx) => {
+        const qty = Number(row.qty) || 0;
+        const costPerUnit = Math.round(Number(row.unitCost) || 0);
+        const batchNo = `BN-${today.replace(/-/g, "")}-${Math.floor(Math.random() * 1000).toString().padStart(3, "0")}-${idx}`;
 
-      addTransaction({
-        id: `tx-${Date.now()}`,
-        materialId: targetMaterialId,
-        date: new Date().toISOString(),
-        batchNo,
-        type: "In",
-        quantity: qty,
-        unit: targetMaterialUom,
-        workOrder: woId,
-        product: targetMaterialObj?.name || initialData?.product || "-",
-        reason: "Stock Build Output",
-        actionBy: "Natasha",
+        addBatch({
+          id: `batch-${Date.now()}-${idx}`,
+          materialId: row.materialId,
+          batchNo,
+          initialQty: qty,
+          currentQty: qty,
+          reservedQty: 0,
+          costPerUnit,
+          purchaseDate: today,
+          expiryDate: row.expiryDate || "",
+          expectedDate: today,
+          receivedDate: today,
+          storageLocation: row.storageLocation,
+          vendor: "Internal Production",
+          attachments: [],
+          status: "Received",
+          reference: woId,
+          notes: postOutputForm.notes || "",
+        });
+
+        addTransaction({
+          id: `tx-${Date.now()}-${idx}`,
+          materialId: row.materialId,
+          date: new Date().toISOString(),
+          batchNo,
+          type: "In",
+          quantity: qty,
+          unit: row.unit,
+          workOrder: woId,
+          product: row.name,
+          reason: "Stock Build Output",
+          actionBy: "Natasha",
+        });
+
+        addActivityLog(
+          "Posted Output to Stock",
+          `${qty} ${row.unit} of ${row.name} posted to stock batch ${batchNo} (Storage: ${row.storageLocation || "-"}).`
+        );
       });
 
       setPostedToStock(true);
-      addActivityLog("Posted Output to Stock", `${qty} unit posted to stock batch.`);
+      setConfirmedStockBuild({
+        confirmedAt: new Date().toISOString(),
+        notes: postOutputForm.notes || "",
+        totalActualCogs: totalActualCogsForModal,
+        rows: outputCostRows,
+      });
     }
 
     // Finalize any material request that hadn't reached a terminal status yet.
@@ -4254,7 +4374,11 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
               </span>
             </div>
           </div>
-          {!isCancelled && <Button variant="outlined">Edit Work Order</Button>}
+          {!isCancelled && (
+            <Button variant="outlined" onClick={() => setIsEditDrawerOpen(true)}>
+              Edit Work Order
+            </Button>
+          )}
         </div>
 
         <Card>
@@ -4329,10 +4453,10 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
             />
             <LabelValue
               label="Priority"
-              value={initialData?.priority || "Medium"}
+              value={priority}
               badge={{
-                variant: initialData?.pBadge || "yellow-light",
-                text: initialData?.priority || "Medium",
+                variant: PRIORITY_BADGE_VARIANT[priority] || "yellow-light",
+                text: priority,
               }}
             />
 
@@ -4341,96 +4465,171 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
               label="Fulfillment Type"
               value={fulfillmentType === "StockBuild" ? "Stock Build" : "Customer Order"}
             />
-            <LabelValue label="Notes" value={initialData?.notes || "-"} />
+            <LabelValue label="Notes" value={notes || "-"} />
           </div>
         </Card>
 
         <Card style={{ gap: "16px" }}>
-          <span
-            style={{
-              fontSize: "var(--text-title-2)",
-              fontWeight: "var(--font-weight-bold)",
-            }}
-          >
-            {targetType === "Material" ? "Target Material" : "Target Product"}
-          </span>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: "24px",
-              padding: "20px 24px",
-              borderRadius: "16px",
-              border: "1px solid var(--neutral-line-separator-1)",
-              background: "var(--neutral-surface-primary)",
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "16px",
-                minWidth: 0,
-                flex: 1,
-              }}
-            >
-              <div
-                style={{
-                  width: "72px",
-                  height: "72px",
-                  borderRadius: "16px",
-                  border: "1px solid var(--neutral-line-separator-1)",
-                  background: "var(--neutral-surface-primary)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  flexShrink: 0,
-                }}
-              >
-                <Box size={28} color="var(--neutral-on-surface-tertiary)" />
-              </div>
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "6px",
-                  minWidth: 0,
-                }}
-              >
-                <span
-                  style={{
-                    fontSize: "18px",
-                    lineHeight: "26px",
-                    fontWeight: "var(--font-weight-bold)",
-                    color: "var(--neutral-on-surface-primary)",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  {initialData?.product || "Wooden Chair"}
-                </span>
-                <span
-                  style={{
-                    fontSize: "var(--text-title-3)",
-                    color: "var(--neutral-on-surface-secondary)",
-                  }}
-                >
-                  SKU: {initialData?.sku || "CH-WD-23948"}
-                </span>
-              </div>
-            </div>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <span
               style={{
-                fontSize: "var(--text-big-title)",
+                fontSize: "var(--text-title-2)",
                 fontWeight: "var(--font-weight-bold)",
-                color: "var(--neutral-on-surface-primary)",
-                whiteSpace: "nowrap",
               }}
             >
-              {TOTAL_QTY} unit
+              {targetType === "Material" ? "Target Material" : "Target Product"}
             </span>
+            <span
+              style={{
+                fontSize: "var(--text-title-3)",
+                color: "var(--neutral-on-surface-secondary)",
+              }}
+            >
+              Total Output: {TOTAL_QTY}
+            </span>
+          </div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "16px" }}>
+            <div
+              style={{
+                flex: "1 1 260px",
+                minWidth: "220px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: "16px",
+                padding: "16px",
+                borderRadius: "16px",
+                border: "1px solid var(--neutral-line-separator-1)",
+                background: "var(--neutral-surface-primary)",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "16px", minWidth: 0 }}>
+                <div
+                  style={{
+                    width: "56px",
+                    height: "56px",
+                    borderRadius: "12px",
+                    border: "1px solid var(--neutral-line-separator-1)",
+                    background: "var(--neutral-surface-primary)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexShrink: 0,
+                  }}
+                >
+                  <Box size={24} color="var(--neutral-on-surface-tertiary)" />
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px", minWidth: 0 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                    <span
+                      style={{
+                        fontSize: "16px",
+                        lineHeight: "22px",
+                        fontWeight: "var(--font-weight-bold)",
+                        color: "var(--neutral-on-surface-primary)",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {product || "Wooden Chair"}
+                    </span>
+                    {outputs?.length > 1 ? (
+                      <StatusBadge variant="blue-light">Main Output</StatusBadge>
+                    ) : null}
+                  </div>
+                  <span
+                    style={{
+                      fontSize: "var(--text-title-3)",
+                      color: "var(--neutral-on-surface-secondary)",
+                    }}
+                  >
+                    {sku || "CH-WD-23948"}
+                  </span>
+                </div>
+              </div>
+              <span
+                style={{
+                  fontSize: "var(--text-title-1)",
+                  fontWeight: "var(--font-weight-bold)",
+                  color: "var(--neutral-on-surface-primary)",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {TOTAL_QTY} unit
+              </span>
+            </div>
+
+            {(outputs || [])
+              .filter((o) => !o.isMain)
+              .map((o, idx) => (
+                <div
+                  key={o.materialId || idx}
+                  style={{
+                    flex: "1 1 260px",
+                    minWidth: "220px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: "16px",
+                    padding: "16px",
+                    borderRadius: "16px",
+                    border: "1px solid var(--neutral-line-separator-1)",
+                    background: "var(--neutral-surface-primary)",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: "16px", minWidth: 0 }}>
+                    <div
+                      style={{
+                        width: "56px",
+                        height: "56px",
+                        borderRadius: "12px",
+                        border: "1px solid var(--neutral-line-separator-1)",
+                        background: "var(--neutral-surface-primary)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flexShrink: 0,
+                      }}
+                    >
+                      <Box size={24} color="var(--neutral-on-surface-tertiary)" />
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "6px", minWidth: 0 }}>
+                      <span
+                        style={{
+                          fontSize: "16px",
+                          lineHeight: "22px",
+                          fontWeight: "var(--font-weight-bold)",
+                          color: "var(--neutral-on-surface-primary)",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {o.name}
+                      </span>
+                      <span
+                        style={{
+                          fontSize: "var(--text-title-3)",
+                          color: "var(--neutral-on-surface-secondary)",
+                        }}
+                      >
+                        {o.sku || "-"}
+                      </span>
+                    </div>
+                  </div>
+                  <span
+                    style={{
+                      fontSize: "var(--text-title-1)",
+                      fontWeight: "var(--font-weight-bold)",
+                      color: "var(--neutral-on-surface-primary)",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {o.qty} {o.unit || "unit"}
+                  </span>
+                </div>
+              ))}
           </div>
         </Card>
 
@@ -4445,6 +4644,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
             tabs={[
               { id: "details", label: "Details" },
               { id: "cogs", label: "Actual COGS" },
+              ...(confirmedStockBuild ? [{ id: "confirm_build", label: "Confirm Build Detail" }] : []),
               { id: "logs", label: "Logs" },
             ]}
             activeTab={activeTab}
@@ -5987,23 +6187,27 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                                 </span>
                                 <span style={{ fontSize: "var(--text-title-3)" }}>{formatIDR(line.amount)}</span>
                                 <div style={{ display: "flex", gap: "4px", justifyContent: "flex-end" }}>
-                                  <Tooltip content="Edit Cost Item">
-                                    <IconButton
-                                      icon={EditIcon}
-                                      size="small"
-                                      color="var(--feature-brand-primary)"
-                                      onClick={() => openEditCostItemModal(key, idx)}
-                                    />
-                                  </Tooltip>
-                                  <Tooltip content="Delete Cost Item">
-                                    <IconButton
-                                      icon={DeleteIcon}
-                                      size="small"
-                                      color="var(--status-red-primary)"
-                                      hoverBackground="#FAE6E8"
-                                      onClick={() => openDeleteCostItemModal(key, idx)}
-                                    />
-                                  </Tooltip>
+                                  {woStatus !== "completed" ? (
+                                    <>
+                                      <Tooltip content="Edit Cost Item">
+                                        <IconButton
+                                          icon={EditIcon}
+                                          size="small"
+                                          color="var(--feature-brand-primary)"
+                                          onClick={() => openEditCostItemModal(key, idx)}
+                                        />
+                                      </Tooltip>
+                                      <Tooltip content="Delete Cost Item">
+                                        <IconButton
+                                          icon={DeleteIcon}
+                                          size="small"
+                                          color="var(--status-red-primary)"
+                                          hoverBackground="#FAE6E8"
+                                          onClick={() => openDeleteCostItemModal(key, idx)}
+                                        />
+                                      </Tooltip>
+                                    </>
+                                  ) : null}
                                 </div>
                               </div>
                             ))
@@ -6028,6 +6232,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                           )}
                         </div>
                         <div style={{ display: "flex", flexDirection: "column", gap: "4px", alignItems: "flex-start" }}>
+                          {woStatus !== "completed" ? (
                           <Button
                             variant="outlined"
                             size="small"
@@ -6038,6 +6243,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                           >
                             Add Cost Item
                           </Button>
+                          ) : null}
                           {atMaxCostItems ? (
                             <span style={{ fontSize: "12px", color: "var(--neutral-on-surface-tertiary)" }}>Maximum 10 items</span>
                           ) : null}
@@ -6405,6 +6611,113 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
           );
         })()}
 
+        {activeTab === "confirm_build" && confirmedStockBuild && (
+          <Card style={{ gap: "16px" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+              <span style={{ fontSize: "var(--text-title-2)", fontWeight: "var(--font-weight-bold)" }}>
+                Confirm Build Detail
+              </span>
+              <span style={{ fontSize: "var(--text-title-3)", color: "var(--neutral-on-surface-secondary)" }}>
+                Details of each output produced by this work order, and how much of the actual COGS was allocated to it.
+              </span>
+            </div>
+
+            <div style={{ overflowX: "auto" }}>
+              <style>{`.confirmed-build-table table td { height: auto; vertical-align: middle; padding-top: 12px; padding-bottom: 12px; }`}</style>
+              <div className="confirmed-build-table">
+                <Table
+                  columns={[
+                    {
+                      key: "material",
+                      header: "Material",
+                      width: 200,
+                      render: (_v, row) => {
+                        const material = MOCK_MATERIALS_DATA.find((m) => m.id === row.materialId);
+                        return (
+                          <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                            <span style={{ fontWeight: "var(--font-weight-bold)" }}>{row.name}</span>
+                            <span
+                              style={{
+                                fontSize: "var(--text-body)",
+                                color: "var(--feature-brand-primary)",
+                                cursor: "pointer",
+                                textDecoration: "underline",
+                              }}
+                              onClick={() => {
+                                // Use the freshly-synced record (kept in step with local
+                                // state by the effect above) rather than the stale
+                                // `initialData` prop, so returning here shows the current
+                                // status/outputs instead of resetting to how the page
+                                // looked when it first mounted.
+                                const currentWoRecord =
+                                  MOCK_WO_TABLE_DATA.find((w) => w.wo === initialData?.wo) || initialData;
+                                onNavigate("material_detail", {
+                                  ...(material || { id: row.materialId, sku: row.sku, name: row.name }),
+                                  returnTo: { view: "work_order_detail", data: currentWoRecord },
+                                });
+                              }}
+                            >
+                              {row.sku}
+                            </span>
+                          </div>
+                        );
+                      },
+                    },
+                    {
+                      key: "qty",
+                      header: "Produced Qty",
+                      width: 100,
+                      render: (_v, row) => <span>{row.qty} {row.unit}</span>,
+                    },
+                    {
+                      key: "percentage",
+                      header: "Cost Share %",
+                      width: 100,
+                      render: (_v, row) => <span>{row.percentage}%</span>,
+                    },
+                    {
+                      key: "allocatedCost",
+                      header: "Allocated Cost",
+                      width: 160,
+                      render: (_v, row) => <span>{formatIDR(Number(row.allocatedCost) || 0)}</span>,
+                    },
+                    {
+                      key: "unitCost",
+                      header: "Recognised Unit Cost",
+                      width: 160,
+                      render: (_v, row) => <span>{formatIDR(Number(row.unitCost) || 0)}</span>,
+                    },
+                    {
+                      key: "storageLocation",
+                      header: "Storage Location",
+                      width: 160,
+                      render: (_v, row) => <span>{row.storageLocation || "-"}</span>,
+                    },
+                    {
+                      key: "expiryDate",
+                      header: "Expiry Date",
+                      width: 140,
+                      render: (_v, row) => <span>{row.expiryDate || "-"}</span>,
+                    },
+                  ]}
+                  data={confirmedStockBuild.rows}
+                  totalRows={confirmedStockBuild.rows.length}
+                  showPagination={false}
+                  className="!h-auto"
+                  selectedRowId={null}
+                />
+              </div>
+            </div>
+
+            {confirmedStockBuild.notes ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                <span style={{ fontSize: "var(--text-body)", color: "var(--neutral-on-surface-secondary)" }}>Notes</span>
+                <span style={{ fontSize: "var(--text-title-3)" }}>{confirmedStockBuild.notes}</span>
+              </div>
+            ) : null}
+          </Card>
+        )}
+
         {activeTab === "logs" && (
           <div
             style={{
@@ -6582,100 +6895,225 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
         </div>
       ) : null}
 
-      <GeneralModal
-        isOpen={isStockBuildFormModalOpen}
-        onClose={() => setIsStockBuildFormModalOpen(false)}
-        title="Confirm stock build?"
-        description="The actual output quantity and production cost will be used to update your inventory. Make sure the information is correct before continuing."
-        footer={
-          <>
-            <Button
-              variant="outlined"
-              size="large"
-              style={{ width: "100%" }}
+      {isStockBuildFormModalOpen ? (
+      <div style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(0, 0, 0, 0.28)",
+        display: "flex",
+        justifyContent: "flex-end",
+        zIndex: 13000,
+      }}>
+        <div style={{ position: "absolute", inset: 0 }} onClick={() => setIsStockBuildFormModalOpen(false)} />
+        <div style={{
+          position: "relative",
+          width: "1200px",
+          maxWidth: "calc(100vw - 24px)",
+          height: "100vh",
+          background: "var(--neutral-surface-primary)",
+          boxShadow: "-12px 0 32px rgba(0, 0, 0, 0.08)",
+          display: "flex",
+          flexDirection: "column",
+        }}>
+          {/* Drawer Header */}
+          <div style={{
+            padding: "20px 24px",
+            borderBottom: "1px solid var(--neutral-line-separator-1)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            background: "var(--neutral-surface-primary)"
+          }}>
+            <h2 style={{
+              margin: 0,
+              fontSize: "var(--text-title-1)",
+              fontWeight: "var(--font-weight-bold)",
+              color: "var(--neutral-on-surface-primary)"
+            }}>
+              Confirm stock build?
+            </h2>
+            <IconButton
+              icon={CloseIcon}
               onClick={() => setIsStockBuildFormModalOpen(false)}
-            >
+              size="small"
+              color="var(--neutral-on-surface-primary)"
+            />
+          </div>
+
+          {/* Drawer Body */}
+          <div style={{ flex: 1, overflowY: "auto", padding: "24px", display: "flex", flexDirection: "column", gap: "16px" }}>
+          <span style={{ fontSize: "var(--text-title-3)", color: "var(--neutral-on-surface-secondary)" }}>
+            The actual output quantity and production cost will be used to update your inventory. Make sure the information is correct before continuing.
+          </span>
+
+          <Card style={{ padding: "16px", boxShadow: "none", border: "1px solid var(--neutral-line-separator-1)" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <span style={{ fontSize: "var(--text-body)", color: "var(--neutral-on-surface-secondary)" }}>
+                Total Actual COGS
+              </span>
+              <span style={{ fontSize: "var(--text-title-3)", fontWeight: "var(--font-weight-bold)" }}>
+                {formatIDR(totalActualCogsForModal)}
+              </span>
+            </div>
+          </Card>
+
+          {outputCostPercentageOver ? (
+            <span style={{ fontSize: "12px", color: "var(--status-red-primary)" }}>
+              Total cost share % exceeds 100%
+            </span>
+          ) : null}
+          {outputCostPercentageUnder ? (
+            <span style={{ fontSize: "12px", color: "var(--status-red-primary)" }}>
+              Total cost share % below 100%
+            </span>
+          ) : null}
+
+          <div style={{ overflowX: "auto" }}>
+            <style>{`
+              .stock-build-cost-table table td { height: auto; vertical-align: middle; padding-top: 12px; padding-bottom: 12px; }
+            `}</style>
+            <div className="stock-build-cost-table">
+              <Table
+                columns={[
+                  {
+                    key: "material",
+                    header: "Material",
+                    width: 200,
+                    render: (_v, row) => (
+                      <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                        <span style={{ fontWeight: "var(--font-weight-bold)" }}>{row.name}</span>
+                        <span style={{ fontSize: "var(--text-body)", color: "var(--neutral-on-surface-secondary)" }}>
+                          {row.sku}
+                        </span>
+                      </div>
+                    ),
+                  },
+                  {
+                    key: "qty",
+                    header: "Produced Qty",
+                    width: 100,
+                    render: (_v, row) => (
+                      <span>
+                        {row.qty} {row.unit}
+                      </span>
+                    ),
+                  },
+                  {
+                    key: "percentage",
+                    header: "Cost Share %",
+                    width: 110,
+                    render: (_v, row) => {
+                      const rowErrors = getOutputCostRowErrors(row);
+                      return (
+                        <div>
+                          <InputField
+                            type="number"
+                            value={row.percentage}
+                            onChange={(e) => updateOutputCostRow(row.materialId, "percentage", e.target.value)}
+                            suffix="%"
+                            errorState={!!rowErrors.percentage || outputCostPercentageMismatch}
+                          />
+                          {rowErrors.percentage ? (
+                            <span style={{ fontSize: "11px", color: "var(--status-red-primary)" }}>{rowErrors.percentage}</span>
+                          ) : null}
+                        </div>
+                      );
+                    },
+                  },
+                  {
+                    key: "allocatedCost",
+                    header: "Allocated Cost",
+                    width: 160,
+                    render: (_v, row) => (
+                      <span style={Number(row.allocatedCost) <= 0 ? { color: "var(--status-red-primary)" } : undefined}>
+                        {formatIDR(Number(row.allocatedCost) || 0)}
+                      </span>
+                    ),
+                  },
+                  {
+                    key: "unitCost",
+                    header: "Recognised Unit Cost",
+                    width: 160,
+                    render: (_v, row) => {
+                      const rowErrors = getOutputCostRowErrors(row);
+                      return (
+                        <div>
+                          <InputField
+                            type="number"
+                            value={row.unitCost}
+                            onChange={(e) => updateOutputCostRow(row.materialId, "unitCost", e.target.value)}
+                            prefix="IDR"
+                            errorState={!!rowErrors.unitCost}
+                          />
+                          {rowErrors.unitCost ? (
+                            <span style={{ fontSize: "11px", color: "var(--status-red-primary)" }}>{rowErrors.unitCost}</span>
+                          ) : null}
+                        </div>
+                      );
+                    },
+                  },
+                  {
+                    key: "averageCost",
+                    header: "Current Avg. Cost",
+                    width: 140,
+                    render: (_v, row) => (
+                      <span>{row.averageCost != null ? formatIDR(row.averageCost) : "-"}</span>
+                    ),
+                  },
+                  {
+                    key: "storageLocation",
+                    header: "Storage Location",
+                    width: 160,
+                    render: (_v, row) => (
+                      <InputField
+                        value={row.storageLocation}
+                        onChange={(e) => updateOutputCostRow(row.materialId, "storageLocation", e.target.value)}
+                        placeholder="Enter storage location (optional)"
+                      />
+                    ),
+                  },
+                  {
+                    key: "expiryDate",
+                    header: "Expiry Date",
+                    width: 160,
+                    render: (_v, row) => (
+                      <InputField
+                        type="date"
+                        value={row.expiryDate}
+                        onChange={(e) => updateOutputCostRow(row.materialId, "expiryDate", e.target.value)}
+                      />
+                    ),
+                  },
+                ]}
+                data={outputCostRows}
+                totalRows={outputCostRows.length}
+                showPagination={false}
+                className="!h-auto"
+                selectedRowId={null}
+              />
+            </div>
+          </div>
+          </div>
+
+          {/* Drawer Footer */}
+          <div style={{
+            padding: "20px 24px",
+            borderTop: "1px solid var(--neutral-line-separator-1)",
+            display: "flex",
+            justifyContent: "space-between",
+            gap: "12px",
+            background: "var(--neutral-surface-primary)"
+          }}>
+            <Button variant="outlined" size="large" onClick={() => setIsStockBuildFormModalOpen(false)} style={{ flex: 1 }}>
               Cancel
             </Button>
-            <Button
-              variant="filled"
-              size="large"
-              style={{ width: "100%" }}
-              onClick={handleStockBuildFormConfirm}
-            >
+            <Button variant="filled" size="large" onClick={handleStockBuildFormConfirm} style={{ flex: 1 }}>
               Confirm
             </Button>
-          </>
-        }
-      >
-        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-          <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-            <span style={{ fontSize: "var(--text-body)", color: "var(--neutral-on-surface-secondary)" }}>
-              Material
-            </span>
-            <span style={{ fontSize: "var(--text-title-3)", fontWeight: "var(--font-weight-bold)", color: "var(--neutral-on-surface-primary)" }}>
-              {targetMaterialObj?.name || initialData?.product || "-"}
-              {" "}
-              <span style={{ fontWeight: "var(--font-weight-regular)", color: "var(--neutral-on-surface-secondary)" }}>
-                (SKU: {targetMaterialObj?.sku || initialData?.sku || "-"})
-              </span>
-            </span>
           </div>
-          <div style={{ display: "flex", gap: "16px" }}>
-            <div style={{ flex: 1 }}>
-              <InputField
-                label="Quantity"
-                required
-                value={postOutputForm.quantity}
-                onChange={(e) => setPostOutputForm({ ...postOutputForm, quantity: e.target.value })}
-                placeholder="Enter quantity"
-                error={postOutputErrors.quantity}
-                suffix={targetMaterialUom}
-              />
-            </div>
-            <div style={{ flex: 1 }}>
-              <InputField
-                label="Cost per Unit"
-                required
-                value={postOutputForm.costPerPcs}
-                onChange={(e) => setPostOutputForm({ ...postOutputForm, costPerPcs: e.target.value })}
-                placeholder="Enter cost per unit"
-                error={postOutputErrors.costPerPcs}
-                prefix="IDR"
-              />
-            </div>
-          </div>
-          <div style={{ display: "flex", gap: "16px" }}>
-            <div style={{ flex: 1 }}>
-              <InputField
-                label="Storage Location"
-                required
-                value={postOutputForm.storageLocation}
-                onChange={(e) => setPostOutputForm({ ...postOutputForm, storageLocation: e.target.value })}
-                placeholder="Enter storage location"
-                error={postOutputErrors.storageLocation}
-              />
-            </div>
-            <div style={{ flex: 1 }}>
-              <InputField
-                label="Expiry Date"
-                type="date"
-                value={postOutputForm.expiryDate}
-                onChange={(e) => setPostOutputForm({ ...postOutputForm, expiryDate: e.target.value })}
-              />
-            </div>
-          </div>
-          <InputField
-            label="Notes"
-            value={postOutputForm.notes}
-            onChange={(e) => setPostOutputForm({ ...postOutputForm, notes: e.target.value })}
-            placeholder="Add notes (optional)"
-            multiline
-            maxLength={400}
-            showCounter
-          />
         </div>
-      </GeneralModal>
+      </div>
+      ) : null}
 
       <GeneralModal
         isOpen={isFinalCompleteModalOpen}
@@ -9530,6 +9968,46 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
           state={deleteCostItemError ? "error" : undefined}
         />
       </GeneralModal>
+
+      <WorkOrderEditDrawer
+        isOpen={isEditDrawerOpen}
+        onClose={() => setIsEditDrawerOpen(false)}
+        workOrder={{
+          wo: initialData?.wo,
+          ord: initialData?.ord,
+          targetType,
+          fulfillmentType,
+          statusKey: woStatus,
+          orderType,
+          priority,
+          notes,
+          start: displayStartDate,
+          end: displayEndDate,
+          outputs,
+          // What's already in progress + completed at the very first routing
+          // stage — i.e. everything that has already left the "yet to start"
+          // pool, regardless of which downstream stage it's currently at.
+          // Total Output can't be edited below this.
+          processedQty: (stagesWithTotals[0]?.prog || 0) + (stagesWithTotals[0]?.totalComp || 0),
+          processedUnit: outputs.find((o) => o.isMain)?.unit || "unit",
+        }}
+        onSave={(changes) => {
+          setOrderType(changes.orderType);
+          setPriority(changes.priority);
+          setNotes(changes.notes);
+          setDisplayStartDate(changes.start);
+          setDisplayEndDate(changes.end);
+          // Customer-order work orders don't expose the Main/Additional
+          // Output fields, so those keys are omitted — leave the existing
+          // product/SKU/qty/outputs untouched rather than clearing them.
+          if (changes.outputs) {
+            setProduct(changes.product);
+            setSku(changes.sku);
+            setMainQty(changes.qty);
+            setOutputs(changes.outputs);
+          }
+        }}
+      />
     </div>
   );
 };
