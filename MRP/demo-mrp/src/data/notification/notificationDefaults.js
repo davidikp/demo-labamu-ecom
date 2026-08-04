@@ -292,6 +292,7 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
         todo: null,
         groupId: null,
         remindBefore: DEFAULT_REMIND_BEFORE_DAYS,
+        reminderTarget: "expiry date",
         defaults: { inApp: true, email: false },
         content: {
           inApp: {
@@ -538,6 +539,7 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
         todo: null,
         groupId: null,
         remindBefore: DEFAULT_REMIND_BEFORE_DAYS,
+        reminderTarget: "deadline",
         defaults: { inApp: true, email: true },
         content: {
           inApp: {
@@ -853,6 +855,7 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
         todo: null,
         groupId: null,
         remindBefore: DEFAULT_REMIND_BEFORE_DAYS,
+        reminderTarget: "valid-until date",
         defaults: { inApp: true, email: true },
         content: {
           inApp: {
@@ -992,6 +995,7 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
         todo: null,
         groupId: null,
         remindBefore: DEFAULT_REMIND_BEFORE_DAYS,
+        reminderTarget: "deadline",
         defaults: { inApp: true, email: true },
         content: {
           inApp: {
@@ -1196,6 +1200,7 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
         todo: null,
         groupId: null,
         remindBefore: DEFAULT_REMIND_BEFORE_DAYS,
+        reminderTarget: "due date",
         defaults: { inApp: true, email: true },
         content: {
           inApp: {
@@ -1463,6 +1468,7 @@ export const DEFAULT_NOTIFICATION_SETTINGS = [
         todo: null,
         groupId: null,
         remindBefore: DEFAULT_REMIND_BEFORE_DAYS,
+        reminderTarget: "expected end date",
         defaults: { inApp: true, email: false },
         content: {
           inApp: {

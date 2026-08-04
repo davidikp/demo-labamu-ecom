@@ -253,6 +253,7 @@ const NotificationSettingsPage = ({
     if (!REMINDER_SUPPORTED_RULE_IDS.has(primaryId)) return null;
     const value = settings[primaryId]?.remindBefore;
     const invalid = remindBeforeInvalid(value);
+    const target = unit.rule.reminderTarget || "target date";
     return (
       <div
         style={{
@@ -280,7 +281,7 @@ const NotificationSettingsPage = ({
               color: "var(--neutral-on-surface-secondary)",
             }}
           >
-            Define how long before expiry the notification should be sent.
+            Define how long before the {target} the notification should be sent.
           </span>
         </div>
         <div
@@ -318,7 +319,7 @@ const NotificationSettingsPage = ({
               }}
             />
             <span style={{ fontSize: "12px", color: "var(--neutral-on-surface-secondary)" }}>
-              days before the expiry date
+              days before the {target}
             </span>
           </div>
           {invalid ? (
@@ -339,7 +340,7 @@ const NotificationSettingsPage = ({
                 color: "var(--neutral-on-surface-secondary)",
               }}
             >
-              {`The reminder will be sent ${value ?? MIN_REMIND_BEFORE_DAYS} days before the expiry date.`}
+              {`The reminder will be sent ${value ?? MIN_REMIND_BEFORE_DAYS} days before the ${target}.`}
             </span>
           )}
         </div>
