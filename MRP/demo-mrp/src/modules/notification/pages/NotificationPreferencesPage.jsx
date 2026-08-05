@@ -3,7 +3,12 @@ import { Button } from "../../../components/common/Button.jsx";
 import { StatusBadge } from "../../../components/common/StatusBadge.jsx";
 import { ToggleSwitch } from "../../../components/common/ToggleSwitch.jsx";
 import { TableSearchField } from "../../../components/table/TableSearchField.jsx";
+import { GeneralModal } from "../../../components/modal/GeneralModal.jsx";
 import { ChipTabs } from "../../../ce-ui";
+import {
+  clearNavigationGuard,
+  setNavigationGuard,
+} from "../../../utils/navigationGuard.js";
 import {
   ALL_NOTIFICATION_RULES,
   DEFAULT_NOTIFICATION_SETTINGS,
@@ -15,7 +20,7 @@ import {
   clonePersonalPreferences,
   pickLocalized,
 } from "../../../data/notification/notificationDefaults.js";
-import { resolveEffectiveStatus } from "../../../utils/notification/notificationUtils.js";
+import { companyStatusOf, resolveEffectiveStatus } from "../../../utils/notification/notificationUtils.js";
 import { Info } from "lucide-react";
 
 // The demo user (Owner) can access every module, so no rows are hidden. In a
@@ -44,6 +49,10 @@ const metaLabelStyle = {
 // Darker grey for a locked (disabled + on) toggle so it reads as "on but
 // locked" — matches the treatment in NotificationSettingsPage.
 const LOCKED_ON_TOGGLE_CLASS = "!bg-[#9AA0A6]";
+// A disabled + off toggle (channel turned off at the company level) uses its
+// own darker grey so it doesn't read the same as a regular, editable off
+// toggle.
+const DISABLED_OFF_TOGGLE_CLASS = "!bg-[#D0D3D8]";
 
 // Collapse grouped admin toggles (e.g. "Receipt Status Updates") into one row.
 const buildDisplayUnits = (items, language) => {
@@ -85,6 +94,12 @@ const canAccess = (permission) =>
   permission === null ||
   ACCESSIBLE_PERMISSIONS.includes(permission);
 
+// Rules the company has turned fully off (both In-app and Email disabled in
+// Company Notification Settings) have nothing left to configure, so they're
+// hidden from personal preferences entirely.
+const isEnabledByCompany = (rule, company) =>
+  companyStatusOf(rule, company) === "on";
+
 const NotificationPreferencesPage = ({
   isSidebarCollapsed, // preserved for API compatibility with the shell
   companySettings,
@@ -105,6 +120,9 @@ const NotificationPreferencesPage = ({
     clonePersonalPreferences(personalPreferences || buildDefaultPersonalPreferences())
   );
   const [toastMessage, setToastMessage] = useState("");
+  // Pending navigation awaiting discard confirmation: null | {type:"cancel"} |
+  // {type:"module", id} | {type:"leave", proceed}
+  const [pendingAction, setPendingAction] = useState(null);
   const toastTimerRef = useRef(null);
 
   useEffect(() => {
@@ -171,8 +189,45 @@ const NotificationPreferencesPage = ({
     showToast("Notification preferences saved");
   };
 
-  const handleCancel = () => {
+  const isDirty = useMemo(
+    () => JSON.stringify(prefs) !== JSON.stringify(savedSnapshot),
+    [prefs, savedSnapshot]
+  );
+
+  // Register a navigation guard so leaving Notification Preferences with
+  // unsaved changes prompts to discard (matches Company Notification Settings).
+  const isDirtyRef = useRef(false);
+  useEffect(() => {
+    isDirtyRef.current = isDirty;
+  }, [isDirty]);
+  useEffect(() => {
+    const guard = (proceed) => {
+      if (!isDirtyRef.current) return true;
+      setPendingAction({ type: "leave", proceed });
+      return false;
+    };
+    setNavigationGuard(guard);
+    return () => clearNavigationGuard(guard);
+  }, []);
+
+  const requestCancel = () => {
+    if (!isDirty) return;
+    setPendingAction({ type: "cancel" });
+  };
+
+  const confirmDiscard = () => {
+    const action = pendingAction;
     setPrefs(clonePersonalPreferences(savedSnapshot));
+    setPendingAction(null);
+    if (action?.type === "leave") {
+      clearNavigationGuard();
+      action.proceed?.();
+      return;
+    }
+    if (action?.type === "module") {
+      setActiveModule(action.id);
+      setSearchQuery("");
+    }
     showToast("Changes discarded");
   };
 
@@ -180,7 +235,9 @@ const NotificationPreferencesPage = ({
     id: section.id,
     label: pickLocalized(section.title, language),
     count: buildDisplayUnits(
-      section.items.filter((item) => canAccess(item.permission)),
+      section.items.filter(
+        (item) => canAccess(item.permission) && isEnabledByCompany(item, company)
+      ),
       language
     ).length,
   }));
@@ -192,8 +249,14 @@ const NotificationPreferencesPage = ({
     [activeModule]
   );
 
+  // Switching module tabs with unsaved changes prompts the same discard
+  // confirmation as Cancel, instead of silently carrying the draft over.
   const requestModule = (id) => {
     if (id === activeModule) return;
+    if (isDirty) {
+      setPendingAction({ type: "module", id });
+      return;
+    }
     setActiveModule(id);
     setSearchQuery("");
   };
@@ -204,12 +267,21 @@ const NotificationPreferencesPage = ({
     const pref = prefs[primaryId] || { inApp: false, email: false };
     const { status } = resolveEffectiveStatus(rule, company, prefs);
     const isRequired = rule.type === "required";
-    const channelsDisabled = isRequired || status !== "on";
+    // A channel the company has switched off has nothing to override — show
+    // it as a disabled toggle rather than letting the user turn it on.
+    const companyAllowsChannel = isRequired || !!company[primaryId]?.[channel];
+    const channelDisabled = isRequired || status !== "on" || !companyAllowsChannel;
+    const checked = isRequired ? true : pref[channel];
+    const toggleClassName = isRequired
+      ? LOCKED_ON_TOGGLE_CLASS
+      : channelDisabled && !checked
+        ? DISABLED_OFF_TOGGLE_CLASS
+        : "";
     return (
       <ToggleSwitch
-        checked={isRequired ? true : pref[channel]}
-        disabled={channelsDisabled}
-        className={isRequired ? LOCKED_ON_TOGGLE_CLASS : ""}
+        checked={checked}
+        disabled={channelDisabled}
+        className={toggleClassName}
         onChange={(next) => patchRules(unit.memberIds, { [channel]: next })}
       />
     );
@@ -250,7 +322,9 @@ const NotificationPreferencesPage = ({
   const rows = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     return buildDisplayUnits(
-      activeSection.items.filter((item) => canAccess(item.permission)),
+      activeSection.items.filter(
+        (item) => canAccess(item.permission) && isEnabledByCompany(item, company)
+      ),
       language
     )
       .filter((unit) => {
@@ -267,7 +341,7 @@ const NotificationPreferencesPage = ({
         permission: unit.rule.permission,
       }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeSection, searchQuery, language]);
+  }, [activeSection, searchQuery, language, company]);
 
 
   return (
@@ -453,13 +527,42 @@ const NotificationPreferencesPage = ({
           zIndex: 5,
         }}
       >
-        <Button variant="outlined" size="large" onClick={handleCancel}>
+        <Button variant="outlined" size="large" onClick={requestCancel}>
           Cancel
         </Button>
         <Button variant="filled" size="large" onClick={handleSave}>
           Save Changes
         </Button>
       </div>
+
+      {/* Discard-changes confirmation modal (matches Company Notification Settings). */}
+      <GeneralModal
+        isOpen={pendingAction !== null}
+        onClose={() => setPendingAction(null)}
+        title="Discard changes?"
+        description="Your changes to the notification preferences will be lost if you leave this page."
+        hideFooterDivider
+        footer={
+          <div style={{ display: "flex", gap: "12px", width: "100%", marginTop: "24px" }}>
+            <Button
+              variant="outlined"
+              size="large"
+              style={{ width: "100%" }}
+              onClick={() => setPendingAction(null)}
+            >
+              Keep Editing
+            </Button>
+            <Button
+              variant="filled"
+              size="large"
+              style={{ width: "100%" }}
+              onClick={confirmDiscard}
+            >
+              Yes, Discard
+            </Button>
+          </div>
+        }
+      />
     </div>
   );
 };

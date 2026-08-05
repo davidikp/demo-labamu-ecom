@@ -192,10 +192,14 @@ const NotificationSettingsPage = ({
     showToast("Notification settings saved");
   };
 
-  // Switching module tabs keeps the draft — no confirmation (drafts persist
-  // across modules within Notification Settings).
+  // Switching module tabs with unsaved changes prompts the same discard
+  // confirmation as Cancel, instead of silently carrying the draft over.
   const requestModule = (id) => {
     if (id === activeModule) return;
+    if (isDirty) {
+      setPendingAction({ type: "module", id });
+      return;
+    }
     setActiveModule(id);
     setSearchQuery("");
   };
@@ -214,6 +218,10 @@ const NotificationSettingsPage = ({
       clearNavigationGuard();
       action.proceed?.();
       return;
+    }
+    if (action?.type === "module") {
+      setActiveModule(action.id);
+      setSearchQuery("");
     }
     showToast("Changes discarded");
   };
@@ -418,7 +426,7 @@ const NotificationSettingsPage = ({
           fontWeight: "var(--font-weight-bold)",
         }}
       >
-        Notification Settings
+        Company Notification Settings
       </h1>
 
       {/* Module chip tabs — outside the content card, wrapping instead of scrolling */}
@@ -560,16 +568,10 @@ const NotificationSettingsPage = ({
         isOpen={pendingAction !== null}
         onClose={() => setPendingAction(null)}
         title="Discard changes?"
+        description="Your changes to the company notification settings will be lost if you leave this page."
+        hideFooterDivider
         footer={
-          <>
-            <Button
-              variant="filled"
-              size="large"
-              style={{ width: "100%" }}
-              onClick={confirmDiscard}
-            >
-              Yes, Discard
-            </Button>
+          <div style={{ display: "flex", gap: "12px", width: "100%", marginTop: "24px" }}>
             <Button
               variant="outlined"
               size="large"
@@ -578,7 +580,15 @@ const NotificationSettingsPage = ({
             >
               Keep Editing
             </Button>
-          </>
+            <Button
+              variant="filled"
+              size="large"
+              style={{ width: "100%" }}
+              onClick={confirmDiscard}
+            >
+              Yes, Discard
+            </Button>
+          </div>
         }
       />
     </div>

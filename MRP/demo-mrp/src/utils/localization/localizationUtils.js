@@ -15,6 +15,7 @@ const INDONESIAN_EXACT_TEXT = {
   "User Management": "Manajemen Pengguna",
   "FX Management": "Manajemen FX",
   "Notification Settings": "Pengaturan Notifikasi",
+  "Company Notification Settings": "Pengaturan Notifikasi Perusahaan",
   "Company Settings": "Pengaturan Perusahaan",
   "Labamu Staff": "Staf Labamu",
   "All Channels": "Semua Kanal",

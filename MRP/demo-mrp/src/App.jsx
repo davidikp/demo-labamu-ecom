@@ -97,7 +97,7 @@ const TRANSLATIONS = {
       administration: "Administration",
       user_management: "User Management",
       fx_management: "FX Management",
-      notification_settings: "Notification Settings",
+      notification_settings: "Company Notification Settings",
       notification_preferences: "Notification Preferences",
       email_outbox: "Email Outbox",
       company_settings: "Company Settings",
@@ -166,7 +166,7 @@ const TRANSLATIONS = {
       administration: "Administrasi",
       user_management: "Manajemen Pengguna",
       fx_management: "Manajemen FX",
-      notification_settings: "Pengaturan Notifikasi",
+      notification_settings: "Pengaturan Notifikasi Perusahaan",
       notification_preferences: "Preferensi Notifikasi",
       email_outbox: "Kotak Keluar Email",
       company_settings: "Pengaturan Perusahaan",
@@ -1280,7 +1280,6 @@ export default function App() {
             notificationSettings={notificationSettings}
             notifications={systemNotifications}
             onNotificationsChange={setSystemNotifications}
-            onOpenNotificationSettings={() => handleModuleChange("notification_settings")}
             onOpenNotificationPreferences={() => handleModuleChange("notification_preferences")}
           />
           {poSnackbar.open && (

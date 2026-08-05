@@ -24,6 +24,10 @@ export const timeAgo = (iso, language = "en") => {
   return `${days}${language === "id" ? " " : ""}${labels.d}`;
 };
 
+// How many notifications are shown up front, and how many more load per
+// "Load more" click.
+const PAGE_SIZE = 10;
+
 export const NotificationBell = () => {
   const navigate = useNavigate();
   const {
@@ -38,8 +42,13 @@ export const NotificationBell = () => {
 
   const [open, setOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("all");
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const loadMoreTimerRef = useRef(null);
   const bellRef = useRef(null);
   const panelRef = useRef(null);
+  const scrollRef = useRef(null);
+  const sentinelRef = useRef(null);
   const [pos, setPos] = useState({ top: 72, left: 0 });
 
   const updatePos = () => {
@@ -70,6 +79,32 @@ export const NotificationBell = () => {
     };
   }, [open]);
 
+  // Reset back to the first page when the All/Unread tab changes. Reopening
+  // the popover within the same session keeps whatever was already loaded —
+  // only a fresh session (component mount) starts back at PAGE_SIZE.
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+    setLoadingMore(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
+
+  useEffect(
+    () => () => {
+      if (loadMoreTimerRef.current) window.clearTimeout(loadMoreTimerRef.current);
+    },
+    []
+  );
+
+  const loadMore = () => {
+    if (loadingMore) return;
+    setLoadingMore(true);
+    // Simulated network delay so the skeleton state is visible in the demo.
+    loadMoreTimerRef.current = window.setTimeout(() => {
+      setVisibleCount((count) => count + PAGE_SIZE);
+      setLoadingMore(false);
+    }, 600);
+  };
+
   const handleOpenItem = (item) => {
     markRead(item.id);
     if (item.entityRoute) navigate(item.entityRoute);
@@ -88,8 +123,29 @@ export const NotificationBell = () => {
     { id: "unread", label: unreadLabel, count: unreadCount },
   ];
   const effectiveTab = activeTab === "unread" ? "unread" : "all";
-  const visibleNotifications =
+  const filteredNotifications =
     effectiveTab === "unread" ? notifications.filter((item) => item.unread) : notifications;
+  // Default view shows PAGE_SIZE items; "Load more" reveals another page at
+  // a time instead of rendering the whole (chip-filtered) list at once.
+  const visibleNotifications = filteredNotifications.slice(0, visibleCount);
+  const hasMore = filteredNotifications.length > visibleNotifications.length;
+
+  // Auto-load the next page once the sentinel at the bottom of the list
+  // scrolls into view, instead of requiring a "Load more" click.
+  useEffect(() => {
+    if (!open || !hasMore || loadingMore) return undefined;
+    const root = scrollRef.current;
+    const target = sentinelRef.current;
+    if (!root || !target || typeof IntersectionObserver === "undefined") return undefined;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) loadMore();
+      },
+      { root, rootMargin: "48px" }
+    );
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [open, hasMore, loadingMore, visibleCount, effectiveTab]);
 
   // Bucket the (chip-filtered) list by day: Today / Yesterday / This Week / Earlier.
   const dayLabels = {
@@ -121,6 +177,25 @@ export const NotificationBell = () => {
   const orderedBuckets = ["today", "yesterday", "week", "earlier"]
     .map((k) => bucketIndex.get(k))
     .filter(Boolean);
+
+  // Placeholder row shown while the next page is "loading" (simulated delay).
+  const renderSkeletonRow = (key) => (
+    <div
+      key={`skeleton-${key}`}
+      style={{
+        display: "flex",
+        gap: "10px",
+        padding: "14px 18px",
+        borderBottom: "1px solid var(--neutral-line-separator-1)",
+      }}
+    >
+      <span style={{ width: "8px", flexShrink: 0 }} />
+      <div style={{ minWidth: 0, flex: 1, display: "flex", flexDirection: "column", gap: "6px" }}>
+        <span className="notif-skeleton-block" style={{ width: "70%", height: "12px" }} />
+        <span className="notif-skeleton-block" style={{ width: "90%", height: "11px" }} />
+      </div>
+    </div>
+  );
 
   const renderItem = (item) => (
     <div
@@ -192,6 +267,18 @@ export const NotificationBell = () => {
 
   return (
     <>
+      <style>{`
+        @keyframes notifSkeletonPulse {
+          0%, 100% { opacity: 0.35; }
+          50% { opacity: 0.8; }
+        }
+        .notif-skeleton-block {
+          display: inline-block;
+          border-radius: 4px;
+          background: var(--neutral-line-separator-1);
+          animation: notifSkeletonPulse 1.2s ease-in-out infinite;
+        }
+      `}</style>
       <div style={{ position: "relative", display: "inline-flex" }}>
         <IconButton
           ref={bellRef}
@@ -293,7 +380,7 @@ export const NotificationBell = () => {
             ) : null}
           </div>
 
-          <div style={{ flex: "1 1 auto", overflowY: "auto", minHeight: 0 }}>
+          <div ref={scrollRef} style={{ flex: "1 1 auto", overflowY: "auto", minHeight: 0 }}>
             {visibleNotifications.length === 0 ? (
               <div style={{ padding: "48px 24px", textAlign: "center", display: "flex", flexDirection: "column", gap: "6px" }}>
                 <span style={{ fontSize: "15px", fontWeight: 700, color: "var(--neutral-on-surface-primary)" }}>
@@ -324,6 +411,16 @@ export const NotificationBell = () => {
                 </div>
               ))
             )}
+
+            {loadingMore ? (
+              <div>
+                {[0, 1, 2].map((i) => renderSkeletonRow(i))}
+              </div>
+            ) : null}
+
+            {/* Invisible sentinel — scrolling it into view auto-loads the
+                next page instead of requiring a "Load more" click. */}
+            {hasMore ? <div ref={sentinelRef} style={{ height: "1px" }} /> : null}
           </div>
         </div>
       ) : null}
