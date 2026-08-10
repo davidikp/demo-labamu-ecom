@@ -4,7 +4,6 @@
         "notifications": "Notifications",
         "userProfile": "User Profile",
         "viewStorefront": "View Website",
-        "editWebsite": "Edit Your Website",
         "logout": "Logout"
     },
     "sidebar": {
@@ -14,6 +13,9 @@
         "catalog": "Catalog",
         "package": "Package",
         "modifier": "Modifier",
+        "onlineStore": "Online Store",
+        "theme": "Theme",
+        "pages": "Pages",
         "orders": "Orders",
         "rfq": "Request for Quotes",
         "bookings": "Bookings",

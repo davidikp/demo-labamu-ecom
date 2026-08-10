@@ -2,8 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
-  ExternalLink, Pencil, Bell,
-  LayoutDashboard, BookOpen, ShoppingCart, FileText, Calendar,
+  ExternalLink, Bell,
+  LayoutDashboard, BookOpen, Store, ShoppingCart, FileText, Calendar,
   MessageSquare, Truck, Globe, UserCog, ChevronDown, ChevronLeft, ChevronRight, Check,
 } from 'lucide-react';
 import Button from './ui/Button';
@@ -22,6 +22,13 @@ const MENU_ITEMS = [
       { id: 'catalog', path: '/catalog', labelKey: 'dashboard:sidebar.catalog', label: 'Catalog' },
       { id: 'package', path: '/catalog/package', labelKey: 'dashboard:sidebar.package', label: 'Package' },
       { id: 'modifier', path: '/catalog/modifier', labelKey: 'dashboard:sidebar.modifier', label: 'Modifier' },
+    ],
+  },
+  {
+    id: 'online-store', icon: Store, labelKey: 'dashboard:sidebar.onlineStore', label: 'Online Store',
+    children: [
+      { id: 'theme', path: '/online-store/theme', labelKey: 'dashboard:sidebar.theme', label: 'Theme' },
+      { id: 'pages', path: '/online-store/pages', labelKey: 'dashboard:sidebar.pages', label: 'Pages' },
     ],
   },
   { id: 'orders', path: '/orders', icon: ShoppingCart, labelKey: 'dashboard:sidebar.orders', label: 'Orders' },
@@ -469,19 +476,6 @@ export default function Layout() {
             onClick={() => window.open('/storefront', '_blank')}
           >
             {t('dashboard:header.viewStorefront')}
-          </Button>
-
-          {/* Edit Your Website Button */}
-          <Button
-            variant="secondary"
-            size="small"
-            leftIcon={<Pencil size={16} />}
-            // TODO: route to the template picker (/websites) once the new
-            // section-builder is the default entry point for new stores too;
-            // for now it goes straight to the section-builder prototype.
-            onClick={() => navigate('/section-builder/demo')}
-          >
-            {t('dashboard:header.editWebsite')}
           </Button>
 
           <div style={{ width: '1px', height: '32px', background: '#E9E9E9' }} />

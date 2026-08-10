@@ -18,6 +18,7 @@
         "addPage": "Tambah halaman — {{name}}",
         "renamePage": "Ubah nama halaman",
         "deletePage": "Hapus halaman",
+        "reorderPages": "Urutkan ulang halaman",
         "updatePageSeo": "Perbarui SEO halaman",
         "togglePageNav": "Alihkan visibilitas navigasi halaman",
         "themePreset": "Preset tema → {{name}}",
@@ -32,6 +33,10 @@
       "discardConfirm": {
         "title": "Buang semua perubahan yang belum dipublikasikan? Tokomu akan kembali ke versi terakhir yang dipublikasikan. Tindakan ini tidak bisa dibatalkan.",
         "confirmLabel": "Buang"
+      },
+      "exitConfirm": {
+        "title": "Buang perubahan dan keluar? Anda memiliki perubahan yang belum dipublikasikan. Jika keluar sekarang, perubahan tersebut akan dibuang dan toko Anda akan kembali ke versi terakhir yang dipublikasikan.",
+        "confirmLabel": "Buang dan keluar"
       },
       "publishSuccess": {
         "message": "Berhasil! Tokomu sudah tayang!",
@@ -101,7 +106,8 @@
       "systemPages": "Halaman sistem",
       "customPages": "Halaman kustom",
       "noCustomPages": "Belum ada halaman kustom. Buat satu di bawah ini.",
-      "deleteConfirmHeading": "Hapus halaman?"
+      "deleteConfirmHeading": "Hapus halaman?",
+      "managementSubtitle": "Tambah, ganti nama, urutkan ulang, atau sembunyikan halaman di website Anda. Klik sebuah halaman untuk mengedit kontennya."
     },
     "publishDrawer": {
       "heading": "Sebelum kamu publikasikan",
@@ -142,6 +148,7 @@
       "applyPresetConfirmTitle": "Terapkan {{name}}? Ini akan mengganti font dan warna Anda saat ini. Konten section Anda tidak akan berubah."
     },
     "topBar": {
+      "exit": "Keluar",
       "title": "Storefront Builder",
       "unsavedChanges": "Anda punya perubahan yang belum disimpan",
       "undo": "Urungkan",
@@ -346,5 +353,27 @@
       "phonePlaceholder": "Tambahkan nomor telepon…",
       "storeHoursPlaceholder": "Tambahkan jam buka…"
     }
+  },
+  "templates": {
+    "gallery": {
+      "heading": "Tema",
+      "subtitle": "Pilih titik awal untuk website Anda. Anda tetap bisa menyesuaikan font, warna, dan konten kapan saja.",
+      "activeLabel": "Sedang aktif",
+      "editSite": "Edit website Anda",
+      "switchTo": "Gunakan tema ini",
+      "seePreview": "Lihat pratinjau",
+      "backToThemes": "Kembali ke tema",
+      "previewNotFound": "Tema ini tidak ditemukan.",
+      "switchChoiceTitle": "Ganti ke {{name}}?",
+      "switchChoiceDescription": "Pilih cara Anda ingin menerapkan tema ini.",
+      "switchChoiceKeepContent": "Pertahankan konten saya",
+      "switchChoiceKeepContentDescription": "Perbarui warna, font, dan gaya header/footer. Halaman dan section Anda tetap seperti semula.",
+      "switchChoiceStartFresh": "Mulai baru dengan tema ini",
+      "switchChoiceStartFreshDescription": "Ganti halaman, header, footer, dan media Anda dengan default tema ini.",
+      "switchConfirmAction": "Ganti tema"
+    },
+    "clothing": { "label": "Fashion", "description": "Gaya editorial untuk brand pakaian dan aksesori." },
+    "fnb": { "label": "Makanan & Minuman", "description": "Gaya hangat yang menggugah selera untuk restoran dan kafe." },
+    "manufacture": { "label": "Manufaktur", "description": "Gaya bersih dan industrial untuk manufaktur dan pemasok B2B." }
   }
 }

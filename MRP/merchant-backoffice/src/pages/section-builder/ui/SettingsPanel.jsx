@@ -29,6 +29,7 @@ export default function SettingsPanel({
   onOpenLibrary,
   onRemove,
   removeLabel,
+  activePage,
 }) {
   const { t } = useTranslation();
   if (!entity) {
@@ -79,6 +80,7 @@ export default function SettingsPanel({
                     mediaLibrary={mediaLibrary}
                     onAddMedia={onAddMedia}
                     onOpenLibrary={onOpenLibrary}
+                    activePage={activePage}
                   />
                   {field.contrastCheck && (
                     <ContrastBadge

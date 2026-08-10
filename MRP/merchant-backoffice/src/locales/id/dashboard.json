@@ -4,7 +4,6 @@
         "notifications": "Notifikasi",
         "userProfile": "Profil Pengguna",
         "viewStorefront": "Lihat Website",
-        "editWebsite": "Edit Website Anda",
         "logout": "Keluar"
     },
     "sidebar": {
@@ -14,6 +13,9 @@
         "catalog": "Katalog",
         "package": "Paket",
         "modifier": "Modifier",
+        "onlineStore": "Toko Online",
+        "theme": "Tema",
+        "pages": "Halaman",
         "orders": "Pesanan",
         "rfq": "Permintaan Penawaran",
         "bookings": "Pemesanan",

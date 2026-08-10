@@ -67,6 +67,7 @@ export default function Sidebar({
   onDeletePage,
   onUpdatePageSeo,
   onTogglePageNavHidden,
+  onReorderPages,
 }) {
   const { t } = useTranslation();
   const isCompact = useCompactSidebar();
@@ -205,6 +206,7 @@ export default function Sidebar({
           onDeletePage={onDeletePage}
           onUpdateSeo={onUpdatePageSeo}
           onToggleNavHidden={onTogglePageNavHidden}
+          onReorderPages={onReorderPages}
         />
       )}
     </div>

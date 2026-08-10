@@ -26,6 +26,7 @@ export const ACTIONS = {
   ADD_PAGE: 'ADD_PAGE',
   RENAME_PAGE: 'RENAME_PAGE',
   DELETE_PAGE: 'DELETE_PAGE',
+  REORDER_PAGES: 'REORDER_PAGES',
   UPDATE_PAGE_SEO: 'UPDATE_PAGE_SEO',
   TOGGLE_PAGE_NAV_HIDDEN: 'TOGGLE_PAGE_NAV_HIDDEN',
   ADD_SECTION: 'ADD_SECTION',
@@ -45,13 +46,16 @@ export const ACTIONS = {
   UPDATE_GLOBAL_DATA: 'UPDATE_GLOBAL_DATA',
   UPDATE_THEME_FIELD: 'UPDATE_THEME_FIELD',
   APPLY_THEME_PRESET: 'APPLY_THEME_PRESET',
+  APPLY_SITE_TEMPLATE_SEED: 'APPLY_SITE_TEMPLATE_SEED',
+  APPLY_SITE_TEMPLATE_RESKIN: 'APPLY_SITE_TEMPLATE_RESKIN',
+  APPLY_SITE_TEMPLATE_RESTYLE: 'APPLY_SITE_TEMPLATE_RESTYLE',
   SELECT: 'SELECT',
   DESELECT: 'DESELECT',
   ADD_MEDIA_ITEM: 'ADD_MEDIA_ITEM',
   REMOVE_MEDIA_ITEM: 'REMOVE_MEDIA_ITEM',
 };
 
-export function createInitialState({ storeId, pages, theme, header, footer }) {
+export function createInitialState({ storeId, pages, theme, header, footer, activeTemplateId = null }) {
   return {
     storeId,
     pages,
@@ -59,6 +63,7 @@ export function createInitialState({ storeId, pages, theme, header, footer }) {
     theme,
     header,
     footer,
+    activeTemplateId,
     selection: { id: null },
     mediaLibrary: [],
   };
@@ -342,6 +347,55 @@ export function builderReducer(state, action) {
       return { ...state, theme: { ...state.theme, colors, typography } };
     }
 
+    case ACTIONS.APPLY_SITE_TEMPLATE_SEED: {
+      // First-ever template pick for this site: replaces theme AND
+      // generates the page roster + globals + media library from the
+      // template's scaffold. Only used when state.activeTemplateId is still
+      // null — see siteTemplates.js for the seed-vs-reskin contract.
+      const { templateId, theme, pages, header, footer, media } = action;
+      return {
+        ...state,
+        activeTemplateId: templateId,
+        theme: { ...state.theme, ...theme },
+        pages,
+        activePageId: pages[0]?.id ?? null,
+        header,
+        footer,
+        mediaLibrary: media ?? [],
+        selection: { id: null },
+      };
+    }
+
+    case ACTIONS.APPLY_SITE_TEMPLATE_RESKIN: {
+      // Switching templates on an already-seeded site: re-skin only
+      // (colors + typography), exactly like APPLY_THEME_PRESET. Page
+      // structure, section arrangement, and any section customization
+      // (including literal hex color overrides) are left untouched.
+      const { templateId, colors, typography } = action;
+      return {
+        ...state,
+        activeTemplateId: templateId,
+        theme: { ...state.theme, colors, typography },
+      };
+    }
+
+    case ACTIONS.APPLY_SITE_TEMPLATE_RESTYLE: {
+      // Switching templates on an already-seeded site, "keep my content":
+      // re-skin colors + typography like RESKIN, but also swap the header's
+      // and footer's structural layout_variant so the site's global chrome
+      // actually looks like the new theme, not just its palette. Page
+      // structure, section arrangement, and header/footer *content* (logo
+      // text, nav links, tagline, link columns) are left untouched.
+      const { templateId, colors, typography, headerLayoutVariant, footerLayoutVariant } = action;
+      return {
+        ...state,
+        activeTemplateId: templateId,
+        theme: { ...state.theme, colors, typography },
+        header: { ...state.header, data: { ...state.header.data, layout_variant: headerLayoutVariant } },
+        footer: { ...state.footer, data: { ...state.footer.data, layout_variant: footerLayoutVariant } },
+      };
+    }
+
     case ACTIONS.ADD_PAGE:
       return {
         ...state,
@@ -360,6 +414,15 @@ export function builderReducer(state, action) {
       const pages = state.pages.filter((p) => p.id !== action.pageId);
       const activePageId = state.activePageId === action.pageId ? pages[0]?.id ?? null : state.activePageId;
       return { ...state, pages, activePageId };
+    }
+
+    case ACTIONS.REORDER_PAGES: {
+      // Full-list reorder (Online Store > Pages) — orderedIds is the entire
+      // pages array's new id order. Unknown ids are dropped defensively;
+      // callers are expected to keep system pages' relative order stable.
+      const byId = new Map(state.pages.map((p) => [p.id, p]));
+      const pages = action.orderedIds.map((id) => byId.get(id)).filter(Boolean);
+      return { ...state, pages };
     }
 
     case ACTIONS.UPDATE_PAGE_SEO:

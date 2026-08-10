@@ -20,7 +20,7 @@ const FIELD_COMPONENTS = {
 };
 
 /** Dispatches a schema field definition to its concrete input component. */
-export default function SchemaField({ field, value, onChange, palette, mediaLibrary, onAddMedia, onOpenLibrary }) {
+export default function SchemaField({ field, value, onChange, palette, mediaLibrary, onAddMedia, onOpenLibrary, activePage }) {
   const Component = FIELD_COMPONENTS[field.type];
   if (!Component) return null;
   return (
@@ -32,6 +32,7 @@ export default function SchemaField({ field, value, onChange, palette, mediaLibr
       mediaLibrary={mediaLibrary}
       onAddMedia={onAddMedia}
       onOpenLibrary={onOpenLibrary}
+      activePage={activePage}
     />
   );
 }

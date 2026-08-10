@@ -1,3 +1,4 @@
+import { useMemo, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { loadDraft } from './state/storage';
@@ -15,6 +16,13 @@ export default function PreviewLive() {
   const [searchParams] = useSearchParams();
   const token = searchParams.get('token');
 
+  const draft = useMemo(() => loadDraft(storeId), [storeId]);
+  // Starts on whatever page was active in the builder; clicking a header/
+  // footer nav link (see onNavigate below) switches which page is shown,
+  // matching the link's URL against each page's slug — this preview has no
+  // real routing of its own, just this one in-memory "current page".
+  const [currentPageId, setCurrentPageId] = useState(() => draft?.activePageId);
+
   if (!token) {
     return (
       <div className="flex h-screen items-center justify-center text-sm text-gray-500">
@@ -23,9 +31,13 @@ export default function PreviewLive() {
     );
   }
 
-  const draft = loadDraft(storeId);
-  const activePage = draft?.pages?.find((p) => p.id === draft.activePageId);
+  const activePage = draft?.pages?.find((p) => p.id === currentPageId) ?? draft?.pages?.[0];
   const sections = activePage?.sections ?? [];
+
+  const handleNavigate = (url) => {
+    const target = draft?.pages?.find((p) => p.slug === url);
+    if (target) setCurrentPageId(target.id);
+  };
 
   return (
     <Canvas
@@ -41,6 +53,7 @@ export default function PreviewLive() {
       onDeleteSection={() => {}}
       theme={draft?.theme}
       mediaLibrary={draft?.mediaLibrary ?? []}
+      onNavigate={handleNavigate}
       readOnly
     />
   );

@@ -75,7 +75,7 @@ function RepeaterItem({ item, index, itemSchema, expanded, onToggle, onChange, o
 }
 
 /** US-4.7 — add/remove/reorder items, each collapsible, sub-fields pre-filled with defaults. */
-export default function RepeaterField({ field, value, onChange, palette, mediaLibrary, onAddMedia, onOpenLibrary }) {
+export default function RepeaterField({ field, value, onChange, palette, mediaLibrary, onAddMedia, onOpenLibrary, activePage }) {
   const { t } = useTranslation();
   const items = value ?? [];
   const [expandedIds, setExpandedIds] = useState(() => new Set(items.map((i) => i.id)));
@@ -90,6 +90,13 @@ export default function RepeaterField({ field, value, onChange, palette, mediaLi
 
   const addItem = () => {
     const newItem = { id: crypto.randomUUID(), ...defaultsForItemSchema(field.itemSchema) };
+    // Nav-style repeaters (e.g. header.nav_links) default a new link's URL
+    // to whichever page is currently active in the builder — more useful
+    // than always defaulting to "/" regardless of what the merchant is
+    // looking at when they click "Add item".
+    if (field.autofillUrlFromActivePage && 'url' in newItem && activePage?.slug) {
+      newItem.url = activePage.slug;
+    }
     setExpandedIds((prev) => new Set(prev).add(newItem.id));
     onChange([...items, newItem]);
   };

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { LocaleProvider, Snackbar } from '../../ce-ui';
 import { useSectionBuilder } from './state/useSectionBuilder';
@@ -57,7 +57,8 @@ const MEDIA_PANEL_SELECTION = 'media-library';
 
 export default function SectionBuilder() {
   const { t } = useTranslation();
-  const { storeId } = useParams();
+  const navigate = useNavigate();
+  const { storeId, pageId } = useParams();
   const {
     state,
     canUndo,
@@ -74,11 +75,25 @@ export default function SectionBuilder() {
     wasRestoredFromDraft,
     restoredAt,
   } = useSectionBuilder(storeId);
+
+  // Deep-link support for the "Pages" management screen (Online Store >
+  // Pages) — /section-builder/:storeId/pages/:pageId opens the builder with
+  // that page already selected, instead of always defaulting to pages[0].
+  useEffect(() => {
+    if (!pageId) return;
+    if (pageId === state.activePageId) return;
+    if (!state.pages.some((page) => page.id === pageId)) return;
+    dispatch({ type: ACTIONS.SET_ACTIVE_PAGE, pageId });
+    // Only re-run when the route's pageId changes — not on every state
+    // update, otherwise this would fight the sidebar's own page switcher.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pageId]);
   const [viewport, setViewport] = useState('desktop');
   const [recoveryBannerDismissed, setRecoveryBannerDismissed] = useState(false);
   const [publishDrawerOpen, setPublishDrawerOpen] = useState(false);
   const [publishCheckState, setPublishCheckState] = useState(createInitialCheckState);
   const [discardConfirmOpen, setDiscardConfirmOpen] = useState(false);
+  const [exitConfirmOpen, setExitConfirmOpen] = useState(false);
   const [deleteTargetId, setDeleteTargetId] = useState(null);
   const [sectionPickerIndex, setSectionPickerIndex] = useState(null);
   const [publishToastOpen, setPublishToastOpen] = useState(false);
@@ -372,6 +387,8 @@ export default function SectionBuilder() {
     dispatch({ type: ACTIONS.UPDATE_PAGE_SEO, pageId, seo, meta: { label: t('sectionBuilder:editor.sectionBuilder.actions.updatePageSeo') } });
   const handleTogglePageNavHidden = (pageId) =>
     dispatch({ type: ACTIONS.TOGGLE_PAGE_NAV_HIDDEN, pageId, meta: { label: t('sectionBuilder:editor.sectionBuilder.actions.togglePageNav') } });
+  const handleReorderPages = (orderedIds) =>
+    dispatch({ type: ACTIONS.REORDER_PAGES, orderedIds, meta: { label: t('sectionBuilder:editor.sectionBuilder.actions.reorderPages') } });
 
   const handleOpenTheme = () => select(THEME_PANEL_SELECTION);
   const handleOpenMedia = () => select(MEDIA_PANEL_SELECTION);
@@ -427,6 +444,19 @@ export default function SectionBuilder() {
     setDiscardConfirmOpen(false);
   };
 
+  // Exit (top-left back arrow, like Shopify's theme editor) — returns to
+  // the backoffice's Online Store > Theme screen (the entry point most
+  // merchants land in the builder from). If there are unpublished changes,
+  // warn before discarding them and leaving, same as the ⋮ menu's "Discard
+  // changes" action above.
+  const goToBackoffice = () => navigate('/online-store/theme');
+  const handleExit = () => (dirty ? setExitConfirmOpen(true) : goToBackoffice());
+  const confirmExit = () => {
+    discardDraft();
+    setExitConfirmOpen(false);
+    goToBackoffice();
+  };
+
   // Snackbar dismisses itself (animates out, then calls onDismiss) once its
   // action is clicked — no need to flip publishToastOpen manually here.
   const handleViewLiveStore = () => {
@@ -461,6 +491,7 @@ export default function SectionBuilder() {
         onPreview={handlePreview}
         onPublish={handlePublish}
         onDiscard={handleDiscard}
+        onExit={handleExit}
       />
       <div className="flex flex-1 overflow-hidden">
         <Sidebar
@@ -486,6 +517,7 @@ export default function SectionBuilder() {
           onDeletePage={handleDeletePage}
           onUpdatePageSeo={handleUpdatePageSeo}
           onTogglePageNavHidden={handleTogglePageNavHidden}
+          onReorderPages={handleReorderPages}
         />
         <Canvas
           viewport={viewport}
@@ -558,6 +590,7 @@ export default function SectionBuilder() {
             mediaLibrary={state.mediaLibrary}
             onAddMedia={handleAddMedia}
             onOpenLibrary={handleOpenLibraryPicker}
+            activePage={activePage}
             footer={
               selectedEntity && sectionSupportsBlocks(selectedEntity.type) ? (
                 <BlockList
@@ -619,6 +652,15 @@ export default function SectionBuilder() {
         danger
         onConfirm={confirmDiscard}
         onCancel={() => setDiscardConfirmOpen(false)}
+      />
+
+      <ConfirmDialog
+        open={exitConfirmOpen}
+        title={t('sectionBuilder:editor.sectionBuilder.exitConfirm.title')}
+        confirmLabel={t('sectionBuilder:editor.sectionBuilder.exitConfirm.confirmLabel')}
+        danger
+        onConfirm={confirmExit}
+        onCancel={() => setExitConfirmOpen(false)}
       />
 
       {publishToastOpen && (

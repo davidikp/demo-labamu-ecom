@@ -17,12 +17,13 @@ const historyReducer = withHistory(builderReducer, TRANSIENT_ACTION_TYPES);
 
 const AUTOSAVE_INTERVAL_MS = 60_000;
 
-function createFreshState(storeId) {
+export function createFreshState(storeId) {
+  const pages = createDefaultPages();
   return createInitialState({
     storeId,
-    pages: createDefaultPages(),
+    pages,
     theme: defaultTheme,
-    ...createDefaultGlobals(),
+    ...createDefaultGlobals(pages),
   });
 }
 

@@ -121,6 +121,71 @@ describe('builderReducer', () => {
     expect(next.theme.layout).toEqual({ section_spacing: 'medium' });
   });
 
+  it('reorders pages by id list, dropping unknown ids', () => {
+    let state = makeState();
+    state = builderReducer(state, { type: ACTIONS.ADD_PAGE, page: { id: 'about', name: 'About', type: 'custom', slug: '/about', sections: [], seo: {} } });
+    state = builderReducer(state, { type: ACTIONS.ADD_PAGE, page: { id: 'contact', name: 'Contact', type: 'custom', slug: '/contact', sections: [], seo: {} } });
+    const next = builderReducer(state, { type: ACTIONS.REORDER_PAGES, orderedIds: ['contact', 'home', 'nonexistent', 'about'] });
+    expect(next.pages.map((p) => p.id)).toEqual(['contact', 'home', 'about']);
+  });
+
+  it('seeds theme, pages, and globals from a site template and sets activeTemplateId', () => {
+    let state = makeState();
+    state = { ...state, activeTemplateId: null };
+    const next = builderReducer(state, {
+      type: ACTIONS.APPLY_SITE_TEMPLATE_SEED,
+      templateId: 'fnb',
+      theme: { colors: { primary: '#6b4f3b' }, typography: { heading_font: 'Lora' } },
+      pages: [{ id: 'home', name: 'Home', type: 'system', slug: '/', sections: [{ id: 's1', type: 'hero_banner', data: {} }], seo: {} }],
+      header: { id: 'header', type: 'header', hidden: false, data: { foo: 'bar' } },
+      footer: { id: 'footer', type: 'footer', hidden: false, data: { foo: 'bar' } },
+    });
+    expect(next.activeTemplateId).toBe('fnb');
+    expect(next.theme.colors).toEqual({ primary: '#6b4f3b' });
+    expect(next.pages).toHaveLength(1);
+    expect(next.pages[0].sections).toHaveLength(1);
+    expect(next.activePageId).toBe('home');
+    expect(next.header.data).toEqual({ foo: 'bar' });
+  });
+
+  it('seeds mediaLibrary from the template media, defaulting to empty when omitted', () => {
+    let state = makeState();
+    state = { ...state, activeTemplateId: null, mediaLibrary: [{ id: 'stale', filename: 'old.jpg' }] };
+    const seedBase = {
+      type: ACTIONS.APPLY_SITE_TEMPLATE_SEED,
+      templateId: 'fnb',
+      theme: {},
+      pages: [{ id: 'home', name: 'Home', type: 'system', slug: '/', sections: [], seo: {} }],
+      header: { id: 'header', type: 'header', hidden: false, data: {} },
+      footer: { id: 'footer', type: 'footer', hidden: false, data: {} },
+    };
+    const withMedia = builderReducer(state, { ...seedBase, media: [{ id: 'm1', filename: 'hero.jpg', url: '/x.jpg' }] });
+    expect(withMedia.mediaLibrary).toEqual([{ id: 'm1', filename: 'hero.jpg', url: '/x.jpg' }]);
+
+    const withoutMedia = builderReducer(state, seedBase);
+    expect(withoutMedia.mediaLibrary).toEqual([]);
+  });
+
+  it('reskins theme colors/typography on template switch without touching pages, globals, or media', () => {
+    let state = makeState();
+    state = builderReducer(state, { type: ACTIONS.ADD_SECTION, pageId: 'home', section: { id: 'a', data: { heading: 'Custom' } } });
+    state = { ...state, activeTemplateId: 'fnb', mediaLibrary: [{ id: 'm1', filename: 'hero.jpg' }] };
+    const next = builderReducer(state, {
+      type: ACTIONS.APPLY_SITE_TEMPLATE_RESKIN,
+      templateId: 'clothing',
+      colors: { primary: '#1a1a1a' },
+      typography: { heading_font: 'Cormorant Garamond' },
+    });
+    expect(next.activeTemplateId).toBe('clothing');
+    expect(next.theme.colors).toEqual({ primary: '#1a1a1a' });
+    expect(next.theme.typography).toEqual({ heading_font: 'Cormorant Garamond' });
+    // page structure/customization/media untouched
+    expect(next.pages[0].sections).toEqual(state.pages[0].sections);
+    expect(next.header).toBe(state.header);
+    expect(next.footer).toBe(state.footer);
+    expect(next.mediaLibrary).toBe(state.mediaLibrary);
+  });
+
   it('updates a single theme field within its group without affecting others', () => {
     let state = makeState();
     state = { ...state, theme: { colors: { primary: '#000', accent: '#fff' } } };

@@ -40,7 +40,11 @@ export function createDefaultPages() {
   return [
     { id: 'home', name: 'Home', type: 'system', slug: '/', sections: [], seo: {}, hiddenFromNav: false },
     {
-      id: 'product', name: 'Product', type: 'system', slug: '/products/:handle', seo: {}, hiddenFromNav: false,
+      // Product/Collection are detail-page templates (parameterized slugs) —
+      // not real, clickable nav destinations, so they default hidden from
+      // nav (defaultNavLinksFromPages below also excludes any ":"-templated
+      // slug as a second safeguard).
+      id: 'product', name: 'Product', type: 'system', slug: '/products/:handle', seo: {}, hiddenFromNav: true,
       sections: [
         defaultSection('product-default-spotlight', 'product_spotlight', {
           show_variant_selector: false,
@@ -49,7 +53,7 @@ export function createDefaultPages() {
       ],
     },
     {
-      id: 'collection', name: 'Collection', type: 'system', slug: '/collections/:handle', seo: {}, hiddenFromNav: false,
+      id: 'collection', name: 'Collection', type: 'system', slug: '/collections/:handle', seo: {}, hiddenFromNav: true,
       sections: [
         defaultSection('collection-default-grid', 'featured_products', {
           heading: 'Collection',
@@ -58,24 +62,47 @@ export function createDefaultPages() {
       ],
     },
     {
-      id: 'cart', name: 'Cart', type: 'system', slug: '/cart', seo: {}, hiddenFromNav: false,
+      // Cart/Checkout are reachable via the header's cart icon, not a
+      // textual nav link, so they default hidden from nav too.
+      id: 'cart', name: 'Cart', type: 'system', slug: '/cart', seo: {}, hiddenFromNav: true,
       sections: [defaultSection('cart-default-summary', 'cart_summary')],
     },
     {
-      id: 'checkout', name: 'Checkout', type: 'system', slug: '/checkout', seo: {}, hiddenFromNav: false,
+      id: 'checkout', name: 'Checkout', type: 'system', slug: '/checkout', seo: {}, hiddenFromNav: true,
       sections: [defaultSection('checkout-default-summary', 'checkout_summary')],
     },
   ];
+}
+
+/** Nav links auto-derived from a page list — used to pre-fill the header's
+ * Nav links field so it isn't empty by default (US follow-up to Epic 5/11).
+ * Only pages meant to be top-nav destinations qualify: not hidden-from-nav,
+ * and not a parameterized detail-page template (e.g. "/products/:handle"). */
+function defaultNavLinksFromPages(pages) {
+  return pages
+    .filter((page) => !page.hiddenFromNav && typeof page.slug === 'string' && !page.slug.includes(':'))
+    .map((page) => ({ id: `nav-${page.id}`, label: page.name, url: page.slug }));
 }
 
 /**
  * Header and footer are global singletons present on every store from
  * creation (US-3.6) — never absent, so there's no "add" flow for them,
  * only a hide toggle.
+ *
+ * `pages`, when supplied, pre-fills the header's Nav links with one entry
+ * per nav-eligible page (see defaultNavLinksFromPages) so a fresh site's
+ * header isn't left with an empty nav list — merchants can still add,
+ * remove, or reorder links afterward exactly as before.
  */
-export function createDefaultGlobals() {
+export function createDefaultGlobals(pages = []) {
+  const navLinks = defaultNavLinksFromPages(pages);
   return {
-    header: { id: 'header', type: 'header', hidden: false, data: defaultsForSchema(headerSchema) },
+    header: {
+      id: 'header',
+      type: 'header',
+      hidden: false,
+      data: { ...defaultsForSchema(headerSchema), ...(navLinks.length ? { nav_links: navLinks } : {}) },
+    },
     footer: { id: 'footer', type: 'footer', hidden: false, data: defaultsForSchema(footerSchema) },
   };
 }

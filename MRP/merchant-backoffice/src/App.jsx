@@ -49,6 +49,9 @@ const HouzezPreview = React.lazy(() => import('./pages/websites/templates/houzez
 const TemplateBuilder = React.lazy(() => import('./pages/websites/TemplateBuilder'));
 const SectionBuilder = React.lazy(() => import('./pages/section-builder/SectionBuilder'));
 const SectionBuilderPreview = React.lazy(() => import('./pages/section-builder/PreviewLive'));
+const ThemeGallery = React.lazy(() => import('./pages/online-store/ThemeGallery'));
+const PagesManagement = React.lazy(() => import('./pages/online-store/PagesManagement'));
+const ThemePreview = React.lazy(() => import('./pages/online-store/ThemePreview'));
 
 // Simple mock auth context — replace with real auth later
 function isAuthenticated() {
@@ -87,6 +90,8 @@ export default function App() {
           <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/websites" element={<WebsiteTemplates />} />
+            <Route path="/online-store/theme" element={<ThemeGallery />} />
+            <Route path="/online-store/pages" element={<PagesManagement />} />
             <Route path="/catalog" element={<CatalogProducts />} />
             <Route path="/catalog/bulk-edit" element={<BulkEditCatalog />} />
             <Route path="/catalog/package/bulk-edit" element={<BulkEditCatalog />} />
@@ -134,7 +139,22 @@ export default function App() {
               <SectionBuilderPreview />
             </BuilderErrorBoundary>
           } />
+          {/* Theme gallery's "See Preview" — full-page render of a theme's
+              own default home page, no live draft/auth required. */}
+          <Route path="/online-store/theme/:templateId/preview" element={
+            <BuilderErrorBoundary>
+              <ThemePreview />
+            </BuilderErrorBoundary>
+          } />
           <Route path="/section-builder/:storeId" element={
+            <BuilderErrorBoundary>
+              <ProtectedRoute>
+                <SectionBuilder />
+              </ProtectedRoute>
+            </BuilderErrorBoundary>
+          } />
+          {/* Deep link from Online Store > Pages into a specific page */}
+          <Route path="/section-builder/:storeId/pages/:pageId" element={
             <BuilderErrorBoundary>
               <ProtectedRoute>
                 <SectionBuilder />

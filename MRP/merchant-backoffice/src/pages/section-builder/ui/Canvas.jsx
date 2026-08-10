@@ -9,7 +9,7 @@ import SectionShell from './SectionShell';
 
 const VIEWPORT_WIDTH = { desktop: 1280, mobile: 390 };
 
-const RenderedEntity = memo(function RenderedEntity({ entity, theme, mediaLibrary, onEdit, blockCtx, isMobile }) {
+const RenderedEntity = memo(function RenderedEntity({ entity, theme, mediaLibrary, onEdit, blockCtx, isMobile, onNavigate }) {
   const { t } = useTranslation();
   const Renderer = SECTION_DEFINITIONS[entity.type]?.Renderer;
   if (!Renderer) {
@@ -26,12 +26,13 @@ const RenderedEntity = memo(function RenderedEntity({ entity, theme, mediaLibrar
         onEdit={onEdit}
         blockCtx={blockCtx}
         isMobile={isMobile}
+        onNavigate={onNavigate}
       />
     </SectionShell>
   );
 });
 
-const GlobalBlock = memo(function GlobalBlock({ entity, selected, onSelect, onInlineEdit, theme, mediaLibrary, readOnly, isMobile }) {
+const GlobalBlock = memo(function GlobalBlock({ entity, selected, onSelect, onInlineEdit, theme, mediaLibrary, readOnly, isMobile, onNavigate }) {
   const { t } = useTranslation();
   const handleEdit = useCallback(
     (key, value) => onInlineEdit?.(entity.type, key, value),
@@ -60,7 +61,18 @@ const GlobalBlock = memo(function GlobalBlock({ entity, selected, onSelect, onIn
           {labelForType(entity.type)}
         </span>
       )}
-      <RenderedEntity entity={entity} theme={theme} mediaLibrary={mediaLibrary} onEdit={readOnly ? undefined : handleEdit} isMobile={isMobile} />
+      <RenderedEntity
+        entity={entity}
+        theme={theme}
+        mediaLibrary={mediaLibrary}
+        onEdit={readOnly ? undefined : handleEdit}
+        isMobile={isMobile}
+        // Nav links only navigate on the read-only preview/live render — in
+        // the interactive builder, clicking one should select the header
+        // (the wrapping div's onClick above) rather than jump the merchant
+        // away from what they're editing.
+        onNavigate={readOnly ? onNavigate : undefined}
+      />
     </div>
   );
 });
@@ -210,6 +222,7 @@ export default function Canvas({
   theme,
   mediaLibrary,
   readOnly = false,
+  onNavigate,
 }) {
   const { t } = useTranslation();
   const isMobile = viewport === 'mobile';
@@ -236,6 +249,7 @@ export default function Canvas({
           mediaLibrary={mediaLibrary}
           readOnly={readOnly}
           isMobile={readOnly ? undefined : isMobile}
+          onNavigate={onNavigate}
         />
 
         {sections.length === 0 ? (
@@ -291,6 +305,7 @@ export default function Canvas({
           mediaLibrary={mediaLibrary}
           readOnly={readOnly}
           isMobile={readOnly ? undefined : isMobile}
+          onNavigate={onNavigate}
         />
       </div>
     </div>

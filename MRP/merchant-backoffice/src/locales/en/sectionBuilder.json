@@ -18,6 +18,7 @@
         "addPage": "Add page — {{name}}",
         "renamePage": "Rename page",
         "deletePage": "Delete page",
+        "reorderPages": "Reorder pages",
         "updatePageSeo": "Update page SEO",
         "togglePageNav": "Toggle page navigation visibility",
         "themePreset": "Theme preset → {{name}}",
@@ -32,6 +33,10 @@
       "discardConfirm": {
         "title": "Discard all unpublished changes? Your store will revert to the last published version. This can't be undone.",
         "confirmLabel": "Discard"
+      },
+      "exitConfirm": {
+        "title": "Discard changes and leave? You have unpublished changes. Leaving now will discard them and revert your store to the last published version.",
+        "confirmLabel": "Discard and leave"
       },
       "publishSuccess": {
         "message": "Your store is live!",
@@ -103,7 +108,8 @@
       "systemPages": "System pages",
       "customPages": "Custom pages",
       "noCustomPages": "No custom pages yet. Create one below.",
-      "deleteConfirmHeading": "Delete page?"
+      "deleteConfirmHeading": "Delete page?",
+      "managementSubtitle": "Add, rename, reorder, or hide the pages on your website. Click a page to edit its content."
     },
     "publishDrawer": {
       "heading": "Before you publish",
@@ -144,6 +150,7 @@
       "applyPresetConfirmTitle": "Apply {{name}}? This will replace your current fonts and colors. Your section content won't change."
     },
     "topBar": {
+      "exit": "Exit",
       "title": "Storefront Builder",
       "unsavedChanges": "You have unsaved changes",
       "undo": "Undo",
@@ -348,5 +355,27 @@
       "phonePlaceholder": "Add a phone number…",
       "storeHoursPlaceholder": "Add store hours…"
     }
+  },
+  "templates": {
+    "gallery": {
+      "heading": "Theme",
+      "subtitle": "Pick a starting point for your website. You can fine-tune fonts, colors, and content anytime.",
+      "activeLabel": "Currently active",
+      "editSite": "Edit your website",
+      "switchTo": "Use this theme",
+      "seePreview": "See preview",
+      "backToThemes": "Back to themes",
+      "previewNotFound": "This theme could not be found.",
+      "switchChoiceTitle": "Switch to {{name}}?",
+      "switchChoiceDescription": "Choose how you'd like to apply this theme.",
+      "switchChoiceKeepContent": "Keep my content",
+      "switchChoiceKeepContentDescription": "Update colors, fonts, and header/footer style. Your pages and sections stay as they are.",
+      "switchChoiceStartFresh": "Start fresh with this theme",
+      "switchChoiceStartFreshDescription": "Replace your pages, header, footer, and media with this theme's defaults.",
+      "switchConfirmAction": "Switch theme"
+    },
+    "clothing": { "label": "Clothing", "description": "Editorial fashion styling for apparel and accessory brands." },
+    "fnb": { "label": "Food & Beverage", "description": "Warm, appetite-friendly styling for restaurants and cafés." },
+    "manufacture": { "label": "Manufacture", "description": "Clean, industrial styling for manufacturers and B2B suppliers." }
   }
 }
