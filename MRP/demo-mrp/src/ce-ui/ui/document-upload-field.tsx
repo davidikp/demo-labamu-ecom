@@ -29,9 +29,15 @@ export interface DocumentUploadFieldProps {
   accept?: string
   /** Max characters for description. Default: 40 */
   descriptionMaxLength?: number
+  /** Second hint line inside the drop zone. Default: "Accepts any file type" */
+  formatsHint?: string
+  /** Whether to show the per-file description field. Default: true */
+  showDescription?: boolean
+  /** Error message — shows the drop zone in an error state with this inline message below it */
+  error?: string
   onAdd: (files: File[]) => void
   onRemove: (id: string) => void
-  onDescriptionChange: (id: string, description: string) => void
+  onDescriptionChange?: (id: string, description: string) => void
   label?: string
   required?: boolean
   className?: string
@@ -73,6 +79,9 @@ export const DocumentUploadField: React.FC<DocumentUploadFieldProps> = ({
   maxSizeMB = 30,
   accept = "*",
   descriptionMaxLength = 40,
+  formatsHint = "Accepts any file type",
+  showDescription = true,
+  error,
   onAdd,
   onRemove,
   onDescriptionChange,
@@ -128,50 +137,71 @@ export const DocumentUploadField: React.FC<DocumentUploadFieldProps> = ({
         </div>
       )}
 
-      {/* Drop zone */}
-      {canAdd && (
-        <div
-          role="button"
-          tabIndex={0}
-          aria-label="Upload files"
-          onDrop={handleDrop}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onClick={() => inputRef.current?.click()}
-          onKeyDown={(e) => e.key === "Enter" && inputRef.current?.click()}
+      {/* Drop zone — stays visible (disabled) once the max file count is reached */}
+      <div
+        role="button"
+        tabIndex={canAdd ? 0 : -1}
+        aria-label="Upload files"
+        aria-disabled={!canAdd}
+        onDrop={canAdd ? handleDrop : undefined}
+        onDragOver={canAdd ? handleDragOver : undefined}
+        onDragLeave={canAdd ? handleDragLeave : undefined}
+        onClick={() => canAdd && inputRef.current?.click()}
+        onKeyDown={(e) => canAdd && e.key === "Enter" && inputRef.current?.click()}
+        className={cn(
+          "w-full rounded-lb-card border-2 border-dashed",
+          "flex flex-col items-center justify-center gap-2 py-8 px-6",
+          "transition-colors duration-150",
+          !canAdd
+            ? "cursor-not-allowed border-lb-line-2 bg-lb-surface-grey"
+            : cn(
+                "cursor-pointer",
+                error
+                  ? "border-lb-red bg-lb-surface"
+                  : isDragging
+                  ? "border-lb-brand bg-lb-brand-light"
+                  : "border-lb-brand bg-lb-surface hover:bg-lb-brand-light"
+              )
+        )}
+      >
+        <CloudUpload
+          size={36}
           className={cn(
-            "w-full rounded-lb-card border-2 border-dashed cursor-pointer",
-            "flex flex-col items-center justify-center gap-2 py-8 px-6",
-            "transition-colors duration-150",
-            isDragging
-              ? "border-lb-brand bg-lb-brand-light"
-              : "border-lb-brand bg-lb-surface hover:bg-lb-brand-light"
+            "transition-colors",
+            !canAdd ? "text-lb-on-surface-3" : error ? "text-lb-red" : "text-lb-brand"
           )}
-        >
-          <CloudUpload
-            size={36}
+          strokeWidth={1.5}
+          aria-hidden="true"
+        />
+        <div className="flex flex-col items-center gap-0.5 text-center">
+          <span className="font-lb text-[13px] text-lb-on-surface-3 leading-[18px]">
+            Max {maxFiles} files, {maxSizeMB}MB each
+          </span>
+          <span className="font-lb text-[13px] text-lb-on-surface-3 leading-[18px]">
+            {formatsHint}
+          </span>
+          <span
             className={cn(
-              "transition-colors",
-              isDragging ? "text-lb-brand" : "text-lb-brand"
+              "font-lb text-[14px] leading-[20px]",
+              !canAdd ? "text-lb-on-surface-3 font-lb-semibold" : "text-lb-on-surface font-lb-semibold"
             )}
-            strokeWidth={1.5}
-            aria-hidden="true"
-          />
-          <div className="flex flex-col items-center gap-0.5 text-center">
-            <span className="font-lb text-[13px] text-lb-on-surface-3 leading-[18px]">
-              Max {maxFiles} files, {maxSizeMB}MB each
-            </span>
-            <span className="font-lb text-[13px] text-lb-on-surface-3 leading-[18px]">
-              Accepts any file type
-            </span>
-            <span className="font-lb text-[14px] text-lb-on-surface font-lb-semibold leading-[20px]">
-              Drag file or{" "}
-              <span className="text-lb-brand underline-offset-2 hover:underline">
-                browse file
-              </span>
-            </span>
-          </div>
+          >
+            {canAdd ? (
+              <>
+                Drag file or{" "}
+                <span className="text-lb-brand underline-offset-2 hover:underline">
+                  browse file
+                </span>
+              </>
+            ) : (
+              "File selected below"
+            )}
+          </span>
         </div>
+      </div>
+
+      {error && (
+        <span className="font-lb text-[12px] text-lb-red leading-[18px]">{error}</span>
       )}
 
       {/* Hidden file input */}
@@ -194,6 +224,7 @@ export const DocumentUploadField: React.FC<DocumentUploadFieldProps> = ({
               key={doc.id}
               doc={doc}
               descriptionMaxLength={descriptionMaxLength}
+              showDescription={showDescription}
               onRemove={onRemove}
               onDescriptionChange={onDescriptionChange}
               locale={locale}
@@ -210,14 +241,16 @@ export const DocumentUploadField: React.FC<DocumentUploadFieldProps> = ({
 interface FileItemProps {
   doc: UploadedDocument
   descriptionMaxLength: number
+  showDescription?: boolean
   onRemove: (id: string) => void
-  onDescriptionChange: (id: string, description: string) => void
+  onDescriptionChange?: (id: string, description: string) => void
   locale: ReturnType<typeof useLocale>
 }
 
 const FileItem: React.FC<FileItemProps> = ({
   doc,
   descriptionMaxLength,
+  showDescription = true,
   onRemove,
   onDescriptionChange,
 }) => {
@@ -260,41 +293,43 @@ const FileItem: React.FC<FileItemProps> = ({
       </div>
 
       {/* Description field */}
-      <div className="flex flex-col gap-1">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-0.5">
-            <span className="font-lb text-[14px] font-lb-bold text-lb-red">*</span>
-            <span className="font-lb text-[12px] text-lb-on-surface leading-[18px] tracking-[0.0825px]">
-              File Description
+      {showDescription && (
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-0.5">
+              <span className="font-lb text-[14px] font-lb-bold text-lb-red">*</span>
+              <span className="font-lb text-[12px] text-lb-on-surface leading-[18px] tracking-[0.0825px]">
+                File Description
+              </span>
+            </div>
+            <span
+              className={cn(
+                "font-lb text-[12px] leading-[18px]",
+                isOver ? "text-lb-red" : "text-lb-on-surface-3"
+              )}
+            >
+              {charCount}/{descriptionMaxLength}
             </span>
           </div>
-          <span
-            className={cn(
-              "font-lb text-[12px] leading-[18px]",
-              isOver ? "text-lb-red" : "text-lb-on-surface-3"
-            )}
-          >
-            {charCount}/{descriptionMaxLength}
-          </span>
-        </div>
 
-        <input
-          type="text"
-          value={doc.description}
-          maxLength={descriptionMaxLength + 20}
-          placeholder="Enter File Description"
-          onChange={(e) => onDescriptionChange(doc.id, e.target.value)}
-          className={cn(
-            "w-full h-12 px-4 font-lb rounded-lb-input border",
-            "text-[16px] leading-[22px] tracking-[0.11px]",
-            "placeholder:text-lb-on-surface-3 text-lb-on-surface",
-            "transition-all duration-200 outline-none bg-lb-surface",
-            isOver
-              ? "border-lb-red hover:border-lb-red focus:border-lb-red focus:shadow-[0_0_0_3px_theme(colors.lb-red-bg)]"
-              : "border-lb-line-1 hover:border-lb-line-2 focus:border-lb-brand focus:shadow-[0_0_0_3px_theme(colors.lb-brand-light)]"
-          )}
-        />
-      </div>
+          <input
+            type="text"
+            value={doc.description}
+            maxLength={descriptionMaxLength + 20}
+            placeholder="Enter File Description"
+            onChange={(e) => onDescriptionChange?.(doc.id, e.target.value)}
+            className={cn(
+              "w-full h-12 px-4 font-lb rounded-lb-input border",
+              "text-[16px] leading-[22px] tracking-[0.11px]",
+              "placeholder:text-lb-on-surface-3 text-lb-on-surface",
+              "transition-all duration-200 outline-none bg-lb-surface",
+              isOver
+                ? "border-lb-red hover:border-lb-red focus:border-lb-red focus:shadow-[0_0_0_3px_theme(colors.lb-red-bg)]"
+                : "border-lb-line-1 hover:border-lb-line-2 focus:border-lb-brand focus:shadow-[0_0_0_3px_theme(colors.lb-brand-light)]"
+            )}
+          />
+        </div>
+      )}
     </div>
   )
 }

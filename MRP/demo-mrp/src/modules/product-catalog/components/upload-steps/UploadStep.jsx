@@ -1,7 +1,8 @@
 import React from "react";
-import { CloudUploadIcon } from "../../../../components/icons/Icons.jsx";
+import { DownloadIcon } from "../../../../components/icons/Icons.jsx";
+import { Button } from "../../../../components/common/Button.jsx";
+import { DocumentUploadField } from "../../../../ce-ui";
 import { PRODUCT_FIELDS_CONFIG } from "../../mock/productFieldsConfig.js";
-import { UploadDescriptionCard } from "../../../purchase-order/components/detail/shared/PoDetailSharedComponents.jsx";
 
 // Naive CSV line/field splitter — good enough for the demo's plain-JS
 // constraint (no papaparse/xlsx). Handles simple double-quoted fields that
@@ -83,12 +84,7 @@ export const analyzeFile = (file, onDone) => {
   }, 3500);
 };
 
-export const UploadStep = ({ selectedFile, onFileSelected, isAnalyzing }) => {
-  const handleFileChange = (e) => {
-    const file = e.target.files?.[0];
-    if (file) onFileSelected(file);
-  };
-
+export const UploadStep = ({ selectedFile, onFileSelected, isAnalyzing, error, onDownloadTemplate }) => {
   if (isAnalyzing) {
     return (
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "16px", padding: "80px 24px", flex: 1, minHeight: 0, height: "100%" }}>
@@ -110,54 +106,37 @@ export const UploadStep = ({ selectedFile, onFileSelected, isAnalyzing }) => {
     );
   }
 
-  const hasFile = !!selectedFile;
+  const uploadedDocs = selectedFile
+    ? [{ id: "pc-upload-file", file: selectedFile, name: selectedFile.name, description: "" }]
+    : [];
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "24px", padding: "40px 24px", maxWidth: "560px", margin: "0 auto", width: "100%", flex: 1, minHeight: 0 }}>
-      <div
-        style={{
-          flex: 1,
-          minHeight: "220px",
-          border: `2px dashed ${hasFile ? "var(--neutral-line-separator-2)" : "var(--feature-brand-primary)"}`,
-          borderRadius: "24px",
-          background: hasFile ? "var(--neutral-surface-grey-lighter)" : "var(--neutral-surface-primary)",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: "16px",
-          cursor: hasFile ? "not-allowed" : "pointer",
-        }}
-        onClick={() => !hasFile && document.getElementById("pc-upload-file-input").click()}
-      >
-        <input
-          id="pc-upload-file-input"
-          type="file"
-          accept=".csv,.xlsx,.xls"
-          style={{ display: "none" }}
-          onChange={handleFileChange}
-          disabled={hasFile}
-        />
-        <CloudUploadIcon size={48} color={hasFile ? "var(--neutral-on-surface-tertiary)" : "var(--feature-brand-primary)"} />
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "8px", textAlign: "center" }}>
-          <span style={{ fontSize: "14px", color: "var(--neutral-on-surface-tertiary)" }}>Allowed formats (.csv, .xlsx, .xls)</span>
-          <div style={{ marginTop: "4px", fontSize: "14px", fontWeight: "var(--font-weight-bold)", color: hasFile ? "var(--neutral-on-surface-tertiary)" : "var(--neutral-on-surface-primary)" }}>
-            {hasFile ? (
-              "File selected below"
-            ) : (
-              <>Drag file or <span style={{ color: "var(--feature-brand-primary)" }}>browse file</span></>
-            )}
-          </div>
+    <div style={{ display: "flex", flexDirection: "column", gap: "24px", padding: "24px", width: "100%", flex: 1, minHeight: 0 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "16px" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+          <span style={{ fontSize: "var(--text-title-2)", fontWeight: "var(--font-weight-bold)", color: "var(--neutral-on-surface-primary)" }}>
+            Import Products
+          </span>
+          <span style={{ fontSize: "14px", color: "var(--neutral-on-surface-secondary)" }}>
+            Upload your product file in any spreadsheet format. We'll map and prepare the data for your product catalog.
+          </span>
         </div>
+        <Button variant="outlined" leftIcon={DownloadIcon} onClick={onDownloadTemplate} style={{ flexShrink: 0 }}>
+          Download Template
+        </Button>
       </div>
 
-      {selectedFile && (
-        <UploadDescriptionCard
-          file={selectedFile}
-          onRemove={() => onFileSelected(null)}
-          hideDescriptionField
-        />
-      )}
+      <DocumentUploadField
+        files={uploadedDocs}
+        maxFiles={1}
+        maxSizeMB={25}
+        accept=".csv,.xlsx,.xls"
+        showDescription={false}
+        formatsHint="Allowed formats (.csv, .xlsx, .xls)"
+        error={error}
+        onAdd={(files) => files[0] && onFileSelected(files[0])}
+        onRemove={() => onFileSelected(null)}
+      />
     </div>
   );
 };

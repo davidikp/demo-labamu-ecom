@@ -24,6 +24,9 @@ export const Popup: React.FC<{
   /** Hide the divider line above the footer (both the built-in action-button
    *  footer and the custom `footer` node). */
   hideFooterDivider?: boolean
+  /** Overrides the footer's top padding (px) — use to control the gap above
+   *  the footer independently of the divider, instead of the default 16px. */
+  footerPaddingTop?: number
   children?: React.ReactNode
   className?: string
   testId?: string
@@ -39,6 +42,7 @@ export const Popup: React.FC<{
   secondaryAction,
   footer,
   hideFooterDivider = false,
+  footerPaddingTop,
   children,
   className,
   testId,
@@ -100,9 +104,17 @@ export const Popup: React.FC<{
         {children && <div className="flex-1 overflow-y-auto px-6 py-4 min-h-0">{children}</div>}
 
         {footer ? (
-          <div className={cn("px-6 py-4 bg-lb-surface flex-shrink-0", !hideFooterDivider && "border-t border-lb-line-1")}>{footer}</div>
+          <div
+            className={cn("px-6 py-4 bg-lb-surface flex-shrink-0", !hideFooterDivider && "border-t border-lb-line-1")}
+            style={footerPaddingTop != null ? { paddingTop: footerPaddingTop } : undefined}
+          >
+            {footer}
+          </div>
         ) : (primaryAction || secondaryAction) && (
-          <div className={cn("px-6 py-4 bg-lb-surface flex gap-3 flex-shrink-0", !hideFooterDivider && "border-t border-lb-line-1")}>
+          <div
+            className={cn("px-6 py-4 bg-lb-surface flex gap-3 flex-shrink-0", !hideFooterDivider && "border-t border-lb-line-1")}
+            style={footerPaddingTop != null ? { paddingTop: footerPaddingTop } : undefined}
+          >
 
             {secondaryAction && (
               <MainBtn

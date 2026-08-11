@@ -7,15 +7,17 @@ export const DeleteRowConfirmModal = ({ isOpen, onClose, onConfirm, count = 1 })
     isOpen={isOpen}
     onClose={onClose}
     title={count > 1 ? `Delete ${count} rows?` : "Delete this row?"}
-    description="This action cannot be undone."
+    description="These rows will be removed from this upload and won’t be imported."
     width="400px"
+    hideFooterDivider
+    footerPaddingTop={24}
     footer={
       <>
         <Button variant="outlined" size="large" onClick={onClose} style={{ flex: 1 }}>
           Cancel
         </Button>
         <Button
-          variant="danger"
+          variant="danger-filled"
           size="large"
           onClick={() => {
             onConfirm();
@@ -23,7 +25,7 @@ export const DeleteRowConfirmModal = ({ isOpen, onClose, onConfirm, count = 1 })
           }}
           style={{ flex: 1 }}
         >
-          Delete
+          Yes, Delete
         </Button>
       </>
     }

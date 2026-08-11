@@ -6,13 +6,15 @@ export const InvalidDataConfirmModal = ({ isOpen, onClose, onContinue, invalidCo
   <GeneralModal
     isOpen={isOpen}
     onClose={onClose}
-    title="Some rows are invalid"
-    description={`${invalidCount} row${invalidCount > 1 ? "s are" : " is"} missing required fields. Do you want to continue anyway?`}
+    title={`${invalidCount} product${invalidCount > 1 ? "s" : ""} need${invalidCount > 1 ? "" : "s"} attention`}
+    description="Some required information is missing. You can update these products now or continue importing the products that are ready."
     width="420px"
+    hideFooterDivider
+    footerPaddingTop={24}
     footer={
       <>
         <Button variant="outlined" size="large" onClick={onClose} style={{ flex: 1 }}>
-          Review Data
+          Keep Editing
         </Button>
         <Button
           variant="filled"
@@ -23,7 +25,7 @@ export const InvalidDataConfirmModal = ({ isOpen, onClose, onContinue, invalidCo
           }}
           style={{ flex: 1 }}
         >
-          Continue Anyway
+          Import Ready Products
         </Button>
       </>
     }

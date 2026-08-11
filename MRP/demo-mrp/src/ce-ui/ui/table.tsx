@@ -488,13 +488,13 @@ export function Table<T extends { id: string | number }>({
                         className={cn(
                           "h-[49px] px-4 font-lb text-[14px]",
                           "text-lb-on-surface leading-[20px]",
-                          isSelected ? "bg-lb-brand-light" : "bg-lb-surface",
+                          isChecked || isSelected ? "bg-lb-brand-light" : "bg-lb-surface",
                           "border-b border-lb-line-1",
                           col.align === "right" && "text-right",
                           col.align === "center" && "text-center",
                           !col.align && "text-left",
-                          col.sticky === "left" && `sticky left-0 z-[21] ${isSelected ? "bg-lb-brand-light" : stickyBg}`,
-                          col.sticky === "right" && `sticky right-0 z-[21] ${isSelected ? "bg-lb-brand-light" : stickyBg}`,
+                          col.sticky === "left" && `sticky left-0 z-[21] ${isChecked || isSelected ? "bg-lb-brand-light" : stickyBg}`,
+                          col.sticky === "right" && `sticky right-0 z-[21] ${isChecked || isSelected ? "bg-lb-brand-light" : stickyBg}`,
                           col.sticky === "right" && scrolled && "shadow-lb-sticky-col"
                         )}
                       >

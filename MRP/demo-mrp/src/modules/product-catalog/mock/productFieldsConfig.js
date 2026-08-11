@@ -25,6 +25,13 @@ export const PRODUCT_FIELDS_CONFIG = [
     synonyms: ["categoryname", "category", "productcategory"],
   },
   {
+    key: "status",
+    label: "Status",
+    required: false,
+    example: "Active",
+    synonyms: ["status", "productstatus", "activestatus", "state"],
+  },
+  {
     key: "leadTime",
     label: "Lead Time",
     required: true,
@@ -133,6 +140,29 @@ export const isRowInvalid = (row) => REQUIRED_PRODUCT_FIELD_KEYS.some((key) => !
 
 export const NOT_MAPPED = "__not_mapped__";
 
+export const STATUS_OPTIONS = ["Active", "Inactive"];
+
+// Best-effort normalization for the Status field — maps common truthy/falsy
+// spellings from an uploaded file to the canonical "Active"/"Inactive"
+// values. Anything unrecognized is left as-is so it still surfaces as an
+// invalid row (missing/unmatched required field) for manual fixing.
+const ACTIVE_ALIASES = new Set(["active", "1", "yes", "true", "y"]);
+const INACTIVE_ALIASES = new Set(["inactive", "0", "no", "false", "n"]);
+export const normalizeStatusValue = (raw) => {
+  const trimmed = String(raw ?? "").trim();
+  if (!trimmed) return "Active";
+  const norm = trimmed.toLowerCase();
+  if (ACTIVE_ALIASES.has(norm)) return "Active";
+  if (INACTIVE_ALIASES.has(norm)) return "Inactive";
+  return trimmed;
+};
+
+// Backfills a missing/blank Status on rows that predate the field (e.g.
+// seeded/saved drafts) so the Review step never shows an empty Status —
+// it's always "Active" unless a source column explicitly mapped "Inactive".
+export const withDefaultStatus = (rows) =>
+  (rows || []).map((row) => ({ ...row, status: normalizeStatusValue(row.status) }));
+
 // Strips everything except letters/digits so headers like "Weight (Kg)",
 // "weight_kg", "Weight-KG" and "weight kg" all normalize to the same key.
 const normalizeHeader = (s) => String(s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
@@ -172,6 +202,26 @@ export const autoMatchHeaders = (headers) => {
   return result;
 };
 
+// The system's base currency — Selling Price is always stored/displayed as a
+// plain number under this currency (see the "IDR" prefix in the Review
+// table). "Rp"/"IDR" prefixes in the source file are treated as already
+// being the base currency and are stripped silently.
+const BASE_CURRENCY_ALIASES = new Set(["rp", "idr"]);
+
+// Any non-numeric prefix/symbol in front of the number (that isn't Rp/IDR)
+// is treated as a foreign-currency signal — e.g. "$120", "USD 120", "€120".
+// Returns the plain numeric string plus the detected currency label (or null
+// when the value is already in the base currency / has no prefix at all).
+const CURRENCY_PREFIX_PATTERN = /^\s*([^\d.,\s-]+)\s*(-?[\d.,]+)\s*$/;
+export const extractSellingPriceCurrency = (raw) => {
+  const str = String(raw ?? "").trim();
+  const match = str.match(CURRENCY_PREFIX_PATTERN);
+  if (!match) return { numeric: str, currency: null };
+  const [, prefix, numeric] = match;
+  const isBaseCurrency = BASE_CURRENCY_ALIASES.has(prefix.trim().toLowerCase());
+  return { numeric, currency: isBaseCurrency ? null : prefix.trim() };
+};
+
 // Shared row-normalization logic used both by MappingStep (kept for
 // reference/back-compat) and by the simulated background "Mapping"
 // processing timer in bulkUploadsStore.js, which needs to build normalized
@@ -183,7 +233,19 @@ export const normalizeMappedRows = (rawRows, mapping) => {
     const normalized = { __rowId: `row-${idx}-${Date.now()}` };
     PRODUCT_FIELDS_CONFIG.forEach((field) => {
       const sourceHeader = fieldMapping[field.key];
-      normalized[field.key] = sourceHeader && sourceHeader !== NOT_MAPPED ? row[sourceHeader] ?? "" : "";
+      const rawValue = sourceHeader && sourceHeader !== NOT_MAPPED ? row[sourceHeader] ?? "" : "";
+      if (field.key === "status") {
+        normalized[field.key] = normalizeStatusValue(rawValue);
+      } else if (field.key === "sellingPrice") {
+        // The numeric value is kept as-is (no conversion) — a mismatched
+        // currency is only flagged for the user to verify, on
+        // `sellingPriceSourceCurrency`.
+        const { numeric, currency } = extractSellingPriceCurrency(rawValue);
+        normalized[field.key] = numeric;
+        normalized.sellingPriceSourceCurrency = currency;
+      } else {
+        normalized[field.key] = rawValue;
+      }
     });
     return normalized;
   });

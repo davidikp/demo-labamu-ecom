@@ -82,7 +82,14 @@ export const MappingStep = ({ headers, mapping, recommendation, onMappingChange,
       <style>{`
         .pc-mapping-table > div:last-child { display: none; }
         .pc-mapping-table th, .pc-mapping-table td { height: auto !important; }
-        .pc-mapping-table th { padding-top: 12px !important; padding-bottom: 12px !important; }
+        .pc-mapping-table th {
+          padding-top: 12px !important;
+          padding-bottom: 12px !important;
+          /* border-bottom on a sticky <th> can vanish while scrolling under
+             border-collapse — a box-shadow paints reliably instead. */
+          border-bottom: none !important;
+          box-shadow: inset 0 -1px 0 var(--neutral-line-separator-2);
+        }
       `}</style>
       <div
         style={{

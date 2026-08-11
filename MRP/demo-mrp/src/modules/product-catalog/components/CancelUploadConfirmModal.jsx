@@ -7,15 +7,17 @@ export const CancelUploadConfirmModal = ({ isOpen, onClose, onConfirm }) => (
     isOpen={isOpen}
     onClose={onClose}
     title="Cancel this upload?"
-    description="The upload process will be cancelled and marked as Cancelled in the Bulk Upload list. This action cannot be undone."
+    description="You won’t be able to continue this upload. It will remain in the Bulk Upload list with a Cancelled status."
     width="400px"
+    hideFooterDivider
+    footerPaddingTop={24}
     footer={
       <>
         <Button variant="outlined" size="large" onClick={onClose} style={{ flex: 1 }}>
           Keep Editing
         </Button>
         <Button
-          variant="danger"
+          variant="danger-filled"
           size="large"
           onClick={() => {
             onConfirm();
@@ -23,7 +25,7 @@ export const CancelUploadConfirmModal = ({ isOpen, onClose, onConfirm }) => (
           }}
           style={{ flex: 1 }}
         >
-          Cancel Upload
+          Yes, Cancel
         </Button>
       </>
     }
