@@ -1192,5 +1192,89 @@ Object.assign(NOTIFICATION_CATALOG.purchase_order, {
   },
 });
 
+NOTIFICATION_CATALOG.product_catalog = {
+  bulk_upload_completed: {
+    recipientRule: "eligible_users",
+    channels: { inApp: true, email: true },
+    todo: null,
+    inApp: (c) => ({
+      title: {
+        en: `Bulk upload finished — ${c.fileName}`,
+        id: `Bulk upload selesai — ${c.fileName}`,
+      },
+      body: {
+        en: `${c.fileName} finished processing — ${c.productCount} product${c.productCount === 1 ? "" : "s"} added to your catalog.`,
+        id: `${c.fileName} selesai diproses — ${c.productCount} produk ditambahkan ke katalog Anda.`,
+      },
+      cta: { en: "View Upload", id: "Lihat Upload" },
+    }),
+    email: (c) => ({
+      subject: {
+        en: `Bulk upload finished — ${c.fileName}`,
+        id: `Bulk upload selesai — ${c.fileName}`,
+      },
+      body: {
+        en: `Hi ${c.requesterName}, ${c.fileName} finished processing — ${c.productCount} product${c.productCount === 1 ? "" : "s"} added to your catalog.`,
+        id: `Halo ${c.requesterName}, ${c.fileName} selesai diproses — ${c.productCount} produk ditambahkan ke katalog Anda.`,
+      },
+      cta: { en: "View Upload", id: "Lihat Upload" },
+    }),
+  },
+  bulk_upload_mapping_ready: {
+    recipientRule: "eligible_users",
+    channels: { inApp: true, email: true },
+    todo: null,
+    inApp: (c) => ({
+      title: {
+        en: `Mapping finished — ${c.fileName}`,
+        id: `Mapping selesai — ${c.fileName}`,
+      },
+      body: {
+        en: `${c.fileName} finished mapping and is ready for review.`,
+        id: `${c.fileName} selesai dipetakan dan siap untuk ditinjau.`,
+      },
+      cta: { en: "Review", id: "Tinjau" },
+    }),
+    email: (c) => ({
+      subject: {
+        en: `Mapping finished — ${c.fileName}`,
+        id: `Mapping selesai — ${c.fileName}`,
+      },
+      body: {
+        en: `Hi ${c.requesterName}, ${c.fileName} finished mapping and is ready for review.`,
+        id: `Halo ${c.requesterName}, ${c.fileName} selesai dipetakan dan siap untuk ditinjau.`,
+      },
+      cta: { en: "Review", id: "Tinjau" },
+    }),
+  },
+  bulk_upload_cancelled: {
+    recipientRule: "eligible_users",
+    channels: { inApp: true, email: true },
+    todo: null,
+    inApp: (c) => ({
+      title: {
+        en: `Bulk upload cancelled — ${c.fileName}`,
+        id: `Bulk upload dibatalkan — ${c.fileName}`,
+      },
+      body: {
+        en: `${c.fileName} was cancelled before it finished processing.`,
+        id: `${c.fileName} dibatalkan sebelum selesai diproses.`,
+      },
+      cta: { en: "View Upload", id: "Lihat Upload" },
+    }),
+    email: (c) => ({
+      subject: {
+        en: `Bulk upload cancelled — ${c.fileName}`,
+        id: `Bulk upload dibatalkan — ${c.fileName}`,
+      },
+      body: {
+        en: `Hi ${c.requesterName}, ${c.fileName} was cancelled before it finished processing.`,
+        id: `Halo ${c.requesterName}, ${c.fileName} dibatalkan sebelum selesai diproses.`,
+      },
+      cta: { en: "View Upload", id: "Lihat Upload" },
+    }),
+  },
+};
+
 export const getCatalogEntry = (moduleKey, triggerKey) =>
   NOTIFICATION_CATALOG[moduleKey]?.[triggerKey] || null;

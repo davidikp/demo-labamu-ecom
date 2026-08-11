@@ -38,7 +38,8 @@ const TablePaginationFooter = ({
         </>
       )}
       {onRowsPerPageChange && (
-        <div style={{ width: "84px" }}>
+        <div className="rows-per-page-dropdown" style={{ width: "84px" }}>
+          <style>{`.rows-per-page-dropdown [aria-label="Clear"] { display: none; }`}</style>
           <Dropdown
             size="sm"
             options={rowsPerPageOptions.map((n) => ({ value: String(n), label: String(n) }))}

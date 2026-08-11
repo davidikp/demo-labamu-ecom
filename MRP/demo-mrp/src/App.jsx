@@ -35,6 +35,10 @@ import { NotificationPreferencesPage } from "./modules/notification/pages/Notifi
 import { MaterialsListPage } from "./modules/materials/pages/MaterialsListPage.jsx";
 import { MaterialDetailPage } from "./modules/materials/pages/MaterialDetailPage.jsx";
 import { MaterialManagePage } from "./modules/materials/pages/MaterialManagePage.jsx";
+import { ProductCatalogPage } from "./modules/product-catalog/pages/ProductCatalogPage.jsx";
+import { ProductCatalogManagePage } from "./modules/product-catalog/pages/ProductCatalogManagePage.jsx";
+import { BulkUploadListPage } from "./modules/product-catalog/pages/BulkUploadListPage.jsx";
+import { BulkUploadNewPage } from "./modules/product-catalog/pages/BulkUploadNewPage.jsx";
 import { MaterialRequestListPage } from "./modules/material-request/pages/MaterialRequestListPage.jsx";
 import { MaterialRequestDetailPage } from "./modules/material-request/pages/MaterialRequestDetailPage.jsx";
 import { MaterialForecastPage } from "./modules/material-forecast/pages/MaterialForecastPage.jsx";
@@ -62,6 +66,7 @@ import { TopHeader } from "./components/layout/TopHeader.jsx";
 import { NotificationProvider } from "./context/NotificationContext.jsx";
 import { LocaleProvider } from "./ce-ui";
 import { NotificationSeeder } from "./components/notification/NotificationSeeder.jsx";
+import { BulkUploadNotifier } from "./modules/product-catalog/components/BulkUploadNotifier.jsx";
 import { SimulateEventPanel } from "./components/notification/SimulateEventPanel.jsx";
 import { DashboardPage } from "./modules/dashboard/pages/DashboardPage.jsx";
 import { EmailOutboxPage } from "./modules/notification/pages/EmailOutboxPage.jsx";
@@ -219,6 +224,7 @@ const MODULE_TO_ROUTE = {
   orders: "orders",
   custom_product_request: "custom-product-request",
   materials: "materials",
+  product_catalog: "product-catalog",
   material_request: "material-request",
   analytics: "analytics",
   administration: "administration",
@@ -435,7 +441,7 @@ const ModuleRenderer = ({
     viewState.data = { id, poNumber: id, wo: id, material: { sku: id } };
   }
 
-  const isSpecialView = ["list", "create", "create_material", "settings", "manage"].includes(viewState.view) ||
+  const isSpecialView = ["list", "create", "create_material", "settings", "manage", "bulk_upload_list", "bulk_upload_new"].includes(viewState.view) ||
                         activeModule === "dashboard" ||
                         activeModule === "email_outbox" ||
                         activeModule === "notification_preferences" ||
@@ -982,6 +988,27 @@ const ModuleRenderer = ({
       );
     }
   }
+  if (activeModule === "product_catalog") {
+    if (viewState.view === "manage") {
+      return <ProductCatalogManagePage onNavigate={onNavigate} t={t} />;
+    }
+    if (viewState.view === "bulk_upload_list") {
+      return <BulkUploadListPage onNavigate={onNavigate} showSnackbar={showPoSnackbar} t={t} />;
+    }
+    if (viewState.view === "bulk_upload_new") {
+      return (
+        <BulkUploadNewPage
+          key={viewState.data?.resumeDraftId || "bulk-upload-new"}
+          onNavigate={onNavigate}
+          showSnackbar={showPoSnackbar}
+          t={t}
+          initialData={viewState.data}
+          isSidebarCollapsed={isSidebarCollapsed}
+        />
+      );
+    }
+    return <ProductCatalogPage onNavigate={onNavigate} showSnackbar={showPoSnackbar} t={t} />;
+  }
 
   return (
     <div
@@ -1116,6 +1143,12 @@ export default function App() {
         navigate(path, { state: data, ...options });
         return;
       }
+      if (view.startsWith("product_catalog_")) {
+        const subView = view.replace("product_catalog_", "").replace(/_/g, "-");
+        const path = subView === "list" ? "/product-catalog" : `/product-catalog/${subView}`;
+        navigate(path, { state: data, ...options });
+        return;
+      }
       if (view === "material_request_detail") {
         const path = data?.id ? `/material-request/${data.id}${data?.pov ? `?pov=${data.pov}` : ""}` : "/material-request";
         navigate(path, { state: data, ...options });
@@ -1241,6 +1274,7 @@ export default function App() {
     >
       <LabamuStyles />
       <NotificationSeeder />
+      <BulkUploadNotifier />
       {currentActiveModule === "dashboard" ? <SimulateEventPanel /> : null}
       <div style={{ display: "flex", flex: 1, width: "100%" }}>
         <Sidebar

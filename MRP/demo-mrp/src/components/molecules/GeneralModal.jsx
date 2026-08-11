@@ -24,8 +24,8 @@ const GeneralModal = ({
       description={description}
       align={centeredHeader ? "center" : "left"}
       platform="desktop"
-      className={`!w-[${width}]`}
-      style={{ zIndex }}
+      className="gm-modal-width"
+      style={{ zIndex, "--gm-width": width }}
       hideFooterDivider={hideFooterDivider}
       footer={
         footer && (

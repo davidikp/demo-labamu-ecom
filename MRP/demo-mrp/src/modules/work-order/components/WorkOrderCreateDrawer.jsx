@@ -4,6 +4,7 @@ import { AddIcon, ChevronDownIcon, CloseIcon, DeleteIcon } from "../../../compon
 import { Button } from "../../../components/common/Button.jsx";
 import { IconButton } from "../../../components/common/IconButton.jsx";
 import { DropdownSelect } from "../../../components/common/DropdownSelect.jsx";
+import { StatusBadge } from "../../../components/common/StatusBadge.jsx";
 import { FormField, InputField } from "../../../components/index.js";
 import { Table } from "../../../ce-ui";
 import { MOCK_MATERIALS_DATA } from "../../materials/mock/materialsMocks.js";
@@ -559,9 +560,13 @@ export const WorkOrderCreateDrawer = ({ isOpen, onClose, onCreated }) => {
                     key: "actions",
                     header: "",
                     align: "center",
-                    width: 64,
+                    width: 140,
                     render: (_value, row) =>
-                      row.isMain ? null : (
+                      row.isMain ? (
+                        <div style={{ display: "flex", justifyContent: "center" }}>
+                          <StatusBadge variant="blue-light">Main Output</StatusBadge>
+                        </div>
+                      ) : (
                         <div style={{ display: "flex", justifyContent: "center" }}>
                           <Button
                             variant="outlined"

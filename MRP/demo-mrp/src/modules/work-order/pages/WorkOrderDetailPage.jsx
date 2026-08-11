@@ -4556,7 +4556,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                   whiteSpace: "nowrap",
                 }}
               >
-                {TOTAL_QTY} unit
+                {mainQty} unit
               </span>
             </div>
 

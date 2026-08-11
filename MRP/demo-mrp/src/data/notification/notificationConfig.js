@@ -90,6 +90,13 @@ export const NOTIFICATION_MODULES = {
     route: "work-order",
     color: "#F59E0B",
   },
+  product_catalog: {
+    key: "product_catalog",
+    label: { en: "Product Catalog", id: "Katalog Produk" },
+    noun: { en: "Bulk Upload", id: "Bulk Upload" },
+    route: "product-catalog/bulk-upload-list",
+    color: "#782AAE",
+  },
 };
 
 // Default approver lists per module. Natasha is everywhere so the demo always

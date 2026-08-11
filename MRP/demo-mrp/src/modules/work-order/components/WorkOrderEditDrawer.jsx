@@ -3,6 +3,7 @@ import { AddIcon, CloseIcon, DeleteIcon } from "../../../components/icons/Icons.
 import { Button } from "../../../components/common/Button.jsx";
 import { IconButton } from "../../../components/common/IconButton.jsx";
 import { DropdownSelect } from "../../../components/common/DropdownSelect.jsx";
+import { StatusBadge } from "../../../components/common/StatusBadge.jsx";
 import { FormField, InputField } from "../../../components/index.js";
 import { MOCK_MATERIALS_DATA } from "../../materials/mock/materialsMocks.js";
 import { getBomLinkedToMaterial } from "../../bill-of-materials/mock/bomMocks.js";
@@ -466,9 +467,13 @@ export const WorkOrderEditDrawer = ({ isOpen, onClose, workOrder, onSave }) => {
                     key: "actions",
                     header: "",
                     align: "center",
-                    width: 64,
+                    width: 140,
                     render: (_value, row) =>
-                      row.isMain ? null : (
+                      row.isMain ? (
+                        <div style={{ display: "flex", justifyContent: "center" }}>
+                          <StatusBadge variant="blue-light">Main Output</StatusBadge>
+                        </div>
+                      ) : (
                         <div style={{ display: "flex", justifyContent: "center" }}>
                           <Button
                             variant="outlined"

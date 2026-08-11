@@ -162,6 +162,11 @@ export const buildEvent = ({
       cta: content.cta || null,
       to: recipients.emailTo,
       cc: recipients.emailCc,
+      // Carried through structurally (rather than only baked into the body
+      // string) so the Email Outbox preview can render a dedicated Approval
+      // Details block for approval-request emails.
+      submitterName: fullCtx.submitterName || null,
+      approverNames: fullCtx.approverNames || [],
     };
   }
 
