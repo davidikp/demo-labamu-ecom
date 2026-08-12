@@ -1,29 +1,72 @@
-import { useMemo, useState } from 'react';
+import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import Button from '../../components/ui/Button';
 import Canvas from '../section-builder/ui/Canvas';
-import SwitchThemeDialog from '../section-builder/ui/SwitchThemeDialog';
+import ConfirmDialog from '../section-builder/ui/ConfirmDialog';
+import { Popup } from '../../ce-ui';
 import { SITE_TEMPLATES, defaultPreviewDataFor } from '../section-builder/state/siteTemplates';
-import { loadDraft, saveDraft } from '../section-builder/state/storage';
+import {
+  loadDraft, saveDraft,
+  loadPublishedTheme, savePublishedTheme, loadDraftThemes, saveDraftThemes,
+} from '../section-builder/state/storage';
 import { applySiteTemplate } from '../section-builder/state/siteTemplateApply';
 import { inferActiveTemplateId, isDefaultTheme } from '../section-builder/state/inferActiveTemplate';
+import { sampleDiscoverThemes, DISCOVER_THEME_POOL } from '../section-builder/state/discoverThemes';
+import { getUniqueName } from '../section-builder/state/nameUtils';
+import { PublishedThemeCard, DraftThemeRow, DiscoverCard } from './ThemeGalleryCards';
 
 // TODO: replace with the real active store id once multi-store routing
 // exists — matches the hardcoded id used by Layout.jsx's builder entry.
 const STORE_ID = 'demo';
 
-// Canvas's own desktop viewport width (see section-builder/ui/Canvas.jsx),
-// scaled down to card size. Approximate for the ~340px-wide gallery card —
-// this is a preview, not a pixel-perfect miniature.
-const CANVAS_DESKTOP_WIDTH = 1280;
-const PREVIEW_SCALE = 0.27;
+// No store-domain field exists anywhere in this codebase yet (grepped for
+// myshopify/storeDomain) — hardcode a plausible one matching STORE_ID.
+const STORE_DOMAIN = `${STORE_ID}.myshopify.com`;
 
-function TemplatePreviewCanvas({ header, footer, sections, theme, mediaLibrary }) {
+// Canvas's own desktop viewport width (see section-builder/ui/Canvas.jsx),
+// scaled down to card size. Approximate for the gallery cards — these are
+// previews, not pixel-perfect miniatures.
+const CANVAS_DESKTOP_WIDTH = 1280;
+const PREVIEW_SCALE_BIG = 0.42;
+
+// Fill-width preview canvas shared by the published card, draft rows, and
+// discover cards: measures its own rendered width (ref + ResizeObserver) and
+// derives the scale factor from it, so the live Canvas content always spans
+// exactly 100% of the container regardless of viewport/card width, instead
+// of relying on a static scale constant that only "fills" at one particular
+// width. Falls back to PREVIEW_SCALE_BIG before the first measurement to
+// avoid a flash of unscaled/empty content. Sizing is controlled by the
+// caller: pass `aspectRatio` (draft/discover cards, e.g. 'aspect-[16/10]')
+// to have this component size itself, or omit it and let the parent
+// constrain height/width instead (published card: fixed 400px tall via
+// .published-theme-card__preview) — either way this component fills exactly
+// 100% of whatever box it ends up in, and overflow:hidden crops the scaled
+// content rather than distorting it, since width and height no longer
+// necessarily share one ratio.
+function FillWidthPreviewCanvas({ header, footer, sections, theme, mediaLibrary, aspectRatio }) {
+  const containerRef = useRef(null);
+  const [scale, setScale] = useState(PREVIEW_SCALE_BIG);
+
+  useLayoutEffect(() => {
+    const el = containerRef.current;
+    if (!el) return undefined;
+    function measure() {
+      const width = el.getBoundingClientRect().width;
+      if (width > 0) setScale(width / CANVAS_DESKTOP_WIDTH);
+    }
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
   return (
-    <div className="relative aspect-[4/3] w-full overflow-hidden bg-gray-50">
+    <div
+      ref={containerRef}
+      className={`relative w-full h-full overflow-hidden bg-gray-50 ${aspectRatio ?? ''}`}
+    >
       <div
-        style={{ width: CANVAS_DESKTOP_WIDTH, transform: `scale(${PREVIEW_SCALE})`, transformOrigin: 'top left' }}
+        style={{ width: CANVAS_DESKTOP_WIDTH, transform: `scale(${scale})`, transformOrigin: 'top left' }}
         className="pointer-events-none"
       >
         <Canvas viewport="desktop" header={header} footer={footer} sections={sections} theme={theme} mediaLibrary={mediaLibrary ?? []} selectedId={null} readOnly />
@@ -32,44 +75,15 @@ function TemplatePreviewCanvas({ header, footer, sections, theme, mediaLibrary }
   );
 }
 
-function TemplateCard({ template, isActive, previewData, onOpen, onSwitch, onSeePreview }) {
-  const { t } = useTranslation();
+// Final, defensive-only fallback for theme records (published or draft)
+// whose templateId matches neither SITE_TEMPLATES nor DISCOVER_THEME_POOL —
+// shouldn't normally happen since every Discover fixture now carries real,
+// renderable illustrative content (see discoverThemes.js), but kept so a
+// stale/unknown templateId never renders nothing.
+function PreviewPlaceholder({ name }) {
   return (
-    <div className="template-card-container">
-      <div
-        className={'template-card' + (isActive ? ' template-card--active' : '')}
-        onClick={() => (isActive ? onOpen(template) : onSwitch(template))}
-      >
-        <TemplatePreviewCanvas {...previewData} />
-        {isActive && (
-          <div className="badge-active">{t('sectionBuilder:templates.gallery.activeLabel')}</div>
-        )}
-        <div className="template-overlay" style={{ flexDirection: 'column', gap: '10px' }}>
-          <Button
-            variant={isActive ? 'primary' : 'secondary'}
-            width="180px"
-            onClick={(e) => { e.stopPropagation(); isActive ? onOpen(template) : onSwitch(template); }}
-            style={{ padding: '12px 24px', fontSize: '14px' }}
-          >
-            {isActive ? t('sectionBuilder:templates.gallery.editSite') : t('sectionBuilder:templates.gallery.switchTo')}
-          </Button>
-          <button
-            type="button"
-            onClick={(e) => { e.stopPropagation(); onSeePreview(template); }}
-            style={{ background: 'none', border: 'none', padding: '4px 0', fontSize: '13px', fontWeight: 600, color: '#FFFFFF', cursor: 'pointer', textDecoration: 'underline' }}
-          >
-            {t('sectionBuilder:templates.gallery.seePreview')}
-          </button>
-        </div>
-      </div>
-      <div style={{ padding: '0 4px' }}>
-        <h3 style={{ margin: '0 0 4px 0', fontSize: '16px', fontWeight: 700, color: '#282828' }}>
-          {t(`sectionBuilder:templates.${template.id}.label`, template.name)}
-        </h3>
-        <p style={{ margin: 0, fontSize: '13px', color: '#6B7280', lineHeight: '18px' }}>
-          {t(`sectionBuilder:templates.${template.id}.description`, '')}
-        </p>
-      </div>
+    <div className="relative aspect-[16/9] w-full overflow-hidden discover-card__placeholder">
+      {name}
     </div>
   );
 }
@@ -82,7 +96,7 @@ export default function ThemeGallery() {
   // a known template, and persist it immediately — so the currently-used
   // theme is saved and marked active as soon as this page opens, not just
   // recomputed-and-discarded on every render.
-  const [draft, setDraft] = useState(() => {
+  const [draft] = useState(() => {
     const loaded = loadDraft(STORE_ID);
     if (loaded?.activeTemplateId) return loaded;
 
@@ -109,19 +123,45 @@ export default function ThemeGallery() {
     }
     return loaded;
   });
-  const [pendingTemplate, setPendingTemplate] = useState(null);
 
   const activeTemplateId = draft?.activeTemplateId ?? null;
 
-  // Active template first (real-site preview), everything else after
-  // (canned preview from the template's own default data) — matches the
-  // confirmed UX: "active shown first, others shown as illustrative cards".
-  const orderedTemplates = useMemo(() => {
-    if (!activeTemplateId) return SITE_TEMPLATES;
-    const active = SITE_TEMPLATES.find((t2) => t2.id === activeTemplateId);
-    if (!active) return SITE_TEMPLATES;
-    return [active, ...SITE_TEMPLATES.filter((t2) => t2.id !== activeTemplateId)];
-  }, [activeTemplateId]);
+  // ---------------------------------------------------------------------
+  // Online Store > Themes bookkeeping layer (published-theme card, draft
+  // theme rows, discover rail below). IMPORTANT: this is a separate concept
+  // from `draft` above. `draft` is the live, editable site content that
+  // section-builder actually renders and that SwitchThemeDialog/
+  // applySiteTemplate operate on. The published/draft-theme *records*
+  // below are just metadata cards (name, timestamps, which one is
+  // "published") for this gallery screen's Shopify-style bookkeeping UI —
+  // publishing one of these records does NOT re-render the live site with
+  // that theme's real content. The two layers intentionally coexist
+  // without touching each other's storage keys.
+  // ---------------------------------------------------------------------
+  const [publishedTheme, setPublishedTheme] = useState(() => {
+    const existing = loadPublishedTheme(STORE_ID);
+    if (existing) return existing;
+    // Seed from whatever's currently active in the live draft so the big
+    // card always has something real to show on first visit.
+    const activeTemplate = SITE_TEMPLATES.find((tpl) => tpl.id === activeTemplateId) ?? SITE_TEMPLATES[0];
+    const seeded = {
+      id: `published-${Date.now()}`,
+      templateId: activeTemplate.id,
+      name: activeTemplate.name,
+      previewImageUrl: null,
+      publishedAt: Date.now(),
+      lastSavedAt: Date.now(),
+    };
+    savePublishedTheme(STORE_ID, seeded);
+    return seeded;
+  });
+  const [draftThemes, setDraftThemes] = useState(() => loadDraftThemes(STORE_ID));
+  const [discoverItems] = useState(() => sampleDiscoverThemes(5));
+
+  const [renamingId, setRenamingId] = useState(null); // 'published' | draft theme id
+  const [publishConfirmTheme, setPublishConfirmTheme] = useState(null); // draft theme pending publish
+  const [deleteConfirmTheme, setDeleteConfirmTheme] = useState(null); // draft theme pending delete
+  const [addingDiscoverId, setAddingDiscoverId] = useState(null);
 
   function previewDataFor(template) {
     const isActive = template.id === activeTemplateId;
@@ -140,6 +180,44 @@ export default function ThemeGallery() {
     return defaultPreviewDataFor(template);
   }
 
+  // Preview element for the big published-theme card: reuses the real, live
+  // draft content when the published record's templateId matches the
+  // currently-active template (the common case), falls back to that
+  // template's illustrative default preview when it doesn't, and — for a
+  // published record whose templateId has no SITE_TEMPLATES match at all
+  // (e.g. published straight from a Discover-added draft) — falls back to
+  // an illustrative placeholder rather than hiding the card entirely (the
+  // bug being fixed here). Always resolves to something renderable, so the
+  // card's render guard no longer needs to gate on this.
+  const publishedPreviewElement = useMemo(() => {
+    const publishedTemplate = SITE_TEMPLATES.find((tpl) => tpl.id === publishedTheme?.templateId);
+    if (publishedTemplate) {
+      const data = publishedTemplate.id === activeTemplateId
+        ? previewDataFor(publishedTemplate)
+        : defaultPreviewDataFor(publishedTemplate);
+      return <FillWidthPreviewCanvas {...data} />;
+    }
+    // Not a real SITE_TEMPLATES entry — fall back to the Discover pool's
+    // own illustrative fixture (e.g. published straight from a
+    // Discover-added draft), rendered through the same live Canvas path.
+    const discoverItem = DISCOVER_THEME_POOL.find((item) => item.templateId === publishedTheme?.templateId);
+    if (discoverItem) return <FillWidthPreviewCanvas {...defaultPreviewDataFor(discoverItem)} />;
+    return <PreviewPlaceholder name={publishedTheme?.name} />;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [publishedTheme?.templateId, publishedTheme?.name, activeTemplateId, draft]);
+
+  function draftPreviewElement(draftThemeRecord) {
+    const template = SITE_TEMPLATES.find((tpl) => tpl.id === draftThemeRecord.templateId);
+    if (template) return <FillWidthPreviewCanvas {...defaultPreviewDataFor(template)} aspectRatio="aspect-[16/10]" />;
+    const discoverItem = DISCOVER_THEME_POOL.find((item) => item.templateId === draftThemeRecord.templateId);
+    if (discoverItem) return <FillWidthPreviewCanvas {...defaultPreviewDataFor(discoverItem)} aspectRatio="aspect-[16/10]" />;
+    return <PreviewPlaceholder name={draftThemeRecord.name} />;
+  }
+
+  function discoverPreviewElement(item) {
+    return <FillWidthPreviewCanvas {...defaultPreviewDataFor(item)} aspectRatio="aspect-[16/10]" />;
+  }
+
   function handleOpen() {
     navigate(`/section-builder/${STORE_ID}`);
   }
@@ -148,83 +226,299 @@ export default function ThemeGallery() {
     navigate(`/online-store/theme/${template.id}/preview`);
   }
 
-  function handleKeepContent() {
-    const next = applySiteTemplate(STORE_ID, pendingTemplate, 'restyle');
-    setDraft(next);
-    setPendingTemplate(null);
+  // -- Published theme card actions --------------------------------------
+
+  function handlePublishedPreview() {
+    const template = SITE_TEMPLATES.find((tpl) => tpl.id === publishedTheme?.templateId);
+    if (template) {
+      handleSeePreview(template);
+      return;
+    }
+    // No real template backs this published record (e.g. published from a
+    // Discover-added draft) — consistent with handleDiscoverPreview's
+    // deliberate no-op for decorative/illustrative-only fixtures.
+    console.log('Preview (illustrative only, no real template):', publishedTheme?.name);
   }
 
-  function handleStartFresh() {
-    const next = applySiteTemplate(STORE_ID, pendingTemplate, 'seed');
-    setDraft(next);
-    setPendingTemplate(null);
+  function handlePublishedRenameSubmit(newName) {
+    const updated = { ...publishedTheme, name: newName };
+    setPublishedTheme(updated);
+    savePublishedTheme(STORE_ID, updated);
+    setRenamingId(null);
+  }
+
+  // -- Draft theme row actions --------------------------------------------
+
+  function handleDraftPreview(draftThemeRecord) {
+    const template = SITE_TEMPLATES.find((tpl) => tpl.id === draftThemeRecord.templateId);
+    if (template) {
+      handleSeePreview(template);
+      return;
+    }
+    console.log('Preview (illustrative only, no real template):', draftThemeRecord.name);
+  }
+
+  function handleDraftRenameSubmit(draftThemeRecord, newName) {
+    const uniqueName = getUniqueName(
+      draftThemes.filter((d) => d.id !== draftThemeRecord.id).map((d) => d.name),
+      newName
+    );
+    const nextList = draftThemes.map((d) => (d.id === draftThemeRecord.id ? { ...d, name: uniqueName } : d));
+    setDraftThemes(nextList);
+    saveDraftThemes(STORE_ID, nextList);
+    setRenamingId(null);
+  }
+
+  function handleDraftDuplicate(draftThemeRecord) {
+    const uniqueName = getUniqueName(draftThemes.map((d) => d.name), draftThemeRecord.name);
+    const copy = { ...draftThemeRecord, id: `draft-${Date.now()}`, name: uniqueName, addedAt: Date.now(), lastSavedAt: Date.now() };
+    const nextList = [...draftThemes, copy];
+    setDraftThemes(nextList);
+    saveDraftThemes(STORE_ID, nextList);
+  }
+
+  function handleDraftDeleteConfirm() {
+    const nextList = draftThemes.filter((d) => d.id !== deleteConfirmTheme.id);
+    setDraftThemes(nextList);
+    saveDraftThemes(STORE_ID, nextList);
+    setDeleteConfirmTheme(null);
+  }
+
+  function handlePublishConfirm() {
+    const promoted = publishConfirmTheme;
+    if (!promoted) return;
+
+    // Demote the currently published record into the draft list, deduping
+    // its name against the existing draft names.
+    const remainingDrafts = draftThemes.filter((d) => d.id !== promoted.id);
+    const demotedName = getUniqueName(remainingDrafts.map((d) => d.name), publishedTheme.name);
+    const demoted = { ...publishedTheme, id: publishedTheme.id ?? `draft-${Date.now()}`, name: demotedName, addedAt: Date.now() };
+
+    const nextDraftThemes = [...remainingDrafts, demoted];
+    const nextPublished = { ...promoted, publishedAt: Date.now(), lastSavedAt: Date.now() };
+
+    setDraftThemes(nextDraftThemes);
+    saveDraftThemes(STORE_ID, nextDraftThemes);
+    setPublishedTheme(nextPublished);
+    savePublishedTheme(STORE_ID, nextPublished);
+    setPublishConfirmTheme(null);
+  }
+
+  // -- Discover section actions --------------------------------------------
+
+  function handleDiscoverAdd(item) {
+    setAddingDiscoverId(item.templateId);
+    setTimeout(() => {
+      const newDraft = {
+        id: `draft-${Date.now()}`,
+        templateId: item.templateId,
+        name: getUniqueName(draftThemes.map((d) => d.name), item.name),
+        previewImageUrl: item.previewImageUrl,
+        addedAt: Date.now(),
+        lastSavedAt: Date.now(),
+      };
+      const nextList = [...draftThemes, newDraft];
+      setDraftThemes(nextList);
+      saveDraftThemes(STORE_ID, nextList);
+      setAddingDiscoverId(null);
+    }, 800);
+  }
+
+  function handleDiscoverPreview(item) {
+    // No real template/content backs a discover-only fixture — this is a
+    // deliberately no-op affordance rather than over-engineering a preview
+    // route for decorative fixtures.
+    console.log('Preview (discover, illustrative only):', item.name);
   }
 
   return (
-    <div style={{ background: '#F4F4F4', height: 'calc(100vh - 56px)', display: 'flex', flexDirection: 'column', overflow: 'hidden', fontFamily: "'Lato', sans-serif" }}>
+    <div style={{ background: '#F4F4F4', minHeight: 'calc(100vh - 56px)', fontFamily: "'Lato', sans-serif" }}>
       <style>{`
-        .template-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-          gap: 32px;
-        }
-        .template-card-container { display: flex; flex-direction: column; gap: 16px; }
-        .template-card {
-          position: relative;
-          border-radius: 16px;
-          overflow: hidden;
-          border: 1px solid #F3F4F6;
-          transition: all 0.3s ease;
-          cursor: pointer;
-          background: #F9FAFB;
-        }
-        .template-card:hover { transform: translateY(-4px); border-color: #006BFF; box-shadow: 0 12px 24px rgba(0, 107, 255, 0.12); }
-        .template-card--active { border-color: #006BFF; box-shadow: 0 0 0 2px rgba(0, 107, 255, 0.25); }
         .template-overlay {
           position: absolute; inset: 0; background: rgba(0, 0, 0, 0.5); opacity: 0;
           display: flex; align-items: center; justify-content: center;
           transition: opacity 0.2s; backdrop-filter: blur(4px);
         }
-        .template-card:hover .template-overlay { opacity: 1; }
-        .badge-active {
-          position: absolute; top: 16px; right: 16px; padding: 6px 14px; border-radius: 100px;
-          font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px;
-          background: #006BFF; color: #FFFFFF; z-index: 5;
+        .template-overlay-container:hover .template-overlay { opacity: 1; }
+
+        .section-heading { margin: 0 0 16px; font-size: 18px; font-weight: 700; color: #282828; }
+
+        .gallery-card {
+          background: #FFFFFF; border: 1px solid #E9E9E9; border-radius: 12px; padding: 24px 20px;
         }
+        .gallery-card + .gallery-card { margin-top: 24px; }
+
+        .published-theme-card {
+          border-radius: 16px; border: 1px solid #E9E9E9; background: #F9FAFB;
+          margin-bottom: 24px;
+        }
+        /* overflow:hidden lives here (not on .published-theme-card) so it
+           only crops the preview image — the footer below, which hosts the
+           More menu's popover, keeps a non-clipping stacking context. */
+        .published-theme-card__preview {
+          position: relative; width: 100%; height: 400px; overflow: hidden; background: #F3F4F6;
+          border-radius: 16px 16px 0 0;
+        }
+        .published-badge {
+          position: absolute; top: 16px; right: 16px; z-index: 5;
+          padding: 6px 14px; border-radius: 100px; font-size: 10px; font-weight: 700;
+          background: #006BFF; color: #FFFFFF; letter-spacing: 0.02em;
+        }
+        .published-theme-card__footer {
+          display: flex; align-items: center; gap: 16px; padding: 16px 20px; background: #FFFFFF; border-top: 1px solid #E9E9E9;
+          border-radius: 0 0 16px 16px;
+        }
+
+        .draft-theme-row {
+          display: flex; align-items: center; gap: 16px; padding: 14px 16px; border: 1px solid #E9E9E9; border-radius: 12px; background: #FFFFFF;
+        }
+        .draft-theme-row + .draft-theme-row { margin-top: 12px; }
+        .draft-theme-row__thumb { position: relative; width: 120px; flex-shrink: 0; border-radius: 8px; overflow: hidden; background: #F3F4F6; }
+
+        .discover-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+          gap: 24px;
+        }
+        .discover-card {
+          display: flex; flex-direction: column;
+          border: 1px solid #E9E9E9; border-radius: 12px; overflow: hidden; background: #FFFFFF;
+        }
+        .discover-card__preview {
+          position: relative; aspect-ratio: 16 / 10; background: #F3F4F6;
+        }
+        .discover-card__footer {
+          display: flex; align-items: center; justify-content: space-between; gap: 8px;
+          padding: 12px 14px; border-top: 1px solid #E9E9E9; background: #FFFFFF;
+        }
+        .discover-card__placeholder {
+          width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
+          background: linear-gradient(135deg, #EEF2FF 0%, #F5F0FF 100%); color: #4338CA; font-size: 16px; font-weight: 700;
+        }
+
+        .more-menu-popover {
+          position: absolute; top: calc(100% + 6px); right: 0; z-index: 20; min-width: 160px;
+          background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+          display: flex; flex-direction: column; padding: 6px; gap: 2px;
+        }
+        .more-menu-item {
+          text-align: left; background: none; border: none; padding: 8px 10px; border-radius: 6px;
+          font-size: 13px; font-weight: 600; color: #282828; cursor: pointer;
+        }
+        .more-menu-item:hover { background: #F3F4F6; }
+        .more-menu-item:disabled { opacity: 0.5; cursor: not-allowed; }
       `}</style>
 
-      <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
-        <h1 style={{ margin: '0 0 20px', fontSize: '26px', fontWeight: 700, color: '#282828', flexShrink: 0 }}>
+      <div style={{ padding: '24px' }}>
+        <h1 style={{ margin: '0 0 20px', fontSize: '26px', fontWeight: 700, color: '#282828' }}>
           {t('sectionBuilder:templates.gallery.heading')}
         </h1>
 
-        <div style={{ background: '#FFFFFF', borderRadius: '12px', border: '1px solid #E9E9E9', flex: 1, minHeight: 0, overflow: 'auto', padding: '24px 20px' }}>
-          <p style={{ fontSize: '15px', color: '#6B7280', margin: '0 0 24px 0', maxWidth: '640px' }}>
-            {t('sectionBuilder:templates.gallery.subtitle')}
-          </p>
+        {/* Card 1 — published theme. Always rendered when a publishedTheme
+            record exists, regardless of whether it maps to a real
+            SITE_TEMPLATES entry (publishedPreviewElement always resolves to
+            something renderable — a live preview or an illustrative
+            placeholder). */}
+        {publishedTheme && (
+          <PublishedThemeCard
+            theme={publishedTheme}
+            domain={STORE_DOMAIN}
+            previewData={publishedPreviewElement}
+            isRenaming={renamingId === 'published'}
+            onEdit={handleOpen}
+            onPreview={handlePublishedPreview}
+            onRenameStart={() => setRenamingId('published')}
+            onRenameSubmit={handlePublishedRenameSubmit}
+            onRenameCancel={() => setRenamingId(null)}
+          />
+        )}
 
-          <div className="template-grid">
-            {orderedTemplates.map((template) => (
-              <TemplateCard
-                key={template.id}
-                template={template}
-                isActive={template.id === activeTemplateId}
-                previewData={previewDataFor(template)}
-                onOpen={handleOpen}
-                onSwitch={setPendingTemplate}
-                onSeePreview={handleSeePreview}
+        {/* Card 2 — draft themes */}
+        <div className="gallery-card">
+          <h2 className="section-heading">{t('sectionBuilder:onlineStore.themes.draftHeading', 'Draft themes')}</h2>
+          {draftThemes.length === 0 ? (
+            <div style={{
+              padding: '48px 24px',
+              textAlign: 'center',
+              color: '#9CA3AF',
+              fontSize: '15px',
+              background: '#FFFFFF',
+              border: '1.5px dashed #E5E7EB',
+              borderRadius: '16px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              minHeight: '120px',
+            }}>
+              {t('sectionBuilder:onlineStore.themes.draftEmpty', 'No draft themes yet — add one from Discover themes below.')}
+            </div>
+          ) : (
+            <div>
+              {draftThemes.map((d) => (
+                <DraftThemeRow
+                  key={d.id}
+                  theme={d}
+                  previewData={draftPreviewElement(d)}
+                  isRenaming={renamingId === d.id}
+                  isPublishing={false}
+                  onPublish={() => setPublishConfirmTheme(d)}
+                  onEdit={handleOpen}
+                  onPreview={() => handleDraftPreview(d)}
+                  onRenameStart={() => setRenamingId(d.id)}
+                  onRenameSubmit={(newName) => handleDraftRenameSubmit(d, newName)}
+                  onRenameCancel={() => setRenamingId(null)}
+                  onDuplicate={() => handleDraftDuplicate(d)}
+                  onDelete={() => setDeleteConfirmTheme(d)}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Card 3 — discover themes */}
+        <div className="gallery-card">
+          <h2 className="section-heading">{t('sectionBuilder:onlineStore.themes.discoverHeading', 'Discover themes')}</h2>
+          <div className="discover-grid">
+            {discoverItems.map((item) => (
+              <DiscoverCard
+                key={item.templateId}
+                item={item}
+                previewData={discoverPreviewElement(item)}
+                isAdding={addingDiscoverId === item.templateId}
+                onAdd={handleDiscoverAdd}
+                onPreview={handleDiscoverPreview}
               />
             ))}
           </div>
         </div>
       </div>
 
-      <SwitchThemeDialog
-        open={Boolean(pendingTemplate)}
-        templateName={pendingTemplate && t(`sectionBuilder:templates.${pendingTemplate.id}.label`, pendingTemplate.name)}
-        onKeepContent={handleKeepContent}
-        onStartFresh={handleStartFresh}
-        onCancel={() => setPendingTemplate(null)}
+      <Popup
+        open={Boolean(publishConfirmTheme)}
+        onClose={() => setPublishConfirmTheme(null)}
+        title={t('sectionBuilder:onlineStore.themes.publishConfirmTitle', 'Publish this theme?')}
+        description={t(
+          'sectionBuilder:onlineStore.themes.publishConfirmDescription',
+          "Publishing '{{name}}' will replace your current published theme. Your current published theme will be moved to drafts.",
+          { name: publishConfirmTheme?.name }
+        )}
+        platform="desktop"
+        primaryAction={{ label: t('sectionBuilder:onlineStore.themes.publish', 'Publish'), onClick: handlePublishConfirm }}
+        secondaryAction={{ label: t('sectionBuilder:editor.common.cancel'), onClick: () => setPublishConfirmTheme(null) }}
+      />
+
+      <ConfirmDialog
+        open={Boolean(deleteConfirmTheme)}
+        title={t('sectionBuilder:onlineStore.themes.deleteConfirmTitle', 'Delete this theme?')}
+        description={t(
+          'sectionBuilder:onlineStore.themes.deleteConfirmDescription',
+          "'{{name}}' will be permanently removed from your draft themes.",
+          { name: deleteConfirmTheme?.name }
+        )}
+        danger
+        confirmLabel={t('sectionBuilder:onlineStore.themes.delete', 'Delete')}
+        onConfirm={handleDraftDeleteConfirm}
+        onCancel={() => setDeleteConfirmTheme(null)}
       />
     </div>
   );

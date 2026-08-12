@@ -19,3 +19,13 @@ export function isSlugTaken(slug, pages, excludePageId = null) {
 export function defaultMetaTitle(pageName, storeName) {
   return `${pageName} — ${storeName}`;
 }
+
+/**
+ * Generates a page id from a name (slug + short uuid suffix) so ids stay
+ * readable but never collide, even across two pages named the same thing.
+ * Matches the pattern PagesManagement.jsx used pre-Page-editor split.
+ */
+export function createPageId(name) {
+  const slug = slugify(name) || 'page';
+  return `page-${slug}-${crypto.randomUUID().slice(0, 8)}`;
+}

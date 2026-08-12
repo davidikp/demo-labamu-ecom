@@ -51,6 +51,7 @@ const SectionBuilder = React.lazy(() => import('./pages/section-builder/SectionB
 const SectionBuilderPreview = React.lazy(() => import('./pages/section-builder/PreviewLive'));
 const ThemeGallery = React.lazy(() => import('./pages/online-store/ThemeGallery'));
 const PagesManagement = React.lazy(() => import('./pages/online-store/PagesManagement'));
+const PageEditor = React.lazy(() => import('./pages/online-store/PageEditor'));
 const ThemePreview = React.lazy(() => import('./pages/online-store/ThemePreview'));
 
 // Simple mock auth context — replace with real auth later
@@ -92,6 +93,8 @@ export default function App() {
             <Route path="/websites" element={<WebsiteTemplates />} />
             <Route path="/online-store/theme" element={<ThemeGallery />} />
             <Route path="/online-store/pages" element={<PagesManagement />} />
+            <Route path="/online-store/pages/new" element={<PageEditor />} />
+            <Route path="/online-store/pages/:pageId" element={<PageEditor />} />
             <Route path="/catalog" element={<CatalogProducts />} />
             <Route path="/catalog/bulk-edit" element={<BulkEditCatalog />} />
             <Route path="/catalog/package/bulk-edit" element={<BulkEditCatalog />} />

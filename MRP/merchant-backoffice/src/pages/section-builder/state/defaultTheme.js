@@ -37,14 +37,25 @@ export const defaultTheme = {
  * or rearrange sections on any of them.
  */
 export function createDefaultPages() {
+  // Every default page also gets the Pages panel's page-level visibility
+  // fields (distinct from hiddenFromNav, which only controls the header nav
+  // link): visibility 'visible'|'hidden' plus an optional visibleFrom
+  // epoch-ms timestamp for scheduled visibility, and an updatedAt stamp
+  // bumped on every subsequent page mutation (see builderReducer.js).
+  // `content` (rich-text HTML from the Page editor) is also seeded as an
+  // empty string here so every page — including these system pages — always
+  // carries the field; PagesManagement.jsx's Content column relies on this
+  // to avoid a `sections`-based fallback.
+  const visibilityDefaults = { visibility: 'visible', visibleFrom: null, updatedAt: Date.now(), content: '' };
   return [
-    { id: 'home', name: 'Home', type: 'system', slug: '/', sections: [], seo: {}, hiddenFromNav: false },
+    { id: 'home', name: 'Home', type: 'system', slug: '/', sections: [], seo: {}, hiddenFromNav: false, ...visibilityDefaults },
     {
       // Product/Collection are detail-page templates (parameterized slugs) —
       // not real, clickable nav destinations, so they default hidden from
       // nav (defaultNavLinksFromPages below also excludes any ":"-templated
       // slug as a second safeguard).
       id: 'product', name: 'Product', type: 'system', slug: '/products/:handle', seo: {}, hiddenFromNav: true,
+      ...visibilityDefaults,
       sections: [
         defaultSection('product-default-spotlight', 'product_spotlight', {
           show_variant_selector: false,
@@ -54,6 +65,7 @@ export function createDefaultPages() {
     },
     {
       id: 'collection', name: 'Collection', type: 'system', slug: '/collections/:handle', seo: {}, hiddenFromNav: true,
+      ...visibilityDefaults,
       sections: [
         defaultSection('collection-default-grid', 'featured_products', {
           heading: 'Collection',
@@ -65,10 +77,12 @@ export function createDefaultPages() {
       // Cart/Checkout are reachable via the header's cart icon, not a
       // textual nav link, so they default hidden from nav too.
       id: 'cart', name: 'Cart', type: 'system', slug: '/cart', seo: {}, hiddenFromNav: true,
+      ...visibilityDefaults,
       sections: [defaultSection('cart-default-summary', 'cart_summary')],
     },
     {
       id: 'checkout', name: 'Checkout', type: 'system', slug: '/checkout', seo: {}, hiddenFromNav: true,
+      ...visibilityDefaults,
       sections: [defaultSection('checkout-default-summary', 'checkout_summary')],
     },
   ];

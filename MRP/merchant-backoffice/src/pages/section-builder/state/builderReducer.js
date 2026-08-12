@@ -29,6 +29,8 @@ export const ACTIONS = {
   REORDER_PAGES: 'REORDER_PAGES',
   UPDATE_PAGE_SEO: 'UPDATE_PAGE_SEO',
   TOGGLE_PAGE_NAV_HIDDEN: 'TOGGLE_PAGE_NAV_HIDDEN',
+  UPDATE_PAGE_VISIBILITY: 'UPDATE_PAGE_VISIBILITY',
+  UPDATE_PAGE: 'UPDATE_PAGE',
   ADD_SECTION: 'ADD_SECTION',
   REMOVE_SECTION: 'REMOVE_SECTION',
   DUPLICATE_SECTION: 'DUPLICATE_SECTION',
@@ -396,18 +398,34 @@ export function builderReducer(state, action) {
       };
     }
 
-    case ACTIONS.ADD_PAGE:
+    case ACTIONS.ADD_PAGE: {
+      // Pages panel Visible/Hidden radio + "visible as of <date>" field
+      // (visibility/visibleFrom) is a new concept distinct from
+      // hiddenFromNav (which only controls header nav link presence).
+      // Defaulted here so callers that don't yet pass them (e.g.
+      // SectionBuilder.jsx's "add page" flow) still get a well-formed page.
+      const page = {
+        visibility: 'visible',
+        visibleFrom: null,
+        ...action.page,
+        updatedAt: Date.now(),
+      };
       return {
         ...state,
-        pages: [...state.pages, action.page],
-        activePageId: action.page.id,
+        pages: [...state.pages, page],
+        activePageId: page.id,
         selection: { id: null },
       };
+    }
 
     case ACTIONS.RENAME_PAGE:
       return {
         ...state,
-        pages: updatePage(state.pages, action.pageId, (page) => ({ ...page, name: action.name })),
+        pages: updatePage(state.pages, action.pageId, (page) => ({
+          ...page,
+          name: action.name,
+          updatedAt: Date.now(),
+        })),
       };
 
     case ACTIONS.DELETE_PAGE: {
@@ -431,6 +449,7 @@ export function builderReducer(state, action) {
         pages: updatePage(state.pages, action.pageId, (page) => ({
           ...page,
           seo: { ...page.seo, ...action.seo },
+          updatedAt: Date.now(),
         })),
       };
 
@@ -440,6 +459,35 @@ export function builderReducer(state, action) {
         pages: updatePage(state.pages, action.pageId, (page) => ({
           ...page,
           hiddenFromNav: !page.hiddenFromNav,
+          updatedAt: Date.now(),
+        })),
+      };
+
+    // Page-level visibility (distinct from hiddenFromNav, which only hides
+    // the header nav link): 'visible' | 'hidden', plus an optional
+    // visibleFrom epoch-ms timestamp for scheduled visibility.
+    case ACTIONS.UPDATE_PAGE_VISIBILITY:
+      return {
+        ...state,
+        pages: updatePage(state.pages, action.pageId, (page) => ({
+          ...page,
+          visibility: action.visibility,
+          visibleFrom: action.visibleFrom ?? null,
+          updatedAt: Date.now(),
+        })),
+      };
+
+    // Generic partial-page update used by the dedicated Page editor screen
+    // (title/content/template/seo/visibility, saved atomically from one
+    // form). `patch` is shallow-merged onto the page; nested objects like
+    // `seo` should be pre-merged by the caller if a partial merge is wanted.
+    case ACTIONS.UPDATE_PAGE:
+      return {
+        ...state,
+        pages: updatePage(state.pages, action.pageId, (page) => ({
+          ...page,
+          ...action.patch,
+          updatedAt: Date.now(),
         })),
       };
 
