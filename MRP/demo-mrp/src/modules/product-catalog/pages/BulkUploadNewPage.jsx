@@ -4,7 +4,7 @@ import { Button } from "../../../components/common/Button.jsx";
 import { UploadStep, analyzeFile } from "../components/upload-steps/UploadStep.jsx";
 import { MappingStep } from "../components/upload-steps/MappingStep.jsx";
 import { ReviewStep } from "../components/upload-steps/ReviewStep.jsx";
-import { addBulkUpload, updateBulkUpload, getBulkUpload } from "../mock/bulkUploadsStore.js";
+import { addBulkUpload, updateBulkUpload, getBulkUpload, SYSTEM_ACTOR_NAME } from "../mock/bulkUploadsStore.js";
 import { addProducts } from "../mock/productsMocks.js";
 import {
   autoMatchHeaders,
@@ -251,6 +251,11 @@ export const BulkUploadNewPage = ({ onNavigate, showSnackbar, initialData, isSid
       normalizationTotal: stats.total,
       normalizationNormalized: stats.normalized,
       normalizationSkipped: stats.skipped,
+      // A natural completion is the background timer firing on its own —
+      // the user may well have navigated away by then — so it's logged as a
+      // System action. "Skip Process" is a direct user click, so that stays
+      // attributed to whoever's logged in (the default actor).
+      logActorName: forceSkip ? undefined : SYSTEM_ACTOR_NAME,
       logDesc: forceSkip
         ? "AI normalization was skipped by the user — remaining rows need attention."
         : undefined,
@@ -317,11 +322,19 @@ export const BulkUploadNewPage = ({ onNavigate, showSnackbar, initialData, isSid
   // Resuming a draft that's still "Normalizing Data" (e.g. clicked from the
   // Bulk Upload list) restarts the simulated countdown from scratch — there's
   // no real backend tracking actual elapsed progress to resume from.
+  //
+  // Deliberately no cleanup here: normalizeTimeoutRef is shared with
+  // handleNormalizeAndReview's own call to startNormalizationTimer, so a
+  // blanket clearTimeout-on-unmount would cancel that pending job the moment
+  // the user navigates away — defeating the "you can leave this page, we'll
+  // notify you by email" promise shown on the interstitial. The timer is
+  // meant to keep running via the module-level store regardless of whether
+  // this page is mounted, exactly like the Processing→Completed timer in
+  // handleStartUpload below.
   useEffect(() => {
     if (resumeAtNormalizing && resumeRecord) {
       startNormalizationTimer(resumeRecord.id, resumeRecord.rawRows || [], resumeRecord.fieldMapping || {});
     }
-    return () => clearTimeout(normalizeTimeoutRef.current);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -391,6 +404,10 @@ export const BulkUploadNewPage = ({ onNavigate, showSnackbar, initialData, isSid
         successCount: validRows.length,
         failedCount: invalidRows.length,
         failedRows: invalidRows,
+        // Always a background completion — there's no user-driven "instant
+        // complete" path for the import step (unlike normalization's Skip
+        // Process), so this is always System.
+        logActorName: SYSTEM_ACTOR_NAME,
       });
       addProducts(validRows);
     }, 5000);

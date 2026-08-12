@@ -114,7 +114,7 @@ const LogsSection = ({ logs }) => {
               }}
             >
               <div style={{ flex: "1.1", minWidth: 0, paddingRight: "8px", overflowWrap: "break-word", wordBreak: "break-word", color: "var(--neutral-on-surface-primary)" }}>{log.name}</div>
-              <div style={{ flex: "1.6", minWidth: 0, paddingRight: "8px", overflowWrap: "break-word", wordBreak: "break-word", color: "var(--neutral-on-surface-primary)" }}>{log.email}</div>
+              <div style={{ flex: "1.6", minWidth: 0, paddingRight: "8px", overflowWrap: "break-word", wordBreak: "break-word", color: "var(--neutral-on-surface-primary)" }}>{log.email || "—"}</div>
               <div style={{ flex: "2.4", minWidth: 0, paddingRight: "8px", overflowWrap: "break-word", wordBreak: "break-word", fontWeight: "var(--font-weight-bold)", color: "var(--neutral-on-surface-primary)" }}>
                 {log.title}
               </div>

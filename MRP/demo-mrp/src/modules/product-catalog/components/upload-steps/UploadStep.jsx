@@ -1,5 +1,5 @@
 import React from "react";
-import { DownloadIcon } from "../../../../components/icons/Icons.jsx";
+import { DownloadIcon, CloudUploadIcon } from "../../../../components/icons/Icons.jsx";
 import { Button } from "../../../../components/common/Button.jsx";
 import { DocumentUploadField } from "../../../../ce-ui";
 import { PRODUCT_FIELDS_CONFIG } from "../../mock/productFieldsConfig.js";
@@ -118,16 +118,33 @@ export const UploadStep = ({ selectedFile, onFileSelected, isAnalyzing, error, o
   if (isAnalyzing) {
     return (
       <div style={{ position: "relative", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "16px", padding: "80px 24px", minHeight: "420px" }}>
+        {/* Same icon-in-circle + spinning border treatment as
+            BackgroundProcessingScreen, so the Analyzing/Normalizing/Importing
+            interstitials all read as one consistent "processing" motif. */}
         <div
           style={{
-            width: "40px",
-            height: "40px",
-            border: "4px solid var(--neutral-line-separator-2)",
-            borderTopColor: "var(--feature-brand-primary)",
+            width: "72px",
+            height: "72px",
             borderRadius: "50%",
-            animation: "pc-spin 0.8s linear infinite",
+            background: "var(--feature-brand-container-lighter)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            position: "relative",
           }}
-        />
+        >
+          <CloudUploadIcon size={32} color="var(--feature-brand-primary)" />
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              borderRadius: "50%",
+              border: "3px solid var(--neutral-line-separator-2)",
+              borderTopColor: "var(--feature-brand-primary)",
+              animation: "pc-spin 1s linear infinite",
+            }}
+          />
+        </div>
         <style>{`@keyframes pc-spin { to { transform: rotate(360deg); } }`}</style>
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "4px", textAlign: "center" }}>
           <span style={{ fontSize: "var(--text-title-2)", fontWeight: "var(--font-weight-bold)" }}>

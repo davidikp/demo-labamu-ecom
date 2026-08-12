@@ -25,10 +25,20 @@ const nextId = (createdAt) => {
 // tab. Shape mirrors the app's other activity-log lists: name, email,
 // activity (title + optional description), timestamp.
 const USER_EMAIL_BY_NAME = new Map(NOTIFICATION_USERS.map((u) => [u.name, u.email]));
-const actorForName = (name) => ({
-  name: name || CURRENT_USER.name,
-  email: USER_EMAIL_BY_NAME.get(name) || CURRENT_USER.email,
-});
+
+// Sentinel actor name for status changes the system makes on its own — e.g. a
+// background timer completing after the user has navigated away — rather
+// than something a person clicked. Kept distinct from a real user name so it
+// never accidentally falls back to CURRENT_USER's email below.
+export const SYSTEM_ACTOR_NAME = "System";
+
+const actorForName = (name) => {
+  if (name === SYSTEM_ACTOR_NAME) return { name: SYSTEM_ACTOR_NAME, email: null };
+  return {
+    name: name || CURRENT_USER.name,
+    email: USER_EMAIL_BY_NAME.get(name) || CURRENT_USER.email,
+  };
+};
 
 const makeLog = (actor, title, desc, timestamp) => ({
   name: actor.name,
@@ -43,8 +53,7 @@ const makeLog = (actor, title, desc, timestamp) => ({
 // `patch.logDesc` can override the description for a specific transition
 // (e.g. "AI normalization skipped by user.").
 const STATUS_LOG_COPY = {
-  Mapping: { title: "Column mapping saved", desc: "Field mapping was set for this upload." },
-  "Normalizing Data": { title: "AI normalization started", desc: "The uploaded data is being normalized in the background." },
+  "Normalizing Data": { title: "Normalization started", desc: "The uploaded data is being normalized in the background." },
   Review: { title: "Normalization finished", desc: "Data is ready for review." },
   Processing: { title: "Import started", desc: "Reviewed products are being imported into the catalog." },
   Completed: { title: "Import completed", desc: "Products were added to the product catalog." },
@@ -104,7 +113,10 @@ const SEED_BATCHES = [
     sourceDocumentName: "product_catalog_master.xlsx",
     logs: [
       makeLog(actorForName(CURRENT_USER.name), "Upload created", "File \"product_catalog_master.xlsx\" was uploaded (24 products).", "2026-08-01T09:12:00Z"),
-      makeLog(actorForName(CURRENT_USER.name), "Import completed", "Products were added to the product catalog.", "2026-08-01T09:19:00Z"),
+      makeLog(actorForName(CURRENT_USER.name), "Normalization started", "The uploaded data is being normalized in the background.", "2026-08-01T09:13:00Z"),
+      makeLog(actorForName(SYSTEM_ACTOR_NAME), "Normalization finished", "Data is ready for review.", "2026-08-01T09:13:05Z"),
+      makeLog(actorForName(CURRENT_USER.name), "Import started", "Reviewed products are being imported into the catalog.", "2026-08-01T09:15:00Z"),
+      makeLog(actorForName(SYSTEM_ACTOR_NAME), "Import completed", "Products were added to the product catalog.", "2026-08-01T09:19:00Z"),
     ],
   },
   {
@@ -123,7 +135,10 @@ const SEED_BATCHES = [
     sourceDocumentName: "wooden_trays_q3.csv",
     logs: [
       makeLog(actorForName(NOTIFICATION_USERS[1].name), "Upload created", "File \"wooden_trays_q3.csv\" was uploaded (15 products).", "2026-08-04T14:30:00Z"),
-      makeLog(actorForName(NOTIFICATION_USERS[1].name), "Import completed", "13 of 15 products were added; 2 rows were skipped for missing required fields.", "2026-08-04T14:36:00Z"),
+      makeLog(actorForName(NOTIFICATION_USERS[1].name), "Normalization started", "The uploaded data is being normalized in the background.", "2026-08-04T14:31:00Z"),
+      makeLog(actorForName(SYSTEM_ACTOR_NAME), "Normalization finished", "Data is ready for review.", "2026-08-04T14:31:05Z"),
+      makeLog(actorForName(NOTIFICATION_USERS[1].name), "Import started", "Reviewed products are being imported into the catalog.", "2026-08-04T14:33:00Z"),
+      makeLog(actorForName(SYSTEM_ACTOR_NAME), "Import completed", "13 of 15 products were added; 2 rows were skipped for missing required fields.", "2026-08-04T14:36:00Z"),
     ],
   },
   {
@@ -139,6 +154,8 @@ const SEED_BATCHES = [
     sourceDocumentName: "vases_new_arrivals.xlsx",
     logs: [
       makeLog(actorForName(NOTIFICATION_USERS[2].name), "Upload created", "File \"vases_new_arrivals.xlsx\" was uploaded (18 products).", "2026-08-07T11:05:00Z"),
+      makeLog(actorForName(NOTIFICATION_USERS[2].name), "Normalization started", "The uploaded data is being normalized in the background.", "2026-08-07T11:06:00Z"),
+      makeLog(actorForName(SYSTEM_ACTOR_NAME), "Normalization finished", "Data is ready for review.", "2026-08-07T11:06:05Z"),
       makeLog(actorForName(NOTIFICATION_USERS[2].name), "Import started", "Reviewed products are being imported into the catalog.", "2026-08-07T11:14:00Z"),
     ],
   },
@@ -164,8 +181,8 @@ const SEED_BATCHES = [
     rows: generateDraftBoardsRows(),
     logs: [
       makeLog(actorForName(NOTIFICATION_USERS[3].name), "Upload created", "File \"draft_boards_batch.csv\" was uploaded (50 products).", "2026-08-08T16:45:00Z"),
-      makeLog(actorForName(NOTIFICATION_USERS[3].name), "Column mapping saved", "Field mapping was set for this upload.", "2026-08-08T16:47:00Z"),
-      makeLog(actorForName(NOTIFICATION_USERS[3].name), "Normalization finished", "Data is ready for review.", "2026-08-08T16:52:00Z"),
+      makeLog(actorForName(NOTIFICATION_USERS[3].name), "Normalization started", "The uploaded data is being normalized in the background.", "2026-08-08T16:50:00Z"),
+      makeLog(actorForName(SYSTEM_ACTOR_NAME), "Normalization finished", "Data is ready for review.", "2026-08-08T16:52:00Z"),
     ],
   },
   {
@@ -194,7 +211,6 @@ const SEED_BATCHES = [
     rows: [],
     logs: [
       makeLog(actorForName(NOTIFICATION_USERS[1].name), "Upload created", "File \"trays_batch_two.csv\" was uploaded (12 products).", "2026-08-09T10:15:00Z"),
-      makeLog(actorForName(NOTIFICATION_USERS[1].name), "Column mapping saved", "Field mapping was set for this upload.", "2026-08-09T10:17:00Z"),
     ],
   },
   {
@@ -223,8 +239,7 @@ const SEED_BATCHES = [
     rows: [],
     logs: [
       makeLog(actorForName(NOTIFICATION_USERS[2].name), "Upload created", "File \"vases_batch_normalizing.csv\" was uploaded (10 products).", "2026-08-09T15:40:00Z"),
-      makeLog(actorForName(NOTIFICATION_USERS[2].name), "Column mapping saved", "Field mapping was set for this upload.", "2026-08-09T15:41:00Z"),
-      makeLog(actorForName(NOTIFICATION_USERS[2].name), "AI normalization started", "The uploaded data is being normalized in the background.", "2026-08-09T15:41:30Z"),
+      makeLog(actorForName(NOTIFICATION_USERS[2].name), "Normalization started", "The uploaded data is being normalized in the background.", "2026-08-09T15:41:30Z"),
     ],
   },
   {
@@ -256,7 +271,6 @@ const SEED_BATCHES = [
     rows: [],
     logs: [
       makeLog(actorForName(NOTIFICATION_USERS[1].name), "Upload created", "File \"trays_batch_three.csv\" was uploaded (3 products).", "2026-08-10T13:05:00Z"),
-      makeLog(actorForName(NOTIFICATION_USERS[1].name), "Column mapping saved", "Field mapping was set for this upload.", "2026-08-10T13:06:00Z"),
     ],
   },
   {
@@ -315,6 +329,14 @@ export const addBulkUpload = (data) => {
       makeLog(actor, "Upload created", `File "${data.fileName || "untitled.csv"}" was uploaded (${data.totalProducts || 0} products).`),
     ],
   };
+  // The record's initial status (almost always "Mapping") isn't reached via
+  // updateBulkUpload's status-diff logging below, since it's set at creation
+  // time — log it explicitly here so the very first status a batch holds
+  // isn't silently missing from its own history.
+  const initialCopy = STATUS_LOG_COPY[record.status];
+  if (initialCopy) {
+    record.logs.push(makeLog(actor, initialCopy.title, initialCopy.desc));
+  }
   batches = [record, ...batches];
   notify();
   return record;
