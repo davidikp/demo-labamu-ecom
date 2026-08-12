@@ -625,6 +625,7 @@ const DropdownSelect = (props) => {
     error,
     hasError,
     state,
+    errorText,
   } = props;
   const isError = error ?? hasError ?? state === "error";
 
@@ -653,6 +654,7 @@ const DropdownSelect = (props) => {
         searchable={searchable}
         size={SIZE_MAP[size] || "lg"}
         error={isError}
+        errorText={errorText}
       />
     </div>
   );

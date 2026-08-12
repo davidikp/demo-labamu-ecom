@@ -8,7 +8,7 @@ export const DiscardChangesConfirmModal = ({ isOpen, onClose, onConfirm }) => (
     onClose={onClose}
     title="Discard changes?"
     description="Any changes you made on this page will be lost."
-    width="400px"
+    width="560px"
     hideFooterDivider
     footerPaddingTop={24}
     footer={

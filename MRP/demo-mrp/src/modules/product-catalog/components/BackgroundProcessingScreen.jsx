@@ -9,7 +9,7 @@ import { Button } from "../../../components/common/Button.jsx";
 // rely on BulkUploadNotifier to fire the in-app/email notification once the
 // status transition happens — regardless of whether this screen is still
 // mounted.
-export const BackgroundProcessingScreen = ({ title, message, onBackToList, buttonLabel = "Back to Bulk Upload List" }) => (
+export const BackgroundProcessingScreen = ({ title, message, onBackToList, buttonLabel = "Back to Bulk Upload List", secondaryActionLabel, onSecondaryAction }) => (
   <div
     style={{
       display: "flex",
@@ -54,8 +54,15 @@ export const BackgroundProcessingScreen = ({ title, message, onBackToList, butto
         {message}
       </span>
     </div>
-    <Button variant="outlined" size="large" onClick={onBackToList}>
-      {buttonLabel}
-    </Button>
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "12px" }}>
+      <Button variant="outlined" size="large" onClick={onBackToList}>
+        {buttonLabel}
+      </Button>
+      {onSecondaryAction && (
+        <Button variant="tertiary" size="large" onClick={onSecondaryAction} style={{ color: "var(--status-red-primary)" }}>
+          {secondaryActionLabel}
+        </Button>
+      )}
+    </div>
   </div>
 );

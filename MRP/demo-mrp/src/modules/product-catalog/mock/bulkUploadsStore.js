@@ -6,6 +6,77 @@ import { CURRENT_USER, NOTIFICATION_USERS } from "../../../data/notification/not
 let seq = 7;
 const nextId = () => `BUP-${String(++seq).padStart(4, "0")}`;
 
+// ── Activity log helpers ─────────────────────────────────────────────────────
+// Every batch carries a `logs` array — one entry per status change (plus the
+// initial "created" entry) — shown in the Bulk Upload Detail modal's Logs
+// tab. Shape mirrors the app's other activity-log lists: name, email,
+// activity (title + optional description), timestamp.
+const USER_EMAIL_BY_NAME = new Map(NOTIFICATION_USERS.map((u) => [u.name, u.email]));
+const actorForName = (name) => ({
+  name: name || CURRENT_USER.name,
+  email: USER_EMAIL_BY_NAME.get(name) || CURRENT_USER.email,
+});
+
+const makeLog = (actor, title, desc, timestamp) => ({
+  name: actor.name,
+  email: actor.email,
+  title,
+  desc,
+  timestamp: timestamp || new Date().toISOString(),
+});
+
+// Default copy for each status a batch can land on — used whenever
+// `updateBulkUpload` sees `patch.status` differ from the current one.
+// `patch.logDesc` can override the description for a specific transition
+// (e.g. "AI normalization skipped by user.").
+const STATUS_LOG_COPY = {
+  Mapping: { title: "Column mapping saved", desc: "Field mapping was set for this upload." },
+  "Normalizing Data": { title: "AI normalization started", desc: "The uploaded data is being normalized in the background." },
+  Review: { title: "Normalization finished", desc: "Data is ready for review." },
+  Processing: { title: "Import started", desc: "Reviewed products are being imported into the catalog." },
+  Completed: { title: "Import completed", desc: "Products were added to the product catalog." },
+  Cancelled: { title: "Upload cancelled", desc: "This upload was cancelled and will not be imported." },
+};
+
+// ── Dummy data generator for BUP-0004 ────────────────────────────────────────
+// Expands the "draft_boards_batch.csv" Review-status draft to 50 rows so the
+// Review step has enough data to demo pagination/search/filtering, with a
+// few deliberate edge cases mixed in alongside the original 3 invalid rows:
+//  - row[4] — Lead Time unit isn't one of our options ("Fortnights"), so the
+//             unit dropdown renders in its unset/error state.
+//  - row[5] — Selling Price came in a foreign currency ($) — the numeric
+//             value is kept as-is and flagged for the user to verify.
+// Both are on page 1 (first 10 rows) so they're easy to spot without paging.
+const DRAFT_CATEGORIES = ["Wooden Boards", "Trays", "Vases", "Bowls", "Baskets", "Coasters"];
+const DRAFT_PRODUCT_NAMES = [
+  "Teak Board", "Rattan Tray", "Ceramic Vase", "Mango Wood Bowl", "Woven Basket", "Bamboo Coaster",
+  "Acacia Board", "Palm Leaf Tray", "Stoneware Vase", "Walnut Bowl", "Seagrass Basket", "Cork Coaster",
+];
+
+const generateDraftBoardsRows = () => {
+  const rows = [];
+  for (let i = 0; i < 50; i++) {
+    const category = DRAFT_CATEGORIES[i % DRAFT_CATEGORIES.length];
+    const productName = DRAFT_PRODUCT_NAMES[i % DRAFT_PRODUCT_NAMES.length];
+    rows.push({
+      __rowId: `draft-row-${i + 1}`,
+      sku: `DFT-${String(i + 1).padStart(3, "0")}`,
+      name: `${productName} ${i + 1}`,
+      categoryName: category,
+      leadTime: `${5 + (i % 10)} Days`,
+      sellingPrice: String(120000 + i * 5000),
+    });
+  }
+
+  rows[1] = { ...rows[1], sku: "", name: "" };
+  rows[2] = { ...rows[2], categoryName: "", leadTime: "" };
+  rows[3] = { ...rows[3], sellingPrice: "" };
+  rows[4] = { ...rows[4], leadTime: "10 Fortnights" };
+  rows[5] = { ...rows[5], sellingPrice: "120", sellingPriceSourceCurrency: "$" };
+
+  return rows;
+};
+
 const SEED_BATCHES = [
   {
     id: "BUP-0001",
@@ -18,6 +89,10 @@ const SEED_BATCHES = [
     failedCount: 0,
     failedRows: [],
     sourceDocumentName: "product_catalog_master.xlsx",
+    logs: [
+      makeLog(actorForName(CURRENT_USER.name), "Upload created", "File \"product_catalog_master.xlsx\" was uploaded (24 products).", "2026-08-01T09:12:00Z"),
+      makeLog(actorForName(CURRENT_USER.name), "Import completed", "Products were added to the product catalog.", "2026-08-01T09:19:00Z"),
+    ],
   },
   {
     id: "BUP-0002",
@@ -33,6 +108,10 @@ const SEED_BATCHES = [
       { row: 11, name: "Wooden Bowl XL", categoryName: "", leadTime: "9 Days", sellingPrice: "195000", reason: "Missing required field: Category Name" },
     ],
     sourceDocumentName: "wooden_trays_q3.csv",
+    logs: [
+      makeLog(actorForName(NOTIFICATION_USERS[1].name), "Upload created", "File \"wooden_trays_q3.csv\" was uploaded (15 products).", "2026-08-04T14:30:00Z"),
+      makeLog(actorForName(NOTIFICATION_USERS[1].name), "Import completed", "13 of 15 products were added; 2 rows were skipped for missing required fields.", "2026-08-04T14:36:00Z"),
+    ],
   },
   {
     id: "BUP-0003",
@@ -45,13 +124,17 @@ const SEED_BATCHES = [
     failedCount: 0,
     failedRows: [],
     sourceDocumentName: "vases_new_arrivals.xlsx",
+    logs: [
+      makeLog(actorForName(NOTIFICATION_USERS[2].name), "Upload created", "File \"vases_new_arrivals.xlsx\" was uploaded (18 products).", "2026-08-07T11:05:00Z"),
+      makeLog(actorForName(NOTIFICATION_USERS[2].name), "Import started", "Reviewed products are being imported into the catalog.", "2026-08-07T11:14:00Z"),
+    ],
   },
   {
     id: "BUP-0004",
     fileName: "draft_boards_batch.csv",
     createdAt: "2026-08-08T16:45:00Z",
     createdBy: NOTIFICATION_USERS[3].name,
-    totalProducts: 9,
+    totalProducts: 50,
     status: "Review",
     successCount: 0,
     failedCount: 0,
@@ -65,47 +148,11 @@ const SEED_BATCHES = [
       leadTime: "Lead Time",
       sellingPrice: "Price",
     },
-    rows: [
-      {
-        __rowId: "draft-row-1",
-        sku: "WBD-DFT-01",
-        name: "Teak Board Draft 90cm",
-        categoryName: "Wooden Boards",
-        leadTime: "8 Days",
-        sellingPrice: "450000",
-      },
-      {
-        __rowId: "draft-row-2",
-        sku: "",
-        name: "",
-        categoryName: "Trays",
-        leadTime: "6 Days",
-        sellingPrice: "180000",
-      },
-      {
-        __rowId: "draft-row-3",
-        sku: "BWL-DFT-02",
-        name: "Draft Bowl Set",
-        categoryName: "",
-        leadTime: "",
-        sellingPrice: "260000",
-      },
-      {
-        __rowId: "draft-row-4",
-        sku: "",
-        name: "Draft Vase Small",
-        categoryName: "Vases",
-        leadTime: "10 Days",
-        sellingPrice: "",
-      },
-      {
-        __rowId: "draft-row-5",
-        sku: "TRY-DFT-03",
-        name: "Draft Serving Tray",
-        categoryName: "Trays",
-        leadTime: "5 Days",
-        sellingPrice: "150000",
-      },
+    rows: generateDraftBoardsRows(),
+    logs: [
+      makeLog(actorForName(NOTIFICATION_USERS[3].name), "Upload created", "File \"draft_boards_batch.csv\" was uploaded (50 products).", "2026-08-08T16:45:00Z"),
+      makeLog(actorForName(NOTIFICATION_USERS[3].name), "Column mapping saved", "Field mapping was set for this upload.", "2026-08-08T16:47:00Z"),
+      makeLog(actorForName(NOTIFICATION_USERS[3].name), "Normalization finished", "Data is ready for review.", "2026-08-08T16:52:00Z"),
     ],
   },
   {
@@ -132,6 +179,10 @@ const SEED_BATCHES = [
       { SKU: "TRY-B2-02", "Product Name": "Rattan Tray Large", Category: "Trays", "Lead Time": "8 Days", Price: "220000" },
     ],
     rows: [],
+    logs: [
+      makeLog(actorForName(NOTIFICATION_USERS[1].name), "Upload created", "File \"trays_batch_two.csv\" was uploaded (12 products).", "2026-08-09T10:15:00Z"),
+      makeLog(actorForName(NOTIFICATION_USERS[1].name), "Column mapping saved", "Field mapping was set for this upload.", "2026-08-09T10:17:00Z"),
+    ],
   },
   {
     id: "BUP-0007",
@@ -157,6 +208,11 @@ const SEED_BATCHES = [
       { SKU: "VAS-NRM-02", "Product Name": "Ceramic Vase Tall", Category: "Vases", "Lead Time": "11 Days", Price: "310000" },
     ],
     rows: [],
+    logs: [
+      makeLog(actorForName(NOTIFICATION_USERS[2].name), "Upload created", "File \"vases_batch_normalizing.csv\" was uploaded (10 products).", "2026-08-09T15:40:00Z"),
+      makeLog(actorForName(NOTIFICATION_USERS[2].name), "Column mapping saved", "Field mapping was set for this upload.", "2026-08-09T15:41:00Z"),
+      makeLog(actorForName(NOTIFICATION_USERS[2].name), "AI normalization started", "The uploaded data is being normalized in the background.", "2026-08-09T15:41:30Z"),
+    ],
   },
   {
     id: "BUP-0005",
@@ -171,6 +227,10 @@ const SEED_BATCHES = [
       { row: 2, name: "Wooden Vase A", categoryName: "Vases", leadTime: "10 Days", sellingPrice: "300000", reason: "Upload cancelled by user" },
     ],
     sourceDocumentName: "bulk_import_cancelled.xlsx",
+    logs: [
+      makeLog(actorForName(CURRENT_USER.name), "Upload created", "File \"bulk_import_cancelled.xlsx\" was uploaded (30 products).", "2026-07-28T08:20:00Z"),
+      makeLog(actorForName(CURRENT_USER.name), "Upload cancelled", "This upload was cancelled and will not be imported.", "2026-07-28T08:24:00Z"),
+    ],
   },
 ];
 
@@ -189,6 +249,7 @@ export const subscribeBulkUploads = (fn) => {
 };
 
 export const addBulkUpload = (data) => {
+  const actor = actorForName(data.createdBy);
   const record = {
     id: nextId(),
     fileName: data.fileName || "untitled.csv",
@@ -204,6 +265,9 @@ export const addBulkUpload = (data) => {
     rawRows: data.rawRows || [],
     fieldMapping: data.fieldMapping || {},
     sourceHeaders: data.sourceHeaders || [],
+    logs: [
+      makeLog(actor, "Upload created", `File "${data.fileName || "untitled.csv"}" was uploaded (${data.totalProducts || 0} products).`),
+    ],
   };
   batches = [record, ...batches];
   notify();
@@ -211,7 +275,18 @@ export const addBulkUpload = (data) => {
 };
 
 export const updateBulkUpload = (id, patch) => {
-  batches = batches.map((b) => (b.id === id ? { ...b, ...patch, id: b.id } : b));
+  const { logActorName, logDesc, ...rest } = patch;
+  batches = batches.map((b) => {
+    if (b.id !== id) return b;
+    const next = { ...b, ...rest, id: b.id };
+    if (rest.status && rest.status !== b.status) {
+      const copy = STATUS_LOG_COPY[rest.status];
+      const actor = actorForName(logActorName || CURRENT_USER.name);
+      const log = makeLog(actor, copy?.title || `Status changed to "${rest.status}"`, logDesc || copy?.desc);
+      next.logs = [...(b.logs || []), log];
+    }
+    return next;
+  });
   notify();
   return getBulkUpload(id);
 };

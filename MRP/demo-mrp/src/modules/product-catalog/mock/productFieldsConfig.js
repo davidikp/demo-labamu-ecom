@@ -138,6 +138,26 @@ export const REQUIRED_PRODUCT_FIELD_KEYS = PRODUCT_FIELDS_CONFIG.filter((f) => f
 // button (disabled while any row is invalid).
 export const isRowInvalid = (row) => REQUIRED_PRODUCT_FIELD_KEYS.some((key) => !String(row[key] || "").trim());
 
+// A non-empty Lead Time whose unit isn't one of our options (e.g. "10
+// Fortnights") — mirrors the Review step's own parsing (see parseLeadTime in
+// ReviewStep.jsx) just enough to flag it without duplicating that UI logic.
+const LEAD_TIME_UNIT_PATTERN = /^[\d,.]+\s*(days?|weeks?|months?)$/i;
+const hasUnrecognizedLeadTimeUnit = (row) => {
+  const value = String(row.leadTime || "").trim();
+  return !!value && !LEAD_TIME_UNIT_PATTERN.test(value);
+};
+
+// Broader than `isRowInvalid` — also flags rows that skipped the AI
+// normalization pass (see `__skippedNormalization`, set by BulkUploadNewPage
+// when the "Skip Process" control or an interrupted normalization leaves a
+// row un-cleaned) or have a Lead Time unit we don't recognize. These rows
+// aren't necessarily missing any required field (so they don't block
+// import), but still need a human look before the user can be confident in
+// them. Used by the Review step's "needs attention" filter/counter;
+// import-blocking logic keeps using `isRowInvalid` as-is.
+export const rowNeedsAttention = (row) =>
+  isRowInvalid(row) || !!row.__skippedNormalization || hasUnrecognizedLeadTimeUnit(row);
+
 export const NOT_MAPPED = "__not_mapped__";
 
 export const STATUS_OPTIONS = ["Active", "Inactive"];
@@ -249,4 +269,41 @@ export const normalizeMappedRows = (rawRows, mapping) => {
     });
     return normalized;
   });
+};
+
+// Triggers a browser download of a blank CSV template — one column per
+// product field, headers only — so users have a known-good starting point
+// instead of guessing at the expected structure.
+export const downloadProductTemplateCsv = () => {
+  const headers = PRODUCT_FIELDS_CONFIG.map((f) => f.label);
+  const exampleRow = PRODUCT_FIELDS_CONFIG.map((f) => f.example);
+  const csvLines = [headers.join(","), exampleRow.join(",")];
+  const blob = new Blob([csvLines.join("\n")], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "labamu_product_upload_template.csv";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+};
+
+// Builds the Review-ready rows for a normalization pass, simulating the AI
+// occasionally leaving the last `skipCount` rows un-cleaned — either because
+// it randomly "ran out of tokens" mid-run, or because the user hit "Skip
+// Process" partway through. Skipped rows are still mapped (so nothing goes
+// missing) but flagged with `__skippedNormalization` so the Review step's
+// "needs attention" filter picks them up even when otherwise valid.
+export const buildNormalizationResult = (rawRows, mapping, skipCount = 0) => {
+  const normalizedAll = normalizeMappedRows(rawRows, mapping);
+  const effectiveSkip = Math.min(skipCount, normalizedAll.length);
+  const skipStartIdx = normalizedAll.length - effectiveSkip;
+  const rows = normalizedAll.map((row, idx) =>
+    effectiveSkip > 0 && idx >= skipStartIdx ? { ...row, __skippedNormalization: true } : row
+  );
+  return {
+    rows,
+    stats: { total: normalizedAll.length, normalized: normalizedAll.length - effectiveSkip, skipped: effectiveSkip },
+  };
 };

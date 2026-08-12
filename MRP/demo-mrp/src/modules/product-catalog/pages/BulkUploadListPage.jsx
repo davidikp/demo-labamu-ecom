@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { AddIcon, ChevronLeft, SearchNotFoundIllustration } from "../../../components/icons/Icons.jsx";
+import { AddIcon, ChevronLeft, ChevronDownIcon, SearchNotFoundIllustration } from "../../../components/icons/Icons.jsx";
 import { EmptyState } from "../../../ce-ui";
 import { Button } from "../../../components/common/Button.jsx";
 import { FilterMenu } from "../../../components/molecules/FilterMenu.jsx";
@@ -37,14 +37,25 @@ export const BulkUploadListPage = ({ onNavigate }) => {
   const [rowsPerPage, setRowsPerPage] = useState(25);
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedBatch, setSelectedBatch] = useState(null);
+  const [sortDirection, setSortDirection] = useState(null); // null | "asc" | "desc"
 
   useEffect(() => subscribeBulkUploads(setBatches), []);
 
-  const filteredRows = batches.filter((row) => {
-    const matchesSearch = !searchQuery || row.fileName.toLowerCase().includes(searchQuery.toLowerCase()) || row.id.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = activeFilters.status.length === 0 || activeFilters.status.includes(row.status);
-    return matchesSearch && matchesStatus;
-  });
+  const toggleCreatedAtSort = () => {
+    setSortDirection((prev) => (prev === "desc" ? "asc" : prev === "asc" ? null : "desc"));
+  };
+
+  const filteredRows = batches
+    .filter((row) => {
+      const matchesSearch = !searchQuery || row.fileName.toLowerCase().includes(searchQuery.toLowerCase()) || row.id.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesStatus = activeFilters.status.length === 0 || activeFilters.status.includes(row.status);
+      return matchesSearch && matchesStatus;
+    })
+    .sort((a, b) => {
+      if (!sortDirection) return 0;
+      const diff = new Date(a.createdAt) - new Date(b.createdAt);
+      return sortDirection === "asc" ? diff : -diff;
+    });
 
   const totalPages = Math.max(1, Math.ceil(filteredRows.length / rowsPerPage));
   const visibleRows = filteredRows.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
@@ -56,9 +67,9 @@ export const BulkUploadListPage = ({ onNavigate }) => {
   const tableColumns = [
     { label: "File Name", key: "fileName", flex: "2" },
     { label: "Upload ID", key: "id", flex: "1.4" },
-    { label: "Created At", key: "createdAt", flex: "1.6" },
+    { label: "Created At", key: "createdAt", flex: "1.6", sortable: true },
     { label: "Created By", key: "createdBy", flex: "1.4" },
-    { label: "Total Product", key: "totalProducts", flex: "1.2" },
+    { label: "Total Data", key: "totalProducts", flex: "1.2" },
     { label: "Status", key: "status", flex: "1.4", minWidth: "160px" },
   ];
 
@@ -138,6 +149,7 @@ export const BulkUploadListPage = ({ onNavigate }) => {
               {tableColumns.map((col, idx) => (
                 <div
                   key={idx}
+                  onClick={col.sortable ? toggleCreatedAtSort : undefined}
                   style={{
                     flex: col.flex,
                     minWidth: col.minWidth,
@@ -146,9 +158,24 @@ export const BulkUploadListPage = ({ onNavigate }) => {
                     fontSize: "var(--text-title-3)",
                     fontWeight: "var(--font-weight-bold)",
                     whiteSpace: "nowrap",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "4px",
+                    cursor: col.sortable ? "pointer" : "default",
+                    userSelect: col.sortable ? "none" : undefined,
                   }}
                 >
                   {col.label}
+                  {col.sortable && (
+                    <ChevronDownIcon
+                      size={14}
+                      color={sortDirection ? "var(--feature-brand-primary)" : "var(--neutral-on-surface-tertiary)"}
+                      style={{
+                        transform: sortDirection === "asc" ? "rotate(180deg)" : "rotate(0deg)",
+                        transition: "transform 0.2s",
+                      }}
+                    />
+                  )}
                 </div>
               ))}
             </div>
@@ -158,7 +185,7 @@ export const BulkUploadListPage = ({ onNavigate }) => {
                 <div
                   key={row.id}
                   onClick={() =>
-                    row.status === "Review" || row.status === "Mapping"
+                    row.status === "Review" || row.status === "Mapping" || row.status === "Normalizing Data"
                       ? onNavigate("product_catalog_bulk-upload-new", { resumeDraftId: row.id })
                       : setSelectedBatch(row)
                   }

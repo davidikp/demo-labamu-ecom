@@ -59,19 +59,29 @@ const buildSimulatedXlsxData = () => {
 };
 
 // Runs the (simulated, ~3.5s) file analysis and calls back with
-// (headers, rows, fileName). Exported so the parent page can drive this from
-// its own fixed "Analyze File" footer button.
-export const analyzeFile = (file, onDone) => {
+// (headers, rows, fileName), or `onEmpty()` when a CSV genuinely has no data
+// rows. Exported so the parent page can drive this from its own fixed
+// "Analyze File" footer button. Returns a `cancel()` function so the caller
+// can abandon a pending analysis (e.g. the demo "Simulate" controls below)
+// without a late callback firing afterwards.
+export const analyzeFile = (file, onDone, onEmpty) => {
   const isCsv = /\.csv$/i.test(file.name);
+  let cancelled = false;
 
-  setTimeout(() => {
+  const timeoutId = setTimeout(() => {
     if (isCsv) {
       const reader = new FileReader();
       reader.onload = () => {
+        if (cancelled) return;
         const { headers, rows } = parseCsvText(String(reader.result || ""));
-        onDone(headers, rows, file.name);
+        if (rows.length === 0) {
+          onEmpty?.();
+        } else {
+          onDone(headers, rows, file.name);
+        }
       };
       reader.onerror = () => {
+        if (cancelled) return;
         const { headers, rows } = buildSimulatedXlsxData();
         onDone(headers, rows, file.name);
       };
@@ -82,12 +92,17 @@ export const analyzeFile = (file, onDone) => {
       onDone(headers, rows, file.name);
     }
   }, 3500);
+
+  return () => {
+    cancelled = true;
+    clearTimeout(timeoutId);
+  };
 };
 
-export const UploadStep = ({ selectedFile, onFileSelected, isAnalyzing, error, onDownloadTemplate }) => {
+export const UploadStep = ({ selectedFile, onFileSelected, isAnalyzing, error, onDownloadTemplate, onSimulateAnalyzeFailure }) => {
   if (isAnalyzing) {
     return (
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "16px", padding: "80px 24px", flex: 1, minHeight: 0, height: "100%" }}>
+      <div style={{ position: "relative", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "16px", padding: "80px 24px", minHeight: "420px" }}>
         <div
           style={{
             width: "40px",
@@ -99,9 +114,42 @@ export const UploadStep = ({ selectedFile, onFileSelected, isAnalyzing, error, o
           }}
         />
         <style>{`@keyframes pc-spin { to { transform: rotate(360deg); } }`}</style>
-        <span style={{ fontSize: "var(--text-title-2)", fontWeight: "var(--font-weight-bold)" }}>
-          Analyzing your file...
-        </span>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "4px", textAlign: "center" }}>
+          <span style={{ fontSize: "var(--text-title-2)", fontWeight: "var(--font-weight-bold)" }}>
+            Analyzing your file...
+          </span>
+          <span style={{ fontSize: "14px", color: "var(--neutral-on-surface-secondary)", maxWidth: "360px" }}>
+            We're reading your file and getting it ready for column mapping. This usually takes a few seconds.
+          </span>
+        </div>
+
+        {onSimulateAnalyzeFailure && (
+          <div
+            style={{
+              position: "absolute",
+              bottom: "16px",
+              right: "16px",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "flex-end",
+              gap: "6px",
+              padding: "10px",
+              borderRadius: "var(--radius-card)",
+              border: "1px dashed var(--neutral-line-separator-2)",
+              background: "var(--neutral-surface-grey-lighter)",
+            }}
+          >
+            <span style={{ fontSize: "11px", color: "var(--neutral-on-surface-tertiary)" }}>Demo: simulate a failure</span>
+            <div style={{ display: "flex", gap: "8px" }}>
+              <Button size="small" variant="outlined" onClick={() => onSimulateAnalyzeFailure("timeout")}>
+                Simulate Timeout
+              </Button>
+              <Button size="small" variant="outlined" onClick={() => onSimulateAnalyzeFailure("empty")}>
+                Simulate Empty File
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -111,7 +159,7 @@ export const UploadStep = ({ selectedFile, onFileSelected, isAnalyzing, error, o
     : [];
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "24px", padding: "24px", width: "100%", flex: 1, minHeight: 0 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "24px", padding: "24px", width: "100%" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "16px" }}>
         <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
           <span style={{ fontSize: "var(--text-title-2)", fontWeight: "var(--font-weight-bold)", color: "var(--neutral-on-surface-primary)" }}>

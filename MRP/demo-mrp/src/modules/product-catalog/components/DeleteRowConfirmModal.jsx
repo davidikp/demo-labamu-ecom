@@ -8,7 +8,7 @@ export const DeleteRowConfirmModal = ({ isOpen, onClose, onConfirm, count = 1 })
     onClose={onClose}
     title={count > 1 ? `Delete ${count} rows?` : "Delete this row?"}
     description="These rows will be removed from this upload and won’t be imported."
-    width="400px"
+    width="560px"
     hideFooterDivider
     footerPaddingTop={24}
     footer={

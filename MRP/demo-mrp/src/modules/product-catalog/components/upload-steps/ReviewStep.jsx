@@ -8,7 +8,7 @@ import { StatusBadge } from "../../../../components/common/StatusBadge.jsx";
 import { DropdownSelect } from "../../../../components/common/DropdownSelect.jsx";
 import { TableSearchField } from "../../../../components/table/TableSearchField.jsx";
 import { TablePaginationFooter } from "../../../../components/table/TablePaginationFooter.jsx";
-import { PRODUCT_FIELDS_CONFIG, isRowInvalid, STATUS_OPTIONS } from "../../mock/productFieldsConfig.js";
+import { PRODUCT_FIELDS_CONFIG, isRowInvalid, rowNeedsAttention, STATUS_OPTIONS } from "../../mock/productFieldsConfig.js";
 import { DeleteRowConfirmModal } from "../DeleteRowConfirmModal.jsx";
 
 let blankRowSeq = 0;
@@ -69,16 +69,21 @@ const stripNumberFormatting = (formatted) => {
 // "leadTime" string (e.g. "10 Days") so the rest of the schema/upload
 // pipeline is unaffected.
 const LEAD_TIME_UNITS = ["Days", "Weeks", "Months"];
+// When the source file's unit isn't one of our options (e.g. "Fortnights"),
+// the unit is left null so the dropdown renders in its unset/placeholder
+// state instead of silently defaulting to "Days" — the user needs to pick
+// the correct one themselves.
 const parseLeadTime = (value) => {
   const str = String(value ?? "").trim();
   const match = str.match(/^([\d,.]+)\s*(\w+)?/);
-  if (!match) return { amount: "", unit: "Days" };
+  if (!match) return { amount: "", unit: null };
   const amount = match[1].replace(/,/g, "");
-  const rawUnit = (match[2] || "Days").toLowerCase().replace(/s$/, "");
-  const unit = LEAD_TIME_UNITS.find((u) => u.toLowerCase().startsWith(rawUnit)) || "Days";
+  if (!match[2]) return { amount, unit: "Days" };
+  const rawUnit = match[2].toLowerCase().replace(/s$/, "");
+  const unit = LEAD_TIME_UNITS.find((u) => u.toLowerCase().startsWith(rawUnit)) || null;
   return { amount, unit };
 };
-const formatLeadTime = (amount, unit) => (amount ? `${amount} ${unit}` : "");
+const formatLeadTime = (amount, unit) => (amount ? (unit ? `${amount} ${unit}` : String(amount)) : "");
 
 // Fields whose label carries a trailing "(Unit)" — e.g. "Weight (Kg)" — shown
 // as an input suffix instead of baked into the column header.
@@ -103,12 +108,12 @@ export const ReviewStep = ({ rows, onRowsChange, normalizationStats }) => {
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
 
-  const invalidCount = rows.filter(isRowInvalid).length;
+  const attentionCount = rows.filter(rowNeedsAttention).length;
 
   const filteredRows = rows.filter((row) => {
     const query = searchQuery.toLowerCase();
     const matchesSearch = !searchQuery || ["sku", "name", "categoryName"].some((key) => String(row[key] || "").toLowerCase().includes(query));
-    const matchesInvalidFilter = !showOnlyInvalid || isRowInvalid(row);
+    const matchesInvalidFilter = !showOnlyInvalid || rowNeedsAttention(row);
     return matchesSearch && matchesInvalidFilter;
   });
 
@@ -187,6 +192,10 @@ export const ReviewStep = ({ rows, onRowsChange, normalizationStats }) => {
           render: (value, row) => {
             const { amount, unit } = parseLeadTime(row.leadTime);
             const isEmptyRequired = !String(row.leadTime || "").trim();
+            // Errors whenever there's no valid unit — whether the whole
+            // field is blank or the amount is filled in but the unit didn't
+            // match one of our options.
+            const isUnrecognizedUnit = !unit;
             const commit = (nextAmount, nextUnit) => updateCell(row.__rowId, "leadTime", formatLeadTime(nextAmount, nextUnit));
             return (
               <div onClick={stopRowToggle} onMouseDown={stopRowToggle} style={{ display: "flex", gap: "6px" }}>
@@ -201,9 +210,12 @@ export const ReviewStep = ({ rows, onRowsChange, normalizationStats }) => {
                 <div className="lead-time-unit-dropdown" style={{ flex: 1, minWidth: 0 }}>
                   <DropdownSelect
                     size="md"
-                    value={unit}
+                    value={unit || undefined}
+                    placeholder="Select unit"
                     options={LEAD_TIME_UNITS.map((u) => ({ value: u, label: u }))}
                     onChange={(val) => commit(amount, val)}
+                    state={isUnrecognizedUnit ? "error" : "default"}
+                    errorText={isUnrecognizedUnit ? "Field cannot be empty" : undefined}
                   />
                 </div>
               </div>
@@ -227,10 +239,15 @@ export const ReviewStep = ({ rows, onRowsChange, normalizationStats }) => {
                 size="md"
                 value={displayValue}
                 onChange={(e) => updateCell(row.__rowId, field.key, isNumberField ? stripNumberFormatting(e.target.value) : e.target.value)}
-                errorText={isEmptyRequired ? "Field cannot be empty" : undefined}
-                helperText={!isEmptyRequired && currencyWarning ? `Detected in ${currencyWarning} — value kept as-is, please verify.` : undefined}
+                errorText={
+                  isEmptyRequired
+                    ? "Field cannot be empty"
+                    : currencyWarning
+                    ? "Different currency detected. Value kept as is."
+                    : undefined
+                }
                 leftIcon={field.key === "sellingPrice" ? "IDR" : undefined}
-                rightIcon={uom}
+                rightIcon={uom ? <span style={{ textTransform: "lowercase" }}>{uom}</span> : undefined}
               />
             </div>
           );
@@ -255,7 +272,12 @@ export const ReviewStep = ({ rows, onRowsChange, normalizationStats }) => {
         .pc-review-table table { table-layout: fixed; width: max-content; min-width: 100%; }
         .pc-review-table th, .pc-review-table td { height: auto !important; overflow: hidden; vertical-align: top; }
         .pc-review-table td > div { padding: 8px 0; }
-        .pc-review-table td:first-child { padding-top: 16px; }
+        /* Checkbox + delete-icon columns don't have per-field error text
+           pushing their row taller, so top-aligning them (like every other
+           cell) would drift out of true vertical center once a sibling cell
+           grows for a helper/error message — true middle alignment tracks
+           the row's actual height regardless. */
+        .pc-review-table td:first-child, .pc-review-table td:last-child { vertical-align: middle !important; }
         .pc-review-table th {
           padding-top: 12px !important;
           padding-bottom: 12px !important;
@@ -290,13 +312,16 @@ export const ReviewStep = ({ rows, onRowsChange, normalizationStats }) => {
                 <div style={{ display: "flex", alignItems: "center", gap: "16px", flexWrap: "wrap" }}>
                   <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", fontSize: "14px" }}>
                     <Checkbox checked={showOnlyInvalid} onChange={(checked) => setShowOnlyInvalid(checked)} />
-                    Show only products that need attention{invalidCount > 0 ? ` (${invalidCount})` : ""}
+                    Show only products that need attention{attentionCount > 0 ? ` (${attentionCount})` : ""}
                   </label>
                   {normalizationStats && (
-                    <StatusBadge variant={normalizationStats.skipped > 0 ? "yellow-light" : "green-light"}>
-                      {normalizationStats.normalized} of {normalizationStats.total} rows normalized by AI
-                      {normalizationStats.skipped > 0 ? ` (${normalizationStats.skipped} skipped)` : ""}
-                    </StatusBadge>
+                    <>
+                      <div style={{ width: "1px", height: "20px", background: "var(--neutral-line-separator-2)" }} />
+                      <StatusBadge variant={normalizationStats.skipped > 0 ? "yellow-light" : "green-light"}>
+                        {normalizationStats.normalized} of {normalizationStats.total} rows normalized by AI
+                        {normalizationStats.skipped > 0 ? ` (${normalizationStats.skipped} skipped)` : ""}
+                      </StatusBadge>
+                    </>
                   )}
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>

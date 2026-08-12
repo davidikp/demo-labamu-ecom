@@ -1,7 +1,7 @@
 import React from "react";
 import { GeneralModal } from "../../../components/modal/GeneralModal.jsx";
 import { Button } from "../../../components/common/Button.jsx";
-import { DownloadIcon } from "../../../components/icons/Icons.jsx";
+import { DownloadIcon, Info } from "../../../components/icons/Icons.jsx";
 import { StatusBadge } from "../../../components/common/StatusBadge.jsx";
 import { LabelValue } from "../../../components/molecules/LabelValue.jsx";
 
@@ -68,6 +68,67 @@ const downloadFailedRowsCsv = (batch) => {
   URL.revokeObjectURL(url);
 };
 
+// Same shape/columns as the app's other activity-log lists (see e.g.
+// PurchaseOrderDetailPage's "Activity Logs" section), minus the description
+// line — just Name / Email / Activity / Timestamp here.
+const LogsSection = ({ logs }) => {
+  const sorted = [...(logs || [])].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+      <span style={{ fontSize: "var(--text-title-2)", fontWeight: "var(--font-weight-bold)", color: "var(--neutral-on-surface-primary)" }}>
+        Activity Logs
+      </span>
+
+      {sorted.length === 0 ? (
+        <div style={{ padding: "16px 0", textAlign: "center", color: "var(--neutral-on-surface-tertiary)", fontSize: "14px" }}>
+          No activity yet.
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column" }}>
+          <div
+            style={{
+              display: "flex",
+              paddingBottom: "12px",
+              borderBottom: "1px solid var(--neutral-line-separator-1)",
+              fontWeight: "var(--font-weight-bold)",
+              fontSize: "var(--text-title-3)",
+              color: "var(--neutral-on-surface-primary)",
+            }}
+          >
+            <div style={{ flex: "1.1", minWidth: 0 }}>Name</div>
+            <div style={{ flex: "1.6", minWidth: 0 }}>Email</div>
+            <div style={{ flex: "2.4", minWidth: 0 }}>Activity</div>
+            <div style={{ width: "150px", flexShrink: 0 }}>Timestamp</div>
+          </div>
+
+          {sorted.map((log, idx) => (
+            <div
+              key={idx}
+              style={{
+                display: "flex",
+                alignItems: "flex-start",
+                padding: "14px 0",
+                borderBottom: idx === sorted.length - 1 ? "none" : "1px solid var(--neutral-line-separator-1)",
+                fontSize: "var(--text-title-3)",
+              }}
+            >
+              <div style={{ flex: "1.1", minWidth: 0, paddingRight: "8px", overflowWrap: "break-word", wordBreak: "break-word", color: "var(--neutral-on-surface-primary)" }}>{log.name}</div>
+              <div style={{ flex: "1.6", minWidth: 0, paddingRight: "8px", overflowWrap: "break-word", wordBreak: "break-word", color: "var(--neutral-on-surface-primary)" }}>{log.email}</div>
+              <div style={{ flex: "2.4", minWidth: 0, paddingRight: "8px", overflowWrap: "break-word", wordBreak: "break-word", fontWeight: "var(--font-weight-bold)", color: "var(--neutral-on-surface-primary)" }}>
+                {log.title}
+              </div>
+              <div style={{ width: "150px", flexShrink: 0, color: "var(--neutral-on-surface-secondary)", fontSize: "13px" }}>
+                {formatDate(log.timestamp)}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
 export const BulkUploadDetailModal = ({ isOpen, onClose, batch }) => {
   if (!batch) return null;
 
@@ -76,7 +137,7 @@ export const BulkUploadDetailModal = ({ isOpen, onClose, batch }) => {
       isOpen={isOpen}
       onClose={onClose}
       title="Bulk Upload Detail"
-      width="640px"
+      width="680px"
       footer={
         batch.failedCount > 0 && (
           <Button variant="secondary" size="large" leftIcon={DownloadIcon} onClick={() => downloadFailedRowsCsv(batch)} style={{ flex: 1 }}>
@@ -85,7 +146,25 @@ export const BulkUploadDetailModal = ({ isOpen, onClose, batch }) => {
         )
       }
     >
-      <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+        {batch.status === "Processing" && (
+          <div
+            style={{
+              display: "flex",
+              gap: "12px",
+              alignItems: "flex-start",
+              padding: "12px 16px",
+              borderRadius: "var(--radius-card)",
+              background: "var(--feature-brand-container-lighter)",
+            }}
+          >
+            <Info size={20} color="var(--feature-brand-primary)" style={{ flexShrink: 0, marginTop: "2px" }} />
+            <span style={{ fontSize: "14px", color: "var(--neutral-on-surface-primary)" }}>
+              <strong>Import in progress:</strong> Your products are being added to the product catalog. We’ll notify you by email when it’s complete.
+            </span>
+          </div>
+        )}
+
         <div
           style={{
             display: "flex",
@@ -117,16 +196,6 @@ export const BulkUploadDetailModal = ({ isOpen, onClose, batch }) => {
               >
                 {batch.fileName}
               </a>
-              <span
-                style={{
-                  fontSize: "12px",
-                  color: "var(--neutral-on-surface-tertiary)",
-                  overflowWrap: "break-word",
-                  wordBreak: "break-word",
-                }}
-              >
-                {batch.id}
-              </span>
             </div>
             <LabelValue label="Created At" value={formatDate(batch.createdAt)} />
             <LabelValue label="Created By" value={batch.createdBy} />
@@ -138,11 +207,14 @@ export const BulkUploadDetailModal = ({ isOpen, onClose, batch }) => {
             </div>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "16px" }}>
-            <LabelValue label="Total Product" value={batch.totalProducts} />
-            <LabelValue label="Valid Data" value={batch.successCount} />
+            <LabelValue label="Upload ID" value={batch.id} />
+            <LabelValue label="Total Data" value={batch.totalProducts} />
+            <LabelValue label="Imported Data" value={batch.successCount} />
             <LabelValue label="Invalid Data" value={batch.failedCount} />
           </div>
         </div>
+
+        <LogsSection logs={batch.logs} />
       </div>
     </GeneralModal>
   );

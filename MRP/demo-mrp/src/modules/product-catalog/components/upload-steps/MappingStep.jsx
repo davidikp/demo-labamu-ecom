@@ -11,7 +11,7 @@ import { PRODUCT_FIELDS_CONFIG, NOT_MAPPED } from "../../mock/productFieldsConfi
 // state. `recommendation` is a one-time snapshot computed when the file was
 // analyzed — it stays fixed even if the user later changes a Source Column
 // selection, since it's meant to show what the AI originally matched.
-export const MappingStep = ({ headers, mapping, recommendation, onMappingChange, missingRequired = [] }) => {
+export const MappingStep = ({ headers, mapping, recommendation, onMappingChange, missingRequired = [], fileName }) => {
   const headerOptions = [
     { value: NOT_MAPPED, label: "— Not mapped —" },
     ...headers.map((h) => ({ value: h, label: h })),
@@ -50,10 +50,14 @@ export const MappingStep = ({ headers, mapping, recommendation, onMappingChange,
         return (
           <div style={{ padding: "8px 0" }}>
             <DropdownSelect
-              value={mappedValue}
+              // "— Not mapped —" renders as the plain placeholder (grey)
+              // instead of a "selected" option, even though it's technically
+              // a valid selectable value in the menu.
+              value={mappedValue === NOT_MAPPED ? undefined : mappedValue}
               options={headerOptions}
               onChange={(val) => onMappingChange(row.field.key, val === "" ? NOT_MAPPED : val)}
               hasError={isMissing}
+              errorText={isMissing ? "Field cannot be empty" : undefined}
               placeholder="— Not mapped —"
             />
           </div>
@@ -90,6 +94,14 @@ export const MappingStep = ({ headers, mapping, recommendation, onMappingChange,
           border-bottom: none !important;
           box-shadow: inset 0 -1px 0 var(--neutral-line-separator-2);
         }
+        /* Source Column header includes the uploaded file name, which can be
+           long — cap it and ellipsize instead of stretching the column. */
+        .pc-mapping-table th:nth-child(3) {
+          max-width: 320px;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
       `}</style>
       <div
         style={{
@@ -111,14 +123,8 @@ export const MappingStep = ({ headers, mapping, recommendation, onMappingChange,
       </div>
 
       <div style={{ height: "calc(100vh - 480px)", minHeight: "280px" }}>
-        <Table className="pc-mapping-table" columns={columns} data={data} showPagination={false} />
+        <Table className="pc-mapping-table" columns={columns} data={data} showPagination={false} selectedRowId={null} />
       </div>
-
-      {missingRequired.length > 0 && (
-        <div style={{ padding: "12px 16px", borderRadius: "8px", background: "var(--status-red-container)", color: "var(--status-red-primary)", fontSize: "14px" }}>
-          Please map all required fields before continuing: {missingRequired.map((k) => PRODUCT_FIELDS_CONFIG.find((f) => f.key === k)?.label).join(", ")}
-        </div>
-      )}
     </div>
   );
 };

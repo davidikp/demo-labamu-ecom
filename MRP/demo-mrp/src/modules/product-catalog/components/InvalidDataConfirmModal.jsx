@@ -8,7 +8,7 @@ export const InvalidDataConfirmModal = ({ isOpen, onClose, onContinue, invalidCo
     onClose={onClose}
     title={`${invalidCount} product${invalidCount > 1 ? "s" : ""} need${invalidCount > 1 ? "" : "s"} attention`}
     description="Some required information is missing. You can update these products now or continue importing the products that are ready."
-    width="420px"
+    width="560px"
     hideFooterDivider
     footerPaddingTop={24}
     footer={

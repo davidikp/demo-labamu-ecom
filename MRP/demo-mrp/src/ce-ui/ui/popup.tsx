@@ -78,7 +78,7 @@ export const Popup: React.FC<{
         )}
 
         {(title || description) && (
-          <div className={cn("relative px-6 pt-6 flex-shrink-0", align === "left" ? "text-left" : "text-center")}>
+          <div className={cn("relative px-6 pt-7 flex-shrink-0", align === "left" ? "text-left" : "text-center")}>
             <button
               onClick={onClose}
               className="absolute top-4 right-4 w-6 h-6 flex items-center justify-center text-lb-on-surface hover:bg-lb-surface-grey transition-colors bg-transparent border-none cursor-pointer rounded-full"
@@ -89,12 +89,18 @@ export const Popup: React.FC<{
               </svg>
             </button>
             {title && (
-              <h2 className="font-lb text-[20px] font-lb-bold text-lb-on-surface leading-[30px] tracking-[0.1375px] m-0">
+              <h2 className={cn(
+                "font-lb text-[20px] font-lb-bold text-lb-on-surface leading-[30px] tracking-[0.1375px] m-0",
+                align !== "left" && "px-5"
+              )}>
                 {title}
               </h2>
             )}
             {description && (
-              <p className="font-lb text-[14px] text-lb-on-surface-2 leading-[20px] tracking-[0.0962px] mt-2 mb-0">
+              <p className={cn(
+                "font-lb text-[14px] text-lb-on-surface-2 leading-[20px] tracking-[0.0962px] mt-2 mb-0",
+                align !== "left" && "px-5"
+              )}>
                 {description}
               </p>
             )}
