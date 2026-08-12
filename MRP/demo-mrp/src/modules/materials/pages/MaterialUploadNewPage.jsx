@@ -4,17 +4,16 @@ import { Button } from "../../../components/common/Button.jsx";
 import { UploadStep, analyzeFile } from "../components/upload-steps/UploadStep.jsx";
 import { MappingStep } from "../components/upload-steps/MappingStep.jsx";
 import { ReviewStep } from "../components/upload-steps/ReviewStep.jsx";
-import { addBulkUpload, updateBulkUpload, getBulkUpload } from "../mock/bulkUploadsStore.js";
-import { addProducts } from "../mock/productsMocks.js";
+import { addMaterialUpload, updateMaterialUpload, getMaterialUpload } from "../mock/materialUploadsStore.js";
+import { addMaterials } from "../mock/materialsMocks.js";
 import {
   autoMatchHeaders,
   buildNormalizationResult,
-  downloadProductTemplateCsv,
-  REQUIRED_PRODUCT_FIELD_KEYS,
+  downloadMaterialTemplateCsv,
+  REQUIRED_MATERIAL_FIELD_KEYS,
   NOT_MAPPED,
   isRowInvalid,
-  withDefaultStatus,
-} from "../mock/productFieldsConfig.js";
+} from "../mock/materialFieldsConfig.js";
 import { BackgroundProcessingScreen } from "../components/BackgroundProcessingScreen.jsx";
 import { CancelUploadConfirmModal } from "../components/CancelUploadConfirmModal.jsx";
 import { DiscardChangesConfirmModal } from "../components/DiscardChangesConfirmModal.jsx";
@@ -75,9 +74,9 @@ const Stepper = ({ currentKey }) => {
   );
 };
 
-export const BulkUploadNewPage = ({ onNavigate, showSnackbar, initialData, isSidebarCollapsed }) => {
+export const MaterialUploadNewPage = ({ onNavigate, showSnackbar, initialData, isSidebarCollapsed }) => {
   const resumeDraftId = initialData?.resumeDraftId || null;
-  const resumeRecord = resumeDraftId ? getBulkUpload(resumeDraftId) : null;
+  const resumeRecord = resumeDraftId ? getMaterialUpload(resumeDraftId) : null;
   const resumeAtMapping = resumeRecord?.status === "Mapping";
   const resumeAtNormalizing = resumeRecord?.status === "Normalizing Data";
 
@@ -87,7 +86,7 @@ export const BulkUploadNewPage = ({ onNavigate, showSnackbar, initialData, isSid
   const [fileName, setFileName] = useState(resumeRecord?.fileName || "");
   const [parsedHeaders, setParsedHeaders] = useState(resumeRecord?.sourceHeaders || []);
   const [parsedRows, setParsedRows] = useState(resumeRecord?.rawRows || []);
-  const [normalizedRows, setNormalizedRows] = useState(withDefaultStatus(resumeRecord?.rows));
+  const [normalizedRows, setNormalizedRows] = useState(resumeRecord?.rows || []);
   const [fieldMapping, setFieldMapping] = useState(resumeRecord?.fieldMapping || {});
   const [sourceHeaders, setSourceHeaders] = useState(resumeRecord?.sourceHeaders || []);
   const [editingDraftId, setEditingDraftId] = useState(resumeRecord?.id || null);
@@ -110,7 +109,7 @@ export const BulkUploadNewPage = ({ onNavigate, showSnackbar, initialData, isSid
   const [mappingSnapshot, setMappingSnapshot] = useState(() =>
     resumeAtMapping ? JSON.stringify(autoMatchHeaders(resumeRecord?.sourceHeaders || [])) : "{}"
   );
-  const [rowsSnapshot, setRowsSnapshot] = useState(() => JSON.stringify(withDefaultStatus(resumeRecord?.rows)));
+  const [rowsSnapshot, setRowsSnapshot] = useState(() => JSON.stringify(resumeRecord?.rows || []));
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
   const [showInvalidConfirm, setShowInvalidConfirm] = useState(false);
@@ -131,7 +130,7 @@ export const BulkUploadNewPage = ({ onNavigate, showSnackbar, initialData, isSid
     };
   });
 
-  const missingRequired = REQUIRED_PRODUCT_FIELD_KEYS.filter(
+  const missingRequired = REQUIRED_MATERIAL_FIELD_KEYS.filter(
     (key) => !mapping[key] || mapping[key] === NOT_MAPPED
   );
 
@@ -144,7 +143,7 @@ export const BulkUploadNewPage = ({ onNavigate, showSnackbar, initialData, isSid
 
   const analyzeCancelRef = useRef(null);
 
-  const handleDownloadTemplate = () => downloadProductTemplateCsv();
+  const handleDownloadTemplate = () => downloadMaterialTemplateCsv();
 
   const handleAnalyzeClick = () => {
     if (!selectedFile) {
@@ -194,7 +193,7 @@ export const BulkUploadNewPage = ({ onNavigate, showSnackbar, initialData, isSid
     // finishes mapping columns.
     const payload = {
       fileName: effectiveFileName,
-      totalProducts: rows.length,
+      totalMaterials: rows.length,
       status: "Mapping",
       successCount: 0,
       failedCount: 0,
@@ -205,8 +204,8 @@ export const BulkUploadNewPage = ({ onNavigate, showSnackbar, initialData, isSid
     };
 
     const record = editingDraftId
-      ? updateBulkUpload(editingDraftId, payload)
-      : addBulkUpload(payload);
+      ? updateMaterialUpload(editingDraftId, payload)
+      : addMaterialUpload(payload);
 
     setEditingDraftId(record.id);
 
@@ -244,10 +243,10 @@ export const BulkUploadNewPage = ({ onNavigate, showSnackbar, initialData, isSid
 
     const { rows: finalRows, stats } = buildNormalizationResult(rowsToNormalize, mappingUsed, skipCount);
 
-    updateBulkUpload(recordId, {
+    updateMaterialUpload(recordId, {
       status: "Review",
       rows: finalRows,
-      totalProducts: finalRows.length,
+      totalMaterials: finalRows.length,
       normalizationTotal: stats.total,
       normalizationNormalized: stats.normalized,
       normalizationSkipped: stats.skipped,
@@ -295,7 +294,7 @@ export const BulkUploadNewPage = ({ onNavigate, showSnackbar, initialData, isSid
     // normalized rows are built and the record flips to "Review".
     const payload = {
       fileName: fileName || "untitled-upload.csv",
-      totalProducts: parsedRows.length,
+      totalMaterials: parsedRows.length,
       status: "Normalizing Data",
       successCount: 0,
       failedCount: 0,
@@ -306,8 +305,8 @@ export const BulkUploadNewPage = ({ onNavigate, showSnackbar, initialData, isSid
     };
 
     const record = editingDraftId
-      ? updateBulkUpload(editingDraftId, payload)
-      : addBulkUpload(payload);
+      ? updateMaterialUpload(editingDraftId, payload)
+      : addMaterialUpload(payload);
 
     setEditingDraftId(record.id);
     setStep("mapping-processing");
@@ -327,16 +326,16 @@ export const BulkUploadNewPage = ({ onNavigate, showSnackbar, initialData, isSid
 
   const handleCancelUpload = () => {
     if (editingDraftId) {
-      updateBulkUpload(editingDraftId, { status: "Cancelled" });
+      updateMaterialUpload(editingDraftId, { status: "Cancelled" });
     }
     showSnackbar?.("Upload cancelled", "info");
-    onNavigate("product_catalog_bulk-upload-list");
+    onNavigate("materials_bulk-upload-list");
   };
 
   const handleSaveDraft = () => {
     const payload = {
       fileName: fileName || "untitled-upload.csv",
-      totalProducts: normalizedRows.length,
+      totalMaterials: normalizedRows.length,
       status: "Review",
       successCount: 0,
       failedCount: 0,
@@ -347,12 +346,12 @@ export const BulkUploadNewPage = ({ onNavigate, showSnackbar, initialData, isSid
     };
 
     if (editingDraftId) {
-      updateBulkUpload(editingDraftId, payload);
+      updateMaterialUpload(editingDraftId, payload);
     } else {
-      addBulkUpload(payload);
+      addMaterialUpload(payload);
     }
     showSnackbar?.("Upload saved as draft", "success");
-    onNavigate("product_catalog_bulk-upload-list");
+    onNavigate("materials_bulk-upload-list");
   };
 
   const handleStartUpload = () => {
@@ -361,7 +360,7 @@ export const BulkUploadNewPage = ({ onNavigate, showSnackbar, initialData, isSid
 
     const payload = {
       fileName: fileName || "untitled-upload.csv",
-      totalProducts: normalizedRows.length,
+      totalMaterials: normalizedRows.length,
       status: "Processing",
       successCount: 0,
       failedCount: 0,
@@ -372,8 +371,8 @@ export const BulkUploadNewPage = ({ onNavigate, showSnackbar, initialData, isSid
     };
 
     const record = editingDraftId
-      ? updateBulkUpload(editingDraftId, payload)
-      : addBulkUpload(payload);
+      ? updateMaterialUpload(editingDraftId, payload)
+      : addMaterialUpload(payload);
 
     setProcessingRecordId(record.id);
     setStep("processing");
@@ -381,18 +380,18 @@ export const BulkUploadNewPage = ({ onNavigate, showSnackbar, initialData, isSid
     // The completion timer lives independently of this page/component — it
     // keeps running via the module-level store even after the user navigates
     // away using the interstitial's "Back to list" button. Notifying is
-    // handled separately by BulkUploadNotifier, which watches the store for
-    // status transitions regardless of which page is mounted. Invalid rows
-    // (if the user chose "Continue Anyway") are skipped from the catalog and
-    // reported back as failed items in the batch detail.
+    // handled separately by MaterialUploadNotifier, which watches the store
+    // for status transitions regardless of which page is mounted. Invalid
+    // rows (if the user chose "Continue Anyway") are skipped from the
+    // catalog and reported back as failed items in the batch detail.
     setTimeout(() => {
-      updateBulkUpload(record.id, {
+      updateMaterialUpload(record.id, {
         status: "Completed",
         successCount: validRows.length,
         failedCount: invalidRows.length,
         failedRows: invalidRows,
       });
-      addProducts(validRows);
+      addMaterials(validRows);
     }, 5000);
   };
 
@@ -423,10 +422,10 @@ export const BulkUploadNewPage = ({ onNavigate, showSnackbar, initialData, isSid
                 if (isStepDirty) {
                   setShowDiscardConfirm(true);
                 } else {
-                  onNavigate("product_catalog_bulk-upload-list");
+                  onNavigate("materials_bulk-upload-list");
                 }
               } else {
-                onNavigate("product_catalog_bulk-upload-list");
+                onNavigate("materials_bulk-upload-list");
               }
             }}
           >
@@ -446,14 +445,14 @@ export const BulkUploadNewPage = ({ onNavigate, showSnackbar, initialData, isSid
           <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "var(--text-title-3)", marginLeft: "32px" }}>
             <span
               style={{ color: "var(--neutral-on-surface-secondary)", cursor: "pointer" }}
-              onClick={() => onNavigate("product_catalog_list")}
+              onClick={() => onNavigate("materials_list")}
             >
-              Product Catalog
+              Materials
             </span>
             <span style={{ color: "var(--neutral-on-surface-tertiary)" }}>/</span>
             <span
               style={{ color: "var(--neutral-on-surface-secondary)", cursor: "pointer" }}
-              onClick={() => onNavigate("product_catalog_bulk-upload-list")}
+              onClick={() => onNavigate("materials_bulk-upload-list")}
             >
               Bulk Upload
             </span>
@@ -530,17 +529,17 @@ export const BulkUploadNewPage = ({ onNavigate, showSnackbar, initialData, isSid
             title="Your file is being normalized"
             message="We’re also validating your data to prepare it for review. You can leave this page and we’ll notify you by email when it’s ready."
             buttonLabel="Back to Bulk Upload"
-            onBackToList={() => onNavigate("product_catalog_bulk-upload-list")}
+            onBackToList={() => onNavigate("materials_bulk-upload-list")}
             secondaryActionLabel="Skip Process"
             onSecondaryAction={() => setShowSkipConfirm(true)}
           />
         )}
         {step === "processing" && (
           <BackgroundProcessingScreen
-            title="Your products are being imported"
-            message={`We’re adding the reviewed data from “${fileName || "your file"}” to your product catalog. You can leave this page and we’ll notify you by email when it’s ready.`}
+            title="Your materials are being imported"
+            message={`We’re adding the reviewed data from “${fileName || "your file"}” to your material catalog. You can leave this page and we’ll notify you by email when it’s ready.`}
             buttonLabel="Back to Bulk Upload"
-            onBackToList={() => onNavigate("product_catalog_bulk-upload-list")}
+            onBackToList={() => onNavigate("materials_bulk-upload-list")}
           />
         )}
       </div>
@@ -602,7 +601,7 @@ export const BulkUploadNewPage = ({ onNavigate, showSnackbar, initialData, isSid
       <DiscardChangesConfirmModal
         isOpen={showDiscardConfirm}
         onClose={() => setShowDiscardConfirm(false)}
-        onConfirm={() => onNavigate("product_catalog_bulk-upload-list")}
+        onConfirm={() => onNavigate("materials_bulk-upload-list")}
       />
 
       <InvalidDataConfirmModal
@@ -616,7 +615,7 @@ export const BulkUploadNewPage = ({ onNavigate, showSnackbar, initialData, isSid
         isOpen={showInputDataConfirm}
         onClose={() => setShowInputDataConfirm(false)}
         onConfirm={handleStartUpload}
-        productCount={normalizedRows.length}
+        materialCount={normalizedRows.length}
       />
 
       <SkipNormalizationConfirmModal

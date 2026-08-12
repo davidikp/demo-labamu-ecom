@@ -3,8 +3,21 @@
 // localStorage persistence, which isn't needed for this demo flow).
 import { CURRENT_USER, NOTIFICATION_USERS } from "../../../data/notification/notificationConfig.js";
 
-let seq = 7;
-const nextId = () => `BUP-${String(++seq).padStart(4, "0")}`;
+// IDs are date-scoped — "BUP-[yyyymmdd]-0001" — with the sequence restarting
+// at 0001 for each new day, based on the upload's created date.
+const formatDateForId = (isoString) => {
+  const d = new Date(isoString);
+  const yyyy = d.getUTCFullYear();
+  const mm = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const dd = String(d.getUTCDate()).padStart(2, "0");
+  return `${yyyy}${mm}${dd}`;
+};
+
+const nextId = (createdAt) => {
+  const prefix = `BUP-${formatDateForId(createdAt)}-`;
+  const countToday = batches.filter((b) => b.id.startsWith(prefix)).length;
+  return `${prefix}${String(countToday + 1).padStart(4, "0")}`;
+};
 
 // ── Activity log helpers ─────────────────────────────────────────────────────
 // Every batch carries a `logs` array — one entry per status change (plus the
@@ -79,7 +92,7 @@ const generateDraftBoardsRows = () => {
 
 const SEED_BATCHES = [
   {
-    id: "BUP-0001",
+    id: "BUP-20260801-0001",
     fileName: "product_catalog_master.xlsx",
     createdAt: "2026-08-01T09:12:00Z",
     createdBy: CURRENT_USER.name,
@@ -95,7 +108,7 @@ const SEED_BATCHES = [
     ],
   },
   {
-    id: "BUP-0002",
+    id: "BUP-20260804-0001",
     fileName: "wooden_trays_q3.csv",
     createdAt: "2026-08-04T14:30:00Z",
     createdBy: NOTIFICATION_USERS[1].name,
@@ -114,7 +127,7 @@ const SEED_BATCHES = [
     ],
   },
   {
-    id: "BUP-0003",
+    id: "BUP-20260807-0001",
     fileName: "vases_new_arrivals.xlsx",
     createdAt: "2026-08-07T11:05:00Z",
     createdBy: NOTIFICATION_USERS[2].name,
@@ -130,7 +143,7 @@ const SEED_BATCHES = [
     ],
   },
   {
-    id: "BUP-0004",
+    id: "BUP-20260808-0001",
     fileName: "draft_boards_batch.csv",
     createdAt: "2026-08-08T16:45:00Z",
     createdBy: NOTIFICATION_USERS[3].name,
@@ -156,7 +169,7 @@ const SEED_BATCHES = [
     ],
   },
   {
-    id: "BUP-0006",
+    id: "BUP-20260809-0001",
     fileName: "trays_batch_two.csv",
     createdAt: "2026-08-09T10:15:00Z",
     createdBy: NOTIFICATION_USERS[1].name,
@@ -185,7 +198,7 @@ const SEED_BATCHES = [
     ],
   },
   {
-    id: "BUP-0007",
+    id: "BUP-20260809-0002",
     fileName: "vases_batch_normalizing.csv",
     createdAt: "2026-08-09T15:40:00Z",
     createdBy: NOTIFICATION_USERS[2].name,
@@ -215,7 +228,39 @@ const SEED_BATCHES = [
     ],
   },
   {
-    id: "BUP-0005",
+    id: "BUP-20260810-0001",
+    fileName: "trays_batch_three.csv",
+    createdAt: "2026-08-10T13:05:00Z",
+    createdBy: NOTIFICATION_USERS[1].name,
+    totalProducts: 3,
+    status: "Mapping",
+    successCount: 0,
+    failedCount: 0,
+    failedRows: [],
+    sourceDocumentName: "trays_batch_three.csv",
+    // Demo data for the Mapping step's header edge cases: the file has two
+    // "SKU" columns (the second becomes "SKU (1)", mirroring how a repeated
+    // download file name gets deduped) and one column with a blank header
+    // (becomes "Untitled Column") — see dedupeHeaders() in UploadStep.jsx.
+    sourceHeaders: ["SKU", "Product Name", "SKU (1)", "Untitled Column", "Category"],
+    fieldMapping: {
+      sku: "SKU",
+      name: "Product Name",
+      categoryName: "Category",
+    },
+    rawRows: [
+      { SKU: "TRY-B3-01", "Product Name": "Bamboo Tray Small", "SKU (1)": "OLD-SKU-01", "Untitled Column": "N/A", Category: "Trays" },
+      { SKU: "TRY-B3-02", "Product Name": "Bamboo Tray Medium", "SKU (1)": "OLD-SKU-02", "Untitled Column": "N/A", Category: "Trays" },
+      { SKU: "TRY-B3-03", "Product Name": "Bamboo Tray Large", "SKU (1)": "OLD-SKU-03", "Untitled Column": "N/A", Category: "Trays" },
+    ],
+    rows: [],
+    logs: [
+      makeLog(actorForName(NOTIFICATION_USERS[1].name), "Upload created", "File \"trays_batch_three.csv\" was uploaded (3 products).", "2026-08-10T13:05:00Z"),
+      makeLog(actorForName(NOTIFICATION_USERS[1].name), "Column mapping saved", "Field mapping was set for this upload.", "2026-08-10T13:06:00Z"),
+    ],
+  },
+  {
+    id: "BUP-20260728-0001",
     fileName: "bulk_import_cancelled.xlsx",
     createdAt: "2026-07-28T08:20:00Z",
     createdBy: CURRENT_USER.name,
@@ -250,10 +295,11 @@ export const subscribeBulkUploads = (fn) => {
 
 export const addBulkUpload = (data) => {
   const actor = actorForName(data.createdBy);
+  const createdAt = new Date().toISOString();
   const record = {
-    id: nextId(),
+    id: nextId(createdAt),
     fileName: data.fileName || "untitled.csv",
-    createdAt: new Date().toISOString(),
+    createdAt,
     createdBy: data.createdBy || CURRENT_USER.name,
     totalProducts: data.totalProducts || 0,
     status: data.status || "Mapping",

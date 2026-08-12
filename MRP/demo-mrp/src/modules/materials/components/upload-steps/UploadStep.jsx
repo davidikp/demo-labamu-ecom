@@ -2,7 +2,7 @@ import React from "react";
 import { DownloadIcon } from "../../../../components/icons/Icons.jsx";
 import { Button } from "../../../../components/common/Button.jsx";
 import { DocumentUploadField } from "../../../../ce-ui";
-import { PRODUCT_FIELDS_CONFIG } from "../../mock/productFieldsConfig.js";
+import { MATERIAL_FIELDS_CONFIG } from "../../mock/materialFieldsConfig.js";
 
 // Naive CSV line/field splitter — good enough for the demo's plain-JS
 // constraint (no papaparse/xlsx). Handles simple double-quoted fields that
@@ -58,14 +58,14 @@ const parseCsvText = (text) => {
 };
 
 // .xlsx/.xls can't be parsed client-side without a library, so we simulate a
-// plausible parsed result (canned headers/rows built from the product field
+// plausible parsed result (canned headers/rows built from the material field
 // examples) so the rest of the wizard flow still works end-to-end.
 const buildSimulatedXlsxData = () => {
-  const headers = PRODUCT_FIELDS_CONFIG.filter((f) => f.key !== "sku").map((f) => f.label);
+  const headers = MATERIAL_FIELDS_CONFIG.filter((f) => f.key !== "sku").map((f) => f.label);
   const rowCount = 6;
   const rows = Array.from({ length: rowCount }).map((_, i) => {
     const row = {};
-    PRODUCT_FIELDS_CONFIG.filter((f) => f.key !== "sku").forEach((f) => {
+    MATERIAL_FIELDS_CONFIG.filter((f) => f.key !== "sku").forEach((f) => {
       row[f.label] = f.key === "name" ? `${f.example} ${i + 1}` : f.example;
     });
     return row;
@@ -125,10 +125,10 @@ export const UploadStep = ({ selectedFile, onFileSelected, isAnalyzing, error, o
             border: "4px solid var(--neutral-line-separator-2)",
             borderTopColor: "var(--feature-brand-primary)",
             borderRadius: "50%",
-            animation: "pc-spin 0.8s linear infinite",
+            animation: "mc-spin 0.8s linear infinite",
           }}
         />
-        <style>{`@keyframes pc-spin { to { transform: rotate(360deg); } }`}</style>
+        <style>{`@keyframes mc-spin { to { transform: rotate(360deg); } }`}</style>
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "4px", textAlign: "center" }}>
           <span style={{ fontSize: "var(--text-title-2)", fontWeight: "var(--font-weight-bold)" }}>
             Analyzing your file...
@@ -170,7 +170,7 @@ export const UploadStep = ({ selectedFile, onFileSelected, isAnalyzing, error, o
   }
 
   const uploadedDocs = selectedFile
-    ? [{ id: "pc-upload-file", file: selectedFile, name: selectedFile.name, description: "" }]
+    ? [{ id: "mc-upload-file", file: selectedFile, name: selectedFile.name, description: "" }]
     : [];
 
   return (
@@ -178,10 +178,10 @@ export const UploadStep = ({ selectedFile, onFileSelected, isAnalyzing, error, o
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "16px" }}>
         <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
           <span style={{ fontSize: "var(--text-title-2)", fontWeight: "var(--font-weight-bold)", color: "var(--neutral-on-surface-primary)" }}>
-            Import Products
+            Import Materials
           </span>
           <span style={{ fontSize: "14px", color: "var(--neutral-on-surface-secondary)" }}>
-            Upload your product file in any spreadsheet format. We'll map and prepare the data for your product catalog.
+            Upload your material file in any spreadsheet format. We'll map and prepare the data for your material catalog.
           </span>
         </div>
         <Button variant="outlined" leftIcon={DownloadIcon} onClick={onDownloadTemplate} style={{ flexShrink: 0 }}>

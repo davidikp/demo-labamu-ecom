@@ -97,6 +97,13 @@ export const NOTIFICATION_MODULES = {
     route: "product-catalog/bulk-upload-list",
     color: "#782AAE",
   },
+  material_bulk_upload: {
+    key: "material_bulk_upload",
+    label: { en: "Materials", id: "Material" },
+    noun: { en: "Bulk Upload", id: "Bulk Upload" },
+    route: "materials/bulk-upload-list",
+    color: "#0D9488",
+  },
 };
 
 // Default approver lists per module. Natasha is everywhere so the demo always

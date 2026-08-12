@@ -18,11 +18,14 @@ import { ListStatusCounterCard } from "../../../components/common/ListStatusCoun
 import { TablePaginationFooter } from "../../../components/table/TablePaginationFooter.jsx";
 import { TableSearchField } from "../../../components/table/TableSearchField.jsx";
 import { MaterialCreateDrawer } from "../components/MaterialCreateDrawer.jsx";
-import { MaterialUploadModal } from "../components/MaterialUploadModal.jsx";
-import { MOCK_MATERIALS_DATA } from "../mock/materialsMocks.js";
+import { getMaterials, subscribeMaterials, addMaterial } from "../mock/materialsMocks.js";
 
 export const MaterialsListPage = ({ onNavigate, showSnackbar, t }) => {
-  const [materials, setMaterials] = useState(MOCK_MATERIALS_DATA);
+  const [materials, setMaterials] = useState(getMaterials());
+
+  // Picks up materials added elsewhere (e.g. a completed Bulk Upload import)
+  // without needing this page to be the one that triggered the change.
+  useEffect(() => subscribeMaterials(setMaterials), []);
   const [sortBy, setSortBy] = useState("name");
   const [sortDirection, setSortDirection] = useState("asc");
   const [searchQuery, setSearchQuery] = useState("");
@@ -41,7 +44,6 @@ export const MaterialsListPage = ({ onNavigate, showSnackbar, t }) => {
     status: [],
   });
   const [isCreateDrawerOpen, setIsCreateDrawerOpen] = useState(false);
-  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
 
   // Filter option lists (values match the stored filter values, which are the labels).
   const FILTER_OPTIONS = {
@@ -320,7 +322,7 @@ export const MaterialsListPage = ({ onNavigate, showSnackbar, t }) => {
       description: data.description
     };
 
-    setMaterials(prev => [newMaterial, ...prev]);
+    addMaterial(newMaterial);
     showSnackbar?.("Material successfully saved", "success");
     setIsCreateDrawerOpen(false);
   };
@@ -356,7 +358,7 @@ export const MaterialsListPage = ({ onNavigate, showSnackbar, t }) => {
           Materials
         </h1>
         <div style={{ display: "flex", gap: "12px" }}>
-          <Button variant="outlined" leftIcon={Upload} onClick={() => setIsUploadModalOpen(true)}>
+          <Button variant="outlined" leftIcon={Upload} onClick={() => onNavigate("materials_bulk-upload-list")}>
             Bulk Upload
           </Button>
           <Button variant="outlined" leftIcon={Settings} onClick={() => onNavigate("settings")}>
@@ -623,19 +625,10 @@ export const MaterialsListPage = ({ onNavigate, showSnackbar, t }) => {
         />
       </div>
 
-      <MaterialCreateDrawer 
-        isOpen={isCreateDrawerOpen} 
-        onClose={() => setIsCreateDrawerOpen(false)} 
+      <MaterialCreateDrawer
+        isOpen={isCreateDrawerOpen}
+        onClose={() => setIsCreateDrawerOpen(false)}
         onSave={handleSaveMaterial}
-      />
-
-      <MaterialUploadModal 
-        isOpen={isUploadModalOpen} 
-        onClose={() => setIsUploadModalOpen(false)} 
-        onUpload={(file) => {
-          console.log("Uploading file:", file);
-          showSnackbar?.("Material successfully saved", "success");
-        }}
       />
     </div>
   );

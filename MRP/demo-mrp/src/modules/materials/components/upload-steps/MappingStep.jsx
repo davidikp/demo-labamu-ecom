@@ -3,7 +3,7 @@ import { Table } from "../../../../ce-ui";
 import { Info } from "../../../../components/icons/Icons.jsx";
 import { StatusBadge } from "../../../../components/common/StatusBadge.jsx";
 import { DropdownSelect } from "../../../../components/common/DropdownSelect.jsx";
-import { PRODUCT_FIELDS_CONFIG, NOT_MAPPED } from "../../mock/productFieldsConfig.js";
+import { MATERIAL_FIELDS_CONFIG, NOT_MAPPED } from "../../mock/materialFieldsConfig.js";
 
 // Presentational/controlled: `mapping` and `recommendation` are owned by the
 // parent page so the fixed "Normalize and Review" / "Cancel Upload" footer
@@ -17,11 +17,11 @@ export const MappingStep = ({ headers, rows = [], mapping, recommendation, onMap
     ...headers.map((h) => ({ value: h, label: h })),
   ];
 
-  const data = PRODUCT_FIELDS_CONFIG.map((field) => ({ id: field.key, field }));
+  const data = MATERIAL_FIELDS_CONFIG.map((field) => ({ id: field.key, field }));
 
   // The example is a live sample pulled from the first uploaded row under
   // whichever source column is currently mapped — not the static example on
-  // the product field config — so it updates as the user changes a mapping.
+  // the material field config — so it updates as the user changes a mapping.
   const getSampleValue = (sourceColumn) => {
     if (!sourceColumn || sourceColumn === NOT_MAPPED) return "—";
     const sampleRow = rows.find((r) => r[sourceColumn] != null && String(r[sourceColumn]).trim() !== "");
@@ -32,7 +32,7 @@ export const MappingStep = ({ headers, rows = [], mapping, recommendation, onMap
   const columns = [
     {
       key: "field",
-      header: "Product Field",
+      header: "Material Field",
       width: 260,
       render: (_, row) => (
         <div style={{ display: "flex", alignItems: "center", gap: "8px", padding: "12px 0" }}>
@@ -97,9 +97,9 @@ export const MappingStep = ({ headers, rows = [], mapping, recommendation, onMap
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "16px", padding: "24px 0", flex: 1, minHeight: 0 }}>
       <style>{`
-        .pc-mapping-table > div:last-child { display: none; }
-        .pc-mapping-table th, .pc-mapping-table td { height: auto !important; }
-        .pc-mapping-table th {
+        .mc-mapping-table > div:last-child { display: none; }
+        .mc-mapping-table th, .mc-mapping-table td { height: auto !important; }
+        .mc-mapping-table th {
           padding-top: 12px !important;
           padding-bottom: 12px !important;
           /* border-bottom on a sticky <th> can vanish while scrolling under
@@ -123,12 +123,12 @@ export const MappingStep = ({ headers, rows = [], mapping, recommendation, onMap
           <Info size={20} color="var(--feature-brand-primary)" />
         </div>
         <span style={{ fontSize: "var(--text-title-3)", color: "var(--neutral-on-surface-primary)" }}>
-          Check that each product field matches the correct column from your file. Once everything looks right, continue to normalize and review your data.
+          Check that each material field matches the correct column from your file. Once everything looks right, continue to normalize and review your data.
         </span>
       </div>
 
       <div style={{ height: "calc(100vh - 480px)", minHeight: "280px" }}>
-        <Table className="pc-mapping-table" columns={columns} data={data} showPagination={false} selectedRowId={null} />
+        <Table className="mc-mapping-table" columns={columns} data={data} showPagination={false} selectedRowId={null} />
       </div>
     </div>
   );

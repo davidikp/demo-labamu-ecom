@@ -235,3 +235,54 @@ export const MOCK_MATERIALS_DATA = [
     gallery: []
   }
 ];
+
+// Module-level pub-sub store (mirrors product-catalog/mock/productsMocks.js),
+// added so Bulk Upload can commit imported rows into a shared list that any
+// subscribed page picks up live. `MOCK_MATERIALS_DATA` above stays exported
+// as-is for existing callers seeding local component state.
+let materials = MOCK_MATERIALS_DATA.map((m) => ({ ...m }));
+const listeners = new Set();
+let seq = 0;
+const nextId = () => `mat-bulk-${Date.now()}-${++seq}`;
+
+const notify = () => listeners.forEach((fn) => fn(materials));
+
+export const getMaterials = () => materials;
+
+export const subscribeMaterials = (fn) => {
+  listeners.add(fn);
+  return () => listeners.delete(fn);
+};
+
+// Prepends a single, already-fully-shaped material record (e.g. from the
+// manual "New Material" create drawer, which builds its own id/sku/defaults)
+// to the shared catalog store.
+export const addMaterial = (material) => {
+  materials = [material, ...materials];
+  notify();
+  return material;
+};
+
+// Appends normalized bulk-upload rows to the catalog. Accepts rows shaped
+// like the normalized rows built by the Material Upload Review step (keyed
+// by the material field keys from materialFieldsConfig.js).
+export const addMaterials = (rows = []) => {
+  const newMaterials = rows.map((row) => ({
+    id: nextId(),
+    image: null,
+    name: row.name || "Untitled Material",
+    sku: row.sku || `MAT-${Date.now().toString().slice(-6)}-${++seq}`,
+    category: row.category || "Uncategorized",
+    abcClassification: row.abcClassification || "C",
+    type: row.materialType || "Raw",
+    onHandStock: 0,
+    unit: row.uom || "-",
+    averageCost: 0,
+    status: "Active",
+    stockRisk: "Healthy",
+    description: "",
+  }));
+  materials = [...newMaterials, ...materials];
+  notify();
+  return newMaterials;
+};

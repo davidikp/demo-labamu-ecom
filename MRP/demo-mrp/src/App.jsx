@@ -35,6 +35,8 @@ import { NotificationPreferencesPage } from "./modules/notification/pages/Notifi
 import { MaterialsListPage } from "./modules/materials/pages/MaterialsListPage.jsx";
 import { MaterialDetailPage } from "./modules/materials/pages/MaterialDetailPage.jsx";
 import { MaterialManagePage } from "./modules/materials/pages/MaterialManagePage.jsx";
+import { MaterialUploadListPage } from "./modules/materials/pages/MaterialUploadListPage.jsx";
+import { MaterialUploadNewPage } from "./modules/materials/pages/MaterialUploadNewPage.jsx";
 import { ProductCatalogPage } from "./modules/product-catalog/pages/ProductCatalogPage.jsx";
 import { ProductCatalogManagePage } from "./modules/product-catalog/pages/ProductCatalogManagePage.jsx";
 import { BulkUploadListPage } from "./modules/product-catalog/pages/BulkUploadListPage.jsx";
@@ -67,6 +69,7 @@ import { NotificationProvider } from "./context/NotificationContext.jsx";
 import { LocaleProvider } from "./ce-ui";
 import { NotificationSeeder } from "./components/notification/NotificationSeeder.jsx";
 import { BulkUploadNotifier } from "./modules/product-catalog/components/BulkUploadNotifier.jsx";
+import { MaterialUploadNotifier } from "./modules/materials/components/MaterialUploadNotifier.jsx";
 import { SimulateEventPanel } from "./components/notification/SimulateEventPanel.jsx";
 import { DashboardPage } from "./modules/dashboard/pages/DashboardPage.jsx";
 import { EmailOutboxPage } from "./modules/notification/pages/EmailOutboxPage.jsx";
@@ -977,6 +980,21 @@ const ModuleRenderer = ({
         />
       );
     }
+    if (viewState.view === "bulk_upload_list") {
+      return <MaterialUploadListPage onNavigate={onNavigate} showSnackbar={showPoSnackbar} t={t} />;
+    }
+    if (viewState.view === "bulk_upload_new") {
+      return (
+        <MaterialUploadNewPage
+          key={viewState.data?.resumeDraftId || "material-bulk-upload-new"}
+          onNavigate={onNavigate}
+          showSnackbar={showPoSnackbar}
+          t={t}
+          initialData={viewState.data}
+          isSidebarCollapsed={isSidebarCollapsed}
+        />
+      );
+    }
     if (viewState.view !== "list") {
       return (
         <MaterialDetailPage
@@ -1275,6 +1293,7 @@ export default function App() {
       <LabamuStyles />
       <NotificationSeeder />
       <BulkUploadNotifier />
+      <MaterialUploadNotifier />
       {currentActiveModule === "dashboard" ? <SimulateEventPanel /> : null}
       <div style={{ display: "flex", flex: 1, width: "100%" }}>
         <Sidebar
