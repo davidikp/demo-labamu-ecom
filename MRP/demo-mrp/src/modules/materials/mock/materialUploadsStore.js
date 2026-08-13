@@ -55,11 +55,11 @@ const makeLog = (actor, title, desc, timestamp) => ({
 // `patch.logDesc` can override the description for a specific transition
 // (e.g. "AI normalization skipped by user.").
 const STATUS_LOG_COPY = {
-  "Normalizing Data": { title: "Normalization started", desc: "The uploaded data is being normalized in the background." },
-  Review: { title: "Normalization finished", desc: "Data is ready for review." },
-  Processing: { title: "Import started", desc: "Reviewed materials are being imported into the catalog." },
-  Completed: { title: "Import completed", desc: "Materials were added to the material catalog." },
-  Cancelled: { title: "Upload cancelled", desc: "This upload was cancelled and will not be imported." },
+  "Normalizing Data": { title: "Normalization Started", desc: "The uploaded data is being normalized in the background." },
+  Review: { title: "Normalization Finished", desc: "Data is ready for review." },
+  Processing: { title: "Import Started", desc: "Reviewed materials are being imported into the catalog." },
+  Completed: { title: "Import Completed", desc: "Materials were added to the material catalog." },
+  Cancelled: { title: "Upload Cancelled", desc: "This upload was cancelled and will not be imported." },
 };
 
 // ── Dummy data generator for the Review-status seed ─────────────────────────
@@ -116,11 +116,11 @@ const SEED_BATCHES = [
     failedRows: [],
     sourceDocumentName: "material_catalog_master.xlsx",
     logs: [
-      makeLog(actorForName(CURRENT_USER.name), "Upload created", "File \"material_catalog_master.xlsx\" was uploaded (14 materials).", "2026-08-02T09:20:00Z"),
-      makeLog(actorForName(CURRENT_USER.name), "Normalization started", "The uploaded data is being normalized in the background.", "2026-08-02T09:21:00Z"),
-      makeLog(actorForName(SYSTEM_ACTOR_NAME), "Normalization finished", "Data is ready for review.", "2026-08-02T09:21:05Z"),
-      makeLog(actorForName(CURRENT_USER.name), "Import started", "Reviewed materials are being imported into the catalog.", "2026-08-02T09:23:00Z"),
-      makeLog(actorForName(SYSTEM_ACTOR_NAME), "Import completed", "Materials were added to the material catalog.", "2026-08-02T09:27:00Z"),
+      makeLog(actorForName(CURRENT_USER.name), "Upload Created", "File \"material_catalog_master.xlsx\" was uploaded (14 materials).", "2026-08-02T09:20:00Z"),
+      makeLog(actorForName(CURRENT_USER.name), "Normalization Started", "The uploaded data is being normalized in the background.", "2026-08-02T09:21:00Z"),
+      makeLog(actorForName(SYSTEM_ACTOR_NAME), "Normalization Finished", "Data is ready for review.", "2026-08-02T09:21:05Z"),
+      makeLog(actorForName(CURRENT_USER.name), "Import Started", "Reviewed materials are being imported into the catalog.", "2026-08-02T09:23:00Z"),
+      makeLog(actorForName(SYSTEM_ACTOR_NAME), "Import Completed", "Materials were added to the material catalog.", "2026-08-02T09:27:00Z"),
     ],
   },
   {
@@ -138,11 +138,11 @@ const SEED_BATCHES = [
     ],
     sourceDocumentName: "fasteners_batch_q3.csv",
     logs: [
-      makeLog(actorForName(NOTIFICATION_USERS[1].name), "Upload created", "File \"fasteners_batch_q3.csv\" was uploaded (10 materials).", "2026-08-05T13:10:00Z"),
-      makeLog(actorForName(NOTIFICATION_USERS[1].name), "Normalization started", "The uploaded data is being normalized in the background.", "2026-08-05T13:11:00Z"),
-      makeLog(actorForName(SYSTEM_ACTOR_NAME), "Normalization finished", "Data is ready for review.", "2026-08-05T13:11:05Z"),
-      makeLog(actorForName(NOTIFICATION_USERS[1].name), "Import started", "Reviewed materials are being imported into the catalog.", "2026-08-05T13:13:00Z"),
-      makeLog(actorForName(SYSTEM_ACTOR_NAME), "Import completed", "8 of 10 materials were added; 2 rows were skipped for missing required fields.", "2026-08-05T13:16:00Z"),
+      makeLog(actorForName(NOTIFICATION_USERS[1].name), "Upload Created", "File \"fasteners_batch_q3.csv\" was uploaded (10 materials).", "2026-08-05T13:10:00Z"),
+      makeLog(actorForName(NOTIFICATION_USERS[1].name), "Normalization Started", "The uploaded data is being normalized in the background.", "2026-08-05T13:11:00Z"),
+      makeLog(actorForName(SYSTEM_ACTOR_NAME), "Normalization Finished", "Data is ready for review.", "2026-08-05T13:11:05Z"),
+      makeLog(actorForName(NOTIFICATION_USERS[1].name), "Import Started", "Reviewed materials are being imported into the catalog.", "2026-08-05T13:13:00Z"),
+      makeLog(actorForName(SYSTEM_ACTOR_NAME), "Import Completed", "8 of 10 materials were added; 2 rows were skipped for missing required fields.", "2026-08-05T13:16:00Z"),
     ],
   },
   {
@@ -157,10 +157,10 @@ const SEED_BATCHES = [
     failedRows: [],
     sourceDocumentName: "electronics_new_stock.xlsx",
     logs: [
-      makeLog(actorForName(NOTIFICATION_USERS[2].name), "Upload created", "File \"electronics_new_stock.xlsx\" was uploaded (12 materials).", "2026-08-07T15:40:00Z"),
-      makeLog(actorForName(NOTIFICATION_USERS[2].name), "Normalization started", "The uploaded data is being normalized in the background.", "2026-08-07T15:41:00Z"),
-      makeLog(actorForName(SYSTEM_ACTOR_NAME), "Normalization finished", "Data is ready for review.", "2026-08-07T15:41:05Z"),
-      makeLog(actorForName(NOTIFICATION_USERS[2].name), "Import started", "Reviewed materials are being imported into the catalog.", "2026-08-07T15:48:00Z"),
+      makeLog(actorForName(NOTIFICATION_USERS[2].name), "Upload Created", "File \"electronics_new_stock.xlsx\" was uploaded (12 materials).", "2026-08-07T15:40:00Z"),
+      makeLog(actorForName(NOTIFICATION_USERS[2].name), "Normalization Started", "The uploaded data is being normalized in the background.", "2026-08-07T15:41:00Z"),
+      makeLog(actorForName(SYSTEM_ACTOR_NAME), "Normalization Finished", "Data is ready for review.", "2026-08-07T15:41:05Z"),
+      makeLog(actorForName(NOTIFICATION_USERS[2].name), "Import Started", "Reviewed materials are being imported into the catalog.", "2026-08-07T15:48:00Z"),
     ],
   },
   {
@@ -185,9 +185,9 @@ const SEED_BATCHES = [
     },
     rows: generateDraftMaterialRows(),
     logs: [
-      makeLog(actorForName(NOTIFICATION_USERS[3].name), "Upload created", "File \"draft_materials_batch.csv\" was uploaded (20 materials).", "2026-08-08T10:05:00Z"),
-      makeLog(actorForName(NOTIFICATION_USERS[3].name), "Normalization started", "The uploaded data is being normalized in the background.", "2026-08-08T10:10:00Z"),
-      makeLog(actorForName(SYSTEM_ACTOR_NAME), "Normalization finished", "Data is ready for review.", "2026-08-08T10:12:00Z"),
+      makeLog(actorForName(NOTIFICATION_USERS[3].name), "Upload Created", "File \"draft_materials_batch.csv\" was uploaded (20 materials).", "2026-08-08T10:05:00Z"),
+      makeLog(actorForName(NOTIFICATION_USERS[3].name), "Normalization Started", "The uploaded data is being normalized in the background.", "2026-08-08T10:10:00Z"),
+      makeLog(actorForName(SYSTEM_ACTOR_NAME), "Normalization Finished", "Data is ready for review.", "2026-08-08T10:12:00Z"),
     ],
   },
   {
@@ -216,7 +216,7 @@ const SEED_BATCHES = [
     ],
     rows: [],
     logs: [
-      makeLog(actorForName(NOTIFICATION_USERS[1].name), "Upload created", "File \"raw_materials_batch_two.csv\" was uploaded (8 materials).", "2026-08-09T11:15:00Z"),
+      makeLog(actorForName(NOTIFICATION_USERS[1].name), "Upload Created", "File \"raw_materials_batch_two.csv\" was uploaded (8 materials).", "2026-08-09T11:15:00Z"),
     ],
   },
   {
@@ -245,8 +245,8 @@ const SEED_BATCHES = [
     ],
     rows: [],
     logs: [
-      makeLog(actorForName(NOTIFICATION_USERS[2].name), "Upload created", "File \"components_batch_normalizing.csv\" was uploaded (6 materials).", "2026-08-09T16:20:00Z"),
-      makeLog(actorForName(NOTIFICATION_USERS[2].name), "Normalization started", "The uploaded data is being normalized in the background.", "2026-08-09T16:21:30Z"),
+      makeLog(actorForName(NOTIFICATION_USERS[2].name), "Upload Created", "File \"components_batch_normalizing.csv\" was uploaded (6 materials).", "2026-08-09T16:20:00Z"),
+      makeLog(actorForName(NOTIFICATION_USERS[2].name), "Normalization Started", "The uploaded data is being normalized in the background.", "2026-08-09T16:21:30Z"),
     ],
   },
   {
@@ -263,8 +263,8 @@ const SEED_BATCHES = [
     ],
     sourceDocumentName: "bulk_material_import_cancelled.xlsx",
     logs: [
-      makeLog(actorForName(CURRENT_USER.name), "Upload created", "File \"bulk_material_import_cancelled.xlsx\" was uploaded (16 materials).", "2026-07-29T09:00:00Z"),
-      makeLog(actorForName(CURRENT_USER.name), "Upload cancelled", "This upload was cancelled and will not be imported.", "2026-07-29T09:04:00Z"),
+      makeLog(actorForName(CURRENT_USER.name), "Upload Created", "File \"bulk_material_import_cancelled.xlsx\" was uploaded (16 materials).", "2026-07-29T09:00:00Z"),
+      makeLog(actorForName(CURRENT_USER.name), "Upload Cancelled", "This upload was cancelled and will not be imported.", "2026-07-29T09:04:00Z"),
     ],
   },
 ];
@@ -302,7 +302,7 @@ export const addMaterialUpload = (data) => {
     fieldMapping: data.fieldMapping || {},
     sourceHeaders: data.sourceHeaders || [],
     logs: [
-      makeLog(actor, "Upload created", `File "${data.fileName || "untitled.csv"}" was uploaded (${data.totalMaterials || 0} materials).`),
+      makeLog(actor, "Upload Created", `File "${data.fileName || "untitled.csv"}" was uploaded (${data.totalMaterials || 0} materials).`),
     ],
   };
   // The record's initial status (almost always "Mapping") isn't reached via
@@ -319,14 +319,14 @@ export const addMaterialUpload = (data) => {
 };
 
 export const updateMaterialUpload = (id, patch) => {
-  const { logActorName, logDesc, ...rest } = patch;
+  const { logActorName, logTitle, logDesc, ...rest } = patch;
   batches = batches.map((b) => {
     if (b.id !== id) return b;
     const next = { ...b, ...rest, id: b.id };
     if (rest.status && rest.status !== b.status) {
       const copy = STATUS_LOG_COPY[rest.status];
       const actor = actorForName(logActorName || CURRENT_USER.name);
-      const log = makeLog(actor, copy?.title || `Status changed to "${rest.status}"`, logDesc || copy?.desc);
+      const log = makeLog(actor, logTitle || copy?.title || `Status Changed To "${rest.status}"`, logDesc || copy?.desc);
       next.logs = [...(b.logs || []), log];
     }
     return next;

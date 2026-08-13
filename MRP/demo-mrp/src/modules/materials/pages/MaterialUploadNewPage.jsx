@@ -253,8 +253,10 @@ export const MaterialUploadNewPage = ({ onNavigate, showSnackbar, initialData, i
       // A natural completion is the background timer firing on its own —
       // the user may well have navigated away by then — so it's logged as a
       // System action. "Skip Process" is a direct user click, so that stays
-      // attributed to whoever's logged in (the default actor).
+      // attributed to whoever's logged in (the default actor) and gets its
+      // own distinct log title instead of "Normalization finished".
       logActorName: forceSkip ? undefined : SYSTEM_ACTOR_NAME,
+      logTitle: forceSkip ? "Normalization Skipped" : undefined,
       logDesc: forceSkip
         ? "AI normalization was skipped by the user — remaining rows need attention."
         : undefined,
