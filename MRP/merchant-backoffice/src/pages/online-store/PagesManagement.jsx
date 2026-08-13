@@ -108,7 +108,12 @@ export default function PagesManagement() {
     {
       key: 'sections',
       header: t('sectionBuilder:onlineStore.pages.columnContent', 'Content'),
-      render: (_value, row) => contentPreview(row),
+      width: '50%',
+      render: (_value, row) => (
+        <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%' }}>
+          {contentPreview(row)}
+        </div>
+      ),
     },
     {
       key: 'updatedAt',

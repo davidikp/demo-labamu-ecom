@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
-  ExternalLink, Bell,
+  ExternalLink, Bell, Pencil,
   LayoutDashboard, BookOpen, Store, ShoppingCart, FileText, Calendar,
   MessageSquare, Truck, Globe, UserCog, ChevronDown, ChevronLeft, ChevronRight, Check,
 } from 'lucide-react';
@@ -29,6 +29,7 @@ const MENU_ITEMS = [
     children: [
       { id: 'theme', path: '/online-store/theme', labelKey: 'dashboard:sidebar.theme', label: 'Theme' },
       { id: 'pages', path: '/online-store/pages', labelKey: 'dashboard:sidebar.pages', label: 'Pages' },
+      { id: 'preferences', path: '/online-store/preferences', labelKey: 'dashboard:sidebar.preferences', label: 'Preferences' },
     ],
   },
   { id: 'orders', path: '/orders', icon: ShoppingCart, labelKey: 'dashboard:sidebar.orders', label: 'Orders' },
@@ -468,6 +469,17 @@ export default function Layout() {
           top: 0,
           zIndex: 100,
         }}>
+          {/* Edit Website Button — jumps straight into the section-builder
+              editor for the store's live draft, from anywhere in the app. */}
+          <Button
+            variant="secondary"
+            size="small"
+            leftIcon={<Pencil size={16} />}
+            onClick={() => navigate('/section-builder/demo')}
+          >
+            {t('dashboard:header.editWebsite', 'Edit website')}
+          </Button>
+
           {/* View Website Button */}
           <Button
             variant="secondary"

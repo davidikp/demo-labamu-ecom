@@ -13,6 +13,7 @@ const DRAFT_KEY_PREFIX = 'sb_draft_v1';
 const PUBLISHED_KEY_PREFIX = 'sb_published_v1';
 const OT_PUBLISHED_THEME_KEY_PREFIX = 'ot_published_theme_v1';
 const OT_DRAFT_THEMES_KEY_PREFIX = 'ot_draft_themes_v1';
+const OT_STORE_PREFERENCES_KEY_PREFIX = 'ot_store_preferences_v1';
 
 function keyFor(prefix, storeId) {
   return `${prefix}_${storeId}`;
@@ -95,4 +96,29 @@ function saveDraftThemes(storeId, themes) {
   }
 }
 
-export { loadPublishedTheme, savePublishedTheme, loadDraftThemes, saveDraftThemes };
+/**
+ * Online Store > Preferences persistence (social sharing image/SEO +
+ * hreflang toggle). Distinct from the theme/draft/published keys above —
+ * this stores the store-level preferences record shown on
+ * `/online-store/preferences`.
+ */
+function loadStorePreferences(storeId) {
+  try {
+    const raw = localStorage.getItem(keyFor(OT_STORE_PREFERENCES_KEY_PREFIX, storeId));
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
+function saveStorePreferences(storeId, prefs) {
+  try {
+    localStorage.setItem(keyFor(OT_STORE_PREFERENCES_KEY_PREFIX, storeId), JSON.stringify(prefs));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export { loadPublishedTheme, savePublishedTheme, loadDraftThemes, saveDraftThemes, loadStorePreferences, saveStorePreferences };

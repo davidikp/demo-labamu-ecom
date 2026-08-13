@@ -53,6 +53,8 @@ const ThemeGallery = React.lazy(() => import('./pages/online-store/ThemeGallery'
 const PagesManagement = React.lazy(() => import('./pages/online-store/PagesManagement'));
 const PageEditor = React.lazy(() => import('./pages/online-store/PageEditor'));
 const ThemePreview = React.lazy(() => import('./pages/online-store/ThemePreview'));
+const PagePreview = React.lazy(() => import('./pages/online-store/PagePreview'));
+const StorePreferences = React.lazy(() => import('./pages/online-store/StorePreferences'));
 
 // Simple mock auth context — replace with real auth later
 function isAuthenticated() {
@@ -95,6 +97,7 @@ export default function App() {
             <Route path="/online-store/pages" element={<PagesManagement />} />
             <Route path="/online-store/pages/new" element={<PageEditor />} />
             <Route path="/online-store/pages/:pageId" element={<PageEditor />} />
+            <Route path="/online-store/preferences" element={<StorePreferences />} />
             <Route path="/catalog" element={<CatalogProducts />} />
             <Route path="/catalog/bulk-edit" element={<BulkEditCatalog />} />
             <Route path="/catalog/package/bulk-edit" element={<BulkEditCatalog />} />
@@ -148,6 +151,16 @@ export default function App() {
             <BuilderErrorBoundary>
               <ThemePreview />
             </BuilderErrorBoundary>
+          } />
+          {/* Page editor's "Preview" — full-page render of the merchant's real
+              site chrome (header/footer/theme) with this page's rich-text
+              content as the body, no app layout chrome. */}
+          <Route path="/online-store/pages/:pageId/preview" element={
+            <ProtectedRoute>
+              <BuilderErrorBoundary>
+                <PagePreview />
+              </BuilderErrorBoundary>
+            </ProtectedRoute>
           } />
           <Route path="/section-builder/:storeId" element={
             <BuilderErrorBoundary>

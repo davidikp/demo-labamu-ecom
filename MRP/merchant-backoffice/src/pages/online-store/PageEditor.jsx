@@ -1,14 +1,17 @@
 import { useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeft, Sparkles } from 'lucide-react';
-import { RadioButton, Dropdown, MainBtn } from '../../ce-ui';
+import { ArrowLeft } from 'lucide-react';
+import { RadioButton, Dropdown, MainBtn, Popup } from '../../ce-ui';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import { loadDraft } from '../section-builder/state/storage';
 import { createFreshState } from '../section-builder/state/useSectionBuilder';
 import { runDraftAction } from '../section-builder/state/runDraftAction';
 import { ACTIONS } from '../section-builder/state/builderReducer';
 import { slugify, isSlugTaken, createPageId } from '../section-builder/sections/pageHelpers';
+import { schemaForType } from '../section-builder/sections/index';
+import { defaultsForSchema } from '../section-builder/sections/schemaDefaults';
+import { makeBlock } from '../section-builder/sections/blockHelpers';
 import ConfirmDialog from '../section-builder/ui/ConfirmDialog';
 import RichTextEditor from './RichTextEditor';
 
@@ -49,6 +52,64 @@ function fromDatetimeLocal(value) {
   if (!value) return null;
   const t = new Date(value).getTime();
   return Number.isNaN(t) ? null : t;
+}
+
+// Stable id for the single auto-generated `rich_text` section that mirrors
+// this page's Title+Content fields — keyed off the page id so it can be
+// found/replaced idempotently on every save (never duplicated) instead of
+// being regenerated with a random uuid each time.
+function contentSyncSectionId(pageId) {
+  return `${pageId}-content-sync`;
+}
+
+// Splits the RichTextEditor's Tiptap HTML into plain-text paragraphs, one
+// per block-level element (<p>, <h1-6>, <li>, ...). The section-builder's
+// own text-block editor (`EditableText`) is a plain contenteditable field,
+// not an HTML renderer — feeding it raw HTML would show literal "<p>" tags
+// while editing (it only gets interpreted as HTML in the site's read-only
+// render). Stripping tags per-paragraph keeps paragraph breaks (as separate
+// blocks) while avoiding that literal-markup artifact in the editor.
+function splitContentIntoParagraphs(html) {
+  if (!html) return [];
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  const blocks = Array.from(doc.body.querySelectorAll('p, h1, h2, h3, h4, h5, h6, li'));
+  const source = blocks.length ? blocks : [doc.body];
+  return source
+    .map((el) => el.textContent.trim())
+    .filter(Boolean);
+}
+
+// Builds/refreshes the auto-managed rich_text section mirroring Title
+// (heading block) + Content (one text block per paragraph) so "Edit in
+// Editor" and the section-builder preview show something in sync with the
+// Page Editor fields, not an empty canvas.
+function buildContentSyncSection(pageId, form) {
+  const headingBlock = makeBlock('rich_text', 'heading');
+  headingBlock.data = { ...headingBlock.data, text: form.name };
+
+  const paragraphs = splitContentIntoParagraphs(form.content);
+  const textBlocks = (paragraphs.length ? paragraphs : ['']).map((text) => {
+    const block = makeBlock('rich_text', 'text');
+    block.data = { ...block.data, content: text };
+    return block;
+  });
+
+  return {
+    id: contentSyncSectionId(pageId),
+    type: 'rich_text',
+    data: defaultsForSchema(schemaForType('rich_text')),
+    blocks: [headingBlock, ...textBlocks],
+  };
+}
+
+// Replaces (or inserts) the auto-managed content-sync section within an
+// existing sections array — kept as the FIRST section (matching the
+// natural reading order of a custom page's own Title/Content, ahead of
+// any other authored sections), leaving every other section untouched.
+function syncSectionsWithContent(sections, pageId, form) {
+  const syncId = contentSyncSectionId(pageId);
+  const withoutSync = (sections ?? []).filter((s) => s.id !== syncId);
+  return [buildContentSyncSection(pageId, form), ...withoutSync];
 }
 
 function formToSnapshot(form) {
@@ -106,8 +167,11 @@ export default function PageEditor() {
 
   const patchForm = (patch) => setForm((f) => ({ ...f, ...patch }));
 
-  const handleSave = () => {
-    if (!canSave) return;
+  // Persists the form (create or update) and returns the page's id — shared
+  // by the footer Save button and the "unsaved changes" prompt shown from
+  // "Edit in Editor", which each navigate somewhere different afterward.
+  const persistPage = () => {
+    if (!canSave) return pageId;
     const seo = { metaTitle: form.metaTitle, metaDescription: form.metaDescription };
 
     if (isCreate && !pageId) {
@@ -120,7 +184,7 @@ export default function PageEditor() {
         name: form.name.trim(),
         type: 'custom',
         slug: `/${slug}`,
-        sections: [],
+        sections: syncSectionsWithContent([], newId, form),
         content: form.content,
         seo,
         hiddenFromNav: false,
@@ -132,9 +196,8 @@ export default function PageEditor() {
       setDraft(next);
       setPageId(newId);
       setSavedSnapshot(formToSnapshot(form));
-      showSnackbar(t('sectionBuilder:onlineStore.pageEditor.saved', 'Page saved'), 'green');
-      navigate(`/online-store/pages/${newId}`, { replace: true });
-      return;
+      showSnackbar(t('sectionBuilder:onlineStore.pageEditor.savedSnackbar', 'Page successfully saved'), 'green');
+      return newId;
     }
 
     const next = runDraftAction(STORE_ID, {
@@ -147,11 +210,19 @@ export default function PageEditor() {
         visibility: form.visibility,
         visibleFrom: form.visibility === 'visible' ? form.visibleFrom : null,
         seo,
+        sections: syncSectionsWithContent(existingPage?.sections, pageId, form),
       },
     });
     setDraft(next);
     setSavedSnapshot(formToSnapshot(form));
-    showSnackbar(t('sectionBuilder:onlineStore.pageEditor.saved', 'Page saved'), 'green');
+    showSnackbar(t('sectionBuilder:onlineStore.pageEditor.savedSnackbar', 'Page successfully saved'), 'green');
+    return pageId;
+  };
+
+  const handleSave = () => {
+    if (!canSave) return;
+    persistPage();
+    navigate('/online-store/pages');
   };
 
   const handleDuplicate = () => {
@@ -166,6 +237,7 @@ export default function PageEditor() {
       slug: `/${slug}`,
     };
     runDraftAction(STORE_ID, { type: ACTIONS.ADD_PAGE, page });
+    showSnackbar(t('sectionBuilder:onlineStore.pageEditor.duplicatedSnackbar', 'Page successfully duplicated'), 'green');
     navigate(`/online-store/pages/${newId}`);
   };
 
@@ -177,7 +249,27 @@ export default function PageEditor() {
   };
 
   const handlePreview = () => {
-    navigate(`/section-builder/${STORE_ID}/preview`);
+    if (!pageId) return;
+    window.open(`/online-store/pages/${pageId}/preview`, '_blank', 'noopener,noreferrer');
+  };
+
+  const [confirmUnsavedEditor, setConfirmUnsavedEditor] = useState(false);
+
+  const goToEditor = (id) => navigate(`/section-builder/${STORE_ID}/pages/${id}`);
+
+  const handleEditInEditor = () => {
+    if (!pageId) return;
+    if (isDirty) {
+      setConfirmUnsavedEditor(true);
+      return;
+    }
+    goToEditor(pageId);
+  };
+
+  const handleSaveThenEditInEditor = () => {
+    const id = persistPage();
+    setConfirmUnsavedEditor(false);
+    goToEditor(id);
   };
 
   const pageModeTitle =
@@ -224,12 +316,7 @@ export default function PageEditor() {
                   value={form.name}
                   onChange={(e) => patchForm({ name: e.target.value })}
                   placeholder={t('sectionBuilder:onlineStore.pageEditor.titlePlaceholder', 'e.g. About us')}
-                  className="w-full h-11 rounded-lg border border-gray-300 pl-4 pr-10 text-[15px] text-gray-800 outline-none focus:border-[#006BFF] focus:shadow-[0_0_0_3px_rgba(0,107,255,0.12)]"
-                />
-                <Sparkles
-                  size={18}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#8A3FFC]"
-                  aria-hidden="true"
+                  className="w-full h-11 rounded-lg border border-gray-300 pl-4 pr-4 text-[15px] text-gray-800 outline-none focus:border-[#006BFF] focus:shadow-[0_0_0_3px_rgba(0,107,255,0.12)]"
                 />
               </div>
 
@@ -285,14 +372,14 @@ export default function PageEditor() {
               </h3>
               <div className="flex flex-col gap-3">
                 <RadioButton
-                  label={t('sectionBuilder:onlineStore.pages.visible', 'Visible')}
-                  checked={form.visibility === 'visible'}
-                  onChange={() => patchForm({ visibility: 'visible' })}
-                />
-                <RadioButton
                   label={t('sectionBuilder:onlineStore.pages.hidden', 'Hidden')}
                   checked={form.visibility === 'hidden'}
                   onChange={() => patchForm({ visibility: 'hidden', visibleFrom: null })}
+                />
+                <RadioButton
+                  label={t('sectionBuilder:onlineStore.pages.visible', 'Visible')}
+                  checked={form.visibility === 'visible'}
+                  onChange={() => patchForm({ visibility: 'visible' })}
                 />
                 {form.visibility === 'visible' && (
                   <div className="pl-9">
@@ -330,7 +417,7 @@ export default function PageEditor() {
         {!isCreate && pageId ? (
           <MainBtn
             variant="danger"
-            size="sm"
+            size="lg"
             label={t('sectionBuilder:onlineStore.pageEditor.delete', 'Delete')}
             onClick={() => setConfirmDelete(true)}
           />
@@ -341,20 +428,30 @@ export default function PageEditor() {
           {!isCreate && pageId && (
             <MainBtn
               variant="secondary"
-              size="sm"
+              size="lg"
               label={t('sectionBuilder:onlineStore.pageEditor.duplicate', 'Duplicate')}
               onClick={handleDuplicate}
             />
           )}
-          <MainBtn
-            variant="secondary"
-            size="sm"
-            label={t('sectionBuilder:onlineStore.pageEditor.preview', 'Preview')}
-            onClick={handlePreview}
-          />
+          {!isCreate && pageId && (
+            <MainBtn
+              variant="secondary"
+              size="lg"
+              label={t('sectionBuilder:onlineStore.pageEditor.preview', 'Preview')}
+              onClick={handlePreview}
+            />
+          )}
+          {!isCreate && pageId && (
+            <MainBtn
+              variant="secondary"
+              size="lg"
+              label={t('sectionBuilder:onlineStore.pageEditor.editInEditor', 'Edit in Editor')}
+              onClick={handleEditInEditor}
+            />
+          )}
           <MainBtn
             variant="primary"
-            size="sm"
+            size="lg"
             label={
               !isCreate && pageId
                 ? t('sectionBuilder:onlineStore.pageEditor.saveChanges', 'Save changes')
@@ -377,6 +474,25 @@ export default function PageEditor() {
         danger
         onConfirm={handleDelete}
         onCancel={() => setConfirmDelete(false)}
+      />
+
+      <Popup
+        open={confirmUnsavedEditor}
+        onClose={() => setConfirmUnsavedEditor(false)}
+        title={t('sectionBuilder:onlineStore.pageEditor.unsavedEditorTitle', 'You have unsaved changes')}
+        description={t(
+          'sectionBuilder:onlineStore.pageEditor.unsavedEditorDescription',
+          'Save your changes before opening the section editor, or keep editing here.'
+        )}
+        platform="desktop"
+        primaryAction={{
+          label: t('sectionBuilder:onlineStore.pageEditor.saveAndContinue', 'Save changes'),
+          onClick: handleSaveThenEditInEditor,
+        }}
+        secondaryAction={{
+          label: t('sectionBuilder:onlineStore.pageEditor.keepEditing', 'Keep editing'),
+          onClick: () => setConfirmUnsavedEditor(false),
+        }}
       />
     </div>
   );
