@@ -68,7 +68,13 @@ const STATUS_LOG_COPY = {
 //             unit dropdown renders in its unset/error state.
 //  - row[5] — Selling Price came in a foreign currency ($) — the numeric
 //             value is kept as-is and flagged for the user to verify.
-// Both are on page 1 (first 10 rows) so they're easy to spot without paging.
+//  - row[6] — Name came in longer than the 100-char cap — already truncated
+//             to 100 chars here (mirroring what normalizeMappedRows would do
+//             for a real import) and flagged via __truncatedFields so the
+//             Review step shows "Max. 100 characters. Extra text removed." Given
+//             an "Aa " prefix so it still sorts into the first 10 rows under
+//             the Review step's default ascending Name sort.
+// All three are on page 1 (first 10 rows) so they're easy to spot without paging.
 const DRAFT_CATEGORIES = ["Wooden Boards", "Trays", "Vases", "Bowls", "Baskets", "Coasters"];
 const DRAFT_PRODUCT_NAMES = [
   "Teak Board", "Rattan Tray", "Ceramic Vase", "Mango Wood Bowl", "Woven Basket", "Bamboo Coaster",
@@ -95,6 +101,11 @@ const generateDraftBoardsRows = () => {
   rows[3] = { ...rows[3], sellingPrice: "" };
   rows[4] = { ...rows[4], leadTime: "10 Fortnights" };
   rows[5] = { ...rows[5], sellingPrice: "120", sellingPriceSourceCurrency: "$" };
+  rows[6] = {
+    ...rows[6],
+    name: "Aa Handwoven Mango Wood Bowl With Natural Finish And Reinforced Base For Everyday Kitchen And Dining Table".slice(0, 100),
+    __truncatedFields: { name: true },
+  };
 
   return rows;
 };

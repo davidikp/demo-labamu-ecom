@@ -14,13 +14,13 @@ import {
   rowNeedsAttention,
   ABC_CLASSIFICATION_OPTIONS,
   MATERIAL_TYPE_OPTIONS,
+  STATUS_OPTIONS,
 } from "../../mock/materialFieldsConfig.js";
-import { DeleteRowConfirmModal } from "../DeleteRowConfirmModal.jsx";
 
 let blankRowSeq = 0;
 const makeBlankRow = () => {
   const row = { __rowId: `blank-${Date.now()}-${++blankRowSeq}` };
-  MATERIAL_FIELDS_CONFIG.forEach((f) => { row[f.key] = ""; });
+  MATERIAL_FIELDS_CONFIG.forEach((f) => { row[f.key] = f.key === "status" ? "Active" : ""; });
   return row;
 };
 
@@ -32,6 +32,9 @@ const COLUMN_WIDTH = {
   abcClassification: 200,
   materialType: 220,
   uom: 160,
+  status: 160,
+  description: 280,
+  stockRisk: 160,
 };
 
 const MATERIAL_TYPE_LABEL = {
@@ -51,9 +54,12 @@ export const ReviewStep = ({ rows, onRowsChange, normalizationStats }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [showOnlyInvalid, setShowOnlyInvalid] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
-  const [confirmDelete, setConfirmDelete] = useState(null); // { ids: [...] } | null
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
+  // Defaults to sorting by Name so the table has a stable, predictable order
+  // as soon as normalization finishes, rather than raw upload order.
+  const [sortKey, setSortKey] = useState("name");
+  const [sortDirection, setSortDirection] = useState("asc");
 
   const attentionCount = rows.filter(rowNeedsAttention).length;
 
@@ -64,13 +70,20 @@ export const ReviewStep = ({ rows, onRowsChange, normalizationStats }) => {
     return matchesSearch && matchesInvalidFilter;
   });
 
-  const totalPages = Math.max(1, Math.ceil(filteredRows.length / rowsPerPage));
+  const sortedRows = sortKey
+    ? [...filteredRows].sort((a, b) => {
+        const cmp = String(a[sortKey] || "").localeCompare(String(b[sortKey] || ""), undefined, { sensitivity: "base" });
+        return sortDirection === "desc" ? -cmp : cmp;
+      })
+    : filteredRows;
+
+  const totalPages = Math.max(1, Math.ceil(sortedRows.length / rowsPerPage));
   const safePage = Math.min(currentPage, totalPages);
-  const visibleRows = filteredRows.slice((safePage - 1) * rowsPerPage, safePage * rowsPerPage);
+  const visibleRows = sortedRows.slice((safePage - 1) * rowsPerPage, safePage * rowsPerPage);
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, showOnlyInvalid]);
+  }, [searchQuery, showOnlyInvalid, sortKey, sortDirection]);
 
   useEffect(() => {
     // Keep the current page in range whenever the underlying row/filter set
@@ -80,9 +93,20 @@ export const ReviewStep = ({ rows, onRowsChange, normalizationStats }) => {
   }, [totalPages]);
 
   const updateCell = (rowId, key, value) => {
-    onRowsChange(rows.map((r) => (r.__rowId === rowId ? { ...r, [key]: value } : r)));
+    onRowsChange(rows.map((r) => {
+      if (r.__rowId !== rowId) return r;
+      // Clear the "extra text removed" flag once the user edits the field
+      // themselves — it's only meant to explain the initial import.
+      const { [key]: _cleared, ...restTruncated } = r.__truncatedFields || {};
+      return { ...r, [key]: value, __truncatedFields: restTruncated };
+    }));
   };
 
+  // Deletes immediately — no confirm step. Safe to do silently because
+  // nothing here is persisted to the store until "Save as Draft"/"Import
+  // Data" (see MaterialUploadNewPage): navigating away or refreshing
+  // beforehand reverts this and every other in-progress Review edit back to
+  // the last saved state.
   const deleteRows = (ids) => {
     onRowsChange(rows.filter((r) => !ids.includes(r.__rowId)));
     setSelectedIds((prev) => prev.filter((id) => !ids.includes(id)));
@@ -130,6 +154,52 @@ export const ReviewStep = ({ rows, onRowsChange, normalizationStats }) => {
         };
       }
 
+      if (field.key === "status") {
+        return {
+          key: field.key,
+          header,
+          width,
+          render: (value, row) => {
+            // Status is never actually blank — it defaults to "Active"
+            // wherever rows are produced (normalization, new/blank rows,
+            // resumed drafts). This is just a last-resort display fallback.
+            const displayStatus = row.status || "Active";
+            return (
+              <div className="status-dropdown" onClick={stopRowToggle} onMouseDown={stopRowToggle}>
+                <DropdownSelect
+                  size="md"
+                  value={displayStatus}
+                  placeholder="Select status"
+                  options={STATUS_OPTIONS.map((s) => ({ value: s, label: s }))}
+                  onChange={(val) => updateCell(row.__rowId, "status", val)}
+                />
+              </div>
+            );
+          },
+        };
+      }
+
+      if (field.key === "description") {
+        return {
+          key: field.key,
+          header,
+          width,
+          render: (value, row) => (
+            <div onClick={stopRowToggle} onMouseDown={stopRowToggle}>
+              <TextField
+                size="md"
+                multiline
+                rows={2}
+                showCount
+                maxLength={1000}
+                value={row.description || ""}
+                onChange={(e) => updateCell(row.__rowId, "description", e.target.value)}
+              />
+            </div>
+          ),
+        };
+      }
+
       if (field.key === "materialType") {
         return {
           key: field.key,
@@ -159,15 +229,28 @@ export const ReviewStep = ({ rows, onRowsChange, normalizationStats }) => {
         key: field.key,
         header,
         width,
+        // Only SKU and Name are user-sortable — they're the fields people
+        // actually scan/search by; everything else stays presentation-order.
+        sortable: field.key === "sku" || field.key === "name",
         render: (value, row) => {
           const isEmptyRequired = field.required && !String(row[field.key] || "").trim();
+          const isCapped = field.key === "name" || field.key === "category";
+          const wasTruncated = !!row.__truncatedFields?.[field.key];
           return (
             <div onClick={stopRowToggle} onMouseDown={stopRowToggle}>
               <TextField
                 size="md"
                 value={row[field.key] || ""}
                 onChange={(e) => updateCell(row.__rowId, field.key, e.target.value)}
-                errorText={isEmptyRequired ? "Field cannot be empty" : undefined}
+                errorText={
+                  isEmptyRequired
+                    ? "Field cannot be empty"
+                    : wasTruncated
+                    ? "Max. 100 characters. Extra text removed."
+                    : undefined
+                }
+                showCount={isCapped}
+                maxLength={isCapped ? 100 : undefined}
               />
             </div>
           );
@@ -179,8 +262,12 @@ export const ReviewStep = ({ rows, onRowsChange, normalizationStats }) => {
       header: "",
       width: 56,
       render: (_, row) => (
-        <div onClick={stopRowToggle} onMouseDown={stopRowToggle}>
-          <IconButton icon={DeleteIcon} size="small" color="var(--status-red-primary)" onClick={() => setConfirmDelete({ ids: [row.__rowId] })} />
+        // Top-aligned like every other cell (see td:last-child above), with
+        // a top padding tuned so the 32px icon button's center lands at the
+        // same height as a 40px field's center (12px + 16px = 28px, matching
+        // the field's 8px top padding + half its own 40px height).
+        <div onClick={stopRowToggle} onMouseDown={stopRowToggle} style={{ paddingTop: "12px" }}>
+          <IconButton icon={DeleteIcon} size="small" color="var(--status-red-primary)" onClick={() => deleteRows([row.__rowId])} />
         </div>
       ),
     },
@@ -190,14 +277,21 @@ export const ReviewStep = ({ rows, onRowsChange, normalizationStats }) => {
     <div style={{ display: "flex", flexDirection: "column", gap: "16px", padding: "0", flex: 1, minHeight: 0 }}>
       <style>{`
         .mc-review-table table { table-layout: fixed; width: max-content; min-width: 100%; }
-        .mc-review-table th, .mc-review-table td { height: auto !important; overflow: hidden; vertical-align: top; }
+        .mc-review-table th, .mc-review-table td { height: auto !important; overflow: hidden; vertical-align: top; display: table-cell !important; }
         .mc-review-table td > div { padding: 8px 0; }
-        /* Checkbox + delete-icon columns don't have per-field error text
-           pushing their row taller, so top-aligning them (like every other
-           cell) would drift out of true vertical center once a sibling cell
-           grows for a helper/error message — true middle alignment tracks
-           the row's actual height regardless. */
-        .mc-review-table td:first-child, .mc-review-table td:last-child { vertical-align: middle !important; }
+        /* True vertical-align: middle tracks the *row's* full height, which
+           drifts taller than a single field whenever a sibling cell wraps
+           onto two lines (e.g. an error message) — so instead these two
+           columns stay top-aligned like every other cell, with a fixed
+           top padding tuned to land the (much shorter) checkbox/icon at the
+           same vertical center as a normal field's own rendered height
+           (TextField/DropdownSelect size="md" = 40px), not the row's. */
+        .mc-review-table td:first-child, .mc-review-table td:last-child {
+          vertical-align: top !important;
+          text-align: center !important;
+        }
+        /* Checkbox: 24px tall, no wrapping div — offset directly on the td. */
+        .mc-review-table td:first-child { padding-top: 16px !important; }
         .mc-review-table th {
           padding-top: 12px !important;
           padding-bottom: 12px !important;
@@ -210,6 +304,7 @@ export const ReviewStep = ({ rows, onRowsChange, normalizationStats }) => {
         .mc-review-table > div:last-child { display: none; }
         .abc-dropdown [aria-label="Clear"] { display: none; }
         .material-type-dropdown [aria-label="Clear"] { display: none; }
+        .status-dropdown [aria-label="Clear"] { display: none; }
       `}</style>
 
       <div style={{ flex: 1, minHeight: "320px", display: "flex", flexDirection: "column" }}>
@@ -220,10 +315,16 @@ export const ReviewStep = ({ rows, onRowsChange, normalizationStats }) => {
           selectable
           selectedIds={selectedIds}
           onSelectionChange={setSelectedIds}
-          totalRows={filteredRows.length}
+          totalRows={sortedRows.length}
           page={safePage}
           perPage={rowsPerPage}
           onPageChange={setCurrentPage}
+          sortKey={sortKey}
+          sortDirection={sortDirection}
+          onSortChange={(key, direction) => {
+            setSortKey(key);
+            setSortDirection(direction);
+          }}
           emptyStateTitle="No rows found"
           emptyStateDescription="Try adjusting your search or the needs-attention filter."
           toolbar={
@@ -265,7 +366,7 @@ export const ReviewStep = ({ rows, onRowsChange, normalizationStats }) => {
                   <span style={{ fontSize: "14px", fontWeight: "var(--font-weight-bold)", color: "var(--neutral-on-surface-primary)" }}>
                     {selectedIds.length} Selected
                   </span>
-                  <Button variant="outlined" leftIcon={DeleteIcon} onClick={() => setConfirmDelete({ ids: selectedIds })} style={{ borderColor: "var(--status-red-primary)", color: "var(--status-red-primary)" }}>
+                  <Button variant="outlined" leftIcon={DeleteIcon} onClick={() => deleteRows(selectedIds)} style={{ borderColor: "var(--status-red-primary)", color: "var(--status-red-primary)" }}>
                     Delete
                   </Button>
                 </div>
@@ -291,13 +392,6 @@ export const ReviewStep = ({ rows, onRowsChange, normalizationStats }) => {
           />
         )}
       </div>
-
-      <DeleteRowConfirmModal
-        isOpen={!!confirmDelete}
-        onClose={() => setConfirmDelete(null)}
-        count={confirmDelete?.ids?.length || 1}
-        onConfirm={() => confirmDelete && deleteRows(confirmDelete.ids)}
-      />
     </div>
   );
 };

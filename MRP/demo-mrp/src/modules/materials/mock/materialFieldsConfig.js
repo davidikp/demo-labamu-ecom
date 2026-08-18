@@ -48,6 +48,27 @@ export const MATERIAL_FIELDS_CONFIG = [
     example: "Sheet",
     synonyms: ["uom", "unit", "unitofmeasurement", "unitofmeasure"],
   },
+  {
+    key: "status",
+    label: "Status",
+    required: false,
+    example: "Active",
+    synonyms: ["status", "materialstatus", "activestatus", "state"],
+  },
+  {
+    key: "description",
+    label: "Description",
+    required: false,
+    example: "Primary raw material used in fabrication",
+    synonyms: ["description", "materialdescription", "notes", "desc"],
+  },
+  {
+    key: "stockRisk",
+    label: "Stock Risk",
+    required: false,
+    example: "10",
+    synonyms: ["stockrisk", "stockriskthreshold", "runninglowthreshold", "lowstockthreshold"],
+  },
 ];
 
 export const REQUIRED_MATERIAL_FIELD_KEYS = MATERIAL_FIELDS_CONFIG.filter((f) => f.required).map((f) => f.key);
@@ -61,6 +82,29 @@ export const NOT_MAPPED = "__not_mapped__";
 
 export const ABC_CLASSIFICATION_OPTIONS = ["A", "B", "C"];
 export const MATERIAL_TYPE_OPTIONS = ["Raw", "SemiFinished", "Finished"];
+export const STATUS_OPTIONS = ["Active", "Inactive"];
+
+// Best-effort normalization for the Status field — maps common truthy/falsy
+// spellings from an uploaded file to the canonical "Active"/"Inactive"
+// values, defaulting to "Active" when blank (mirrors product-catalog's
+// bulk upload Status behavior). Anything unrecognized is left as-is so it
+// still surfaces as flagged for manual fixing.
+const ACTIVE_ALIASES = new Set(["active", "1", "yes", "true", "y"]);
+const INACTIVE_ALIASES = new Set(["inactive", "0", "no", "false", "n"]);
+export const normalizeStatusValue = (raw) => {
+  const trimmed = String(raw ?? "").trim();
+  if (!trimmed) return "Active";
+  const norm = trimmed.toLowerCase();
+  if (ACTIVE_ALIASES.has(norm)) return "Active";
+  if (INACTIVE_ALIASES.has(norm)) return "Inactive";
+  return trimmed;
+};
+
+// Backfills a missing/blank Status on rows that predate the field (e.g.
+// seeded/saved drafts) so the Review step never shows an empty Status — it's
+// always "Active" unless a source column explicitly mapped "Inactive".
+export const withDefaultStatus = (rows) =>
+  (rows || []).map((row) => ({ ...row, status: normalizeStatusValue(row.status) }));
 
 // Best-effort normalization for ABC Classification — accepts the bare letter
 // or a few common longer spellings from an uploaded file and maps them to the
@@ -114,7 +158,8 @@ export const rowNeedsAttention = (row) =>
   isRowInvalid(row) ||
   !!row.__skippedNormalization ||
   hasUnrecognizedAbcClassification(row) ||
-  hasUnrecognizedMaterialType(row);
+  hasUnrecognizedMaterialType(row) ||
+  Object.keys(row.__truncatedFields || {}).length > 0;
 
 // Strips everything except letters/digits so headers like "Unit of
 // Measurement (UOM)", "uom", "Unit-Of-Measurement" all normalize the same.
@@ -158,22 +203,37 @@ export const autoMatchHeaders = (headers) => {
 // Shared row-normalization logic used by the simulated background
 // "Normalizing Data" processing timer, building normalized rows from the raw
 // parsed rows + chosen field mapping once the delay ends.
+// Fields capped to 100 chars (Name/Category) — an uploaded file's value
+// longer than this is silently truncated during normalization, with the row
+// flagged via `__truncatedFields` so the Review step can surface an inline
+// "Max. 100 characters. Extra text removed." error on the affected cell.
+const TRUNCATED_FIELD_MAX_LENGTH = 100;
+const TRUNCATABLE_FIELD_KEYS = new Set(["name", "category"]);
+
 export const normalizeMappedRows = (rawRows, mapping) => {
   const rows = rawRows || [];
   const fieldMapping = mapping || {};
   return rows.map((row, idx) => {
     const normalized = { __rowId: `row-${idx}-${Date.now()}` };
+    const truncatedFields = {};
     MATERIAL_FIELDS_CONFIG.forEach((field) => {
       const sourceHeader = fieldMapping[field.key];
-      const rawValue = sourceHeader && sourceHeader !== NOT_MAPPED ? row[sourceHeader] ?? "" : "";
+      let rawValue = sourceHeader && sourceHeader !== NOT_MAPPED ? row[sourceHeader] ?? "" : "";
+      if (TRUNCATABLE_FIELD_KEYS.has(field.key) && String(rawValue).length > TRUNCATED_FIELD_MAX_LENGTH) {
+        rawValue = String(rawValue).slice(0, TRUNCATED_FIELD_MAX_LENGTH);
+        truncatedFields[field.key] = true;
+      }
       if (field.key === "abcClassification") {
         normalized[field.key] = normalizeAbcValue(rawValue);
       } else if (field.key === "materialType") {
         normalized[field.key] = normalizeMaterialTypeValue(rawValue);
+      } else if (field.key === "status") {
+        normalized[field.key] = normalizeStatusValue(rawValue);
       } else {
         normalized[field.key] = rawValue;
       }
     });
+    if (Object.keys(truncatedFields).length > 0) normalized.__truncatedFields = truncatedFields;
     return normalized;
   });
 };

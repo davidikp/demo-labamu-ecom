@@ -69,8 +69,10 @@ const downloadFailedRowsCsv = (batch) => {
 };
 
 // Same shape/columns as the app's other activity-log lists (see e.g.
-// PurchaseOrderDetailPage's "Activity Logs" section), minus the description
-// line — just Name / Email / Activity / Timestamp here.
+// PurchaseOrderDetailPage's "Activity Logs" section): Name / Email /
+// Activity (title, plus the cancellation reason as a description line when
+// present — every other log's desc is internal bookkeeping copy, not shown) /
+// Timestamp.
 const LogsSection = ({ logs }) => {
   const sorted = [...(logs || [])].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
@@ -115,8 +117,19 @@ const LogsSection = ({ logs }) => {
             >
               <div style={{ flex: "1.1", minWidth: 0, paddingRight: "8px", overflowWrap: "break-word", wordBreak: "break-word", color: "var(--neutral-on-surface-primary)" }}>{log.name}</div>
               <div style={{ flex: "1.6", minWidth: 0, paddingRight: "8px", overflowWrap: "break-word", wordBreak: "break-word", color: "var(--neutral-on-surface-primary)" }}>{log.email || "—"}</div>
-              <div style={{ flex: "2.4", minWidth: 0, paddingRight: "8px", overflowWrap: "break-word", wordBreak: "break-word", fontWeight: "var(--font-weight-bold)", color: "var(--neutral-on-surface-primary)" }}>
-                {log.title}
+              <div style={{ flex: "2.4", minWidth: 0, paddingRight: "8px", display: "flex", flexDirection: "column", gap: log.title === "Upload Cancelled" && log.desc ? "6px" : "0" }}>
+                <span style={{ overflowWrap: "break-word", wordBreak: "break-word", fontWeight: "var(--font-weight-bold)", color: "var(--neutral-on-surface-primary)" }}>
+                  {log.title}
+                </span>
+                {/* Only the cancellation reason is surfaced here — every other
+                    log's `desc` is internal bookkeeping copy (e.g. "File X
+                    was uploaded"), not something the user needs repeated
+                    back to them. */}
+                {log.title === "Upload Cancelled" && log.desc && (
+                  <span style={{ overflowWrap: "break-word", wordBreak: "break-word", color: "var(--neutral-on-surface-secondary)", fontWeight: "var(--font-weight-regular)", lineHeight: "1.5" }}>
+                    {log.desc}
+                  </span>
+                )}
               </div>
               <div style={{ width: "150px", flexShrink: 0, color: "var(--neutral-on-surface-secondary)", fontSize: "13px" }}>
                 {formatDate(log.timestamp)}

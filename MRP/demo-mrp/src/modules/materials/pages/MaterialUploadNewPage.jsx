@@ -13,11 +13,13 @@ import {
   REQUIRED_MATERIAL_FIELD_KEYS,
   NOT_MAPPED,
   isRowInvalid,
+  withDefaultStatus,
 } from "../mock/materialFieldsConfig.js";
 import { BackgroundProcessingScreen } from "../components/BackgroundProcessingScreen.jsx";
 import { CancelUploadConfirmModal } from "../components/CancelUploadConfirmModal.jsx";
 import { DiscardChangesConfirmModal } from "../components/DiscardChangesConfirmModal.jsx";
 import { InvalidDataConfirmModal } from "../components/InvalidDataConfirmModal.jsx";
+import { NoDataToImportConfirmModal } from "../components/NoDataToImportConfirmModal.jsx";
 import { InputDataConfirmModal } from "../components/InputDataConfirmModal.jsx";
 import { SkipNormalizationConfirmModal } from "../components/SkipNormalizationConfirmModal.jsx";
 import { UseTemplateSuggestionModal } from "../components/UseTemplateSuggestionModal.jsx";
@@ -86,7 +88,7 @@ export const MaterialUploadNewPage = ({ onNavigate, showSnackbar, initialData, i
   const [fileName, setFileName] = useState(resumeRecord?.fileName || "");
   const [parsedHeaders, setParsedHeaders] = useState(resumeRecord?.sourceHeaders || []);
   const [parsedRows, setParsedRows] = useState(resumeRecord?.rawRows || []);
-  const [normalizedRows, setNormalizedRows] = useState(resumeRecord?.rows || []);
+  const [normalizedRows, setNormalizedRows] = useState(withDefaultStatus(resumeRecord?.rows));
   const [fieldMapping, setFieldMapping] = useState(resumeRecord?.fieldMapping || {});
   const [sourceHeaders, setSourceHeaders] = useState(resumeRecord?.sourceHeaders || []);
   const [editingDraftId, setEditingDraftId] = useState(resumeRecord?.id || null);
@@ -109,10 +111,11 @@ export const MaterialUploadNewPage = ({ onNavigate, showSnackbar, initialData, i
   const [mappingSnapshot, setMappingSnapshot] = useState(() =>
     resumeAtMapping ? JSON.stringify(autoMatchHeaders(resumeRecord?.sourceHeaders || [])) : "{}"
   );
-  const [rowsSnapshot, setRowsSnapshot] = useState(() => JSON.stringify(resumeRecord?.rows || []));
+  const [rowsSnapshot, setRowsSnapshot] = useState(() => JSON.stringify(withDefaultStatus(resumeRecord?.rows)));
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
   const [showInvalidConfirm, setShowInvalidConfirm] = useState(false);
+  const [showNoDataConfirm, setShowNoDataConfirm] = useState(false);
   const [showInputDataConfirm, setShowInputDataConfirm] = useState(false);
   const [showSkipConfirm, setShowSkipConfirm] = useState(false);
   const [showTemplateSuggestion, setShowTemplateSuggestion] = useState(false);
@@ -339,9 +342,9 @@ export const MaterialUploadNewPage = ({ onNavigate, showSnackbar, initialData, i
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleCancelUpload = () => {
+  const handleCancelUpload = (reason) => {
     if (editingDraftId) {
-      updateMaterialUpload(editingDraftId, { status: "Cancelled" });
+      updateMaterialUpload(editingDraftId, { status: "Cancelled", logDesc: reason });
     }
     showSnackbar?.("Upload cancelled", "info");
     onNavigate("materials_bulk-upload-list");
@@ -415,7 +418,9 @@ export const MaterialUploadNewPage = ({ onNavigate, showSnackbar, initialData, i
   };
 
   const handleInputDataClick = () => {
-    if (normalizedRows.some(isRowInvalid)) {
+    if (normalizedRows.length === 0) {
+      setShowNoDataConfirm(true);
+    } else if (normalizedRows.some(isRowInvalid)) {
       setShowInvalidConfirm(true);
     } else {
       setShowInputDataConfirm(true);
@@ -628,6 +633,11 @@ export const MaterialUploadNewPage = ({ onNavigate, showSnackbar, initialData, i
         onClose={() => setShowInvalidConfirm(false)}
         onContinue={handleStartUpload}
         invalidCount={normalizedRows.filter(isRowInvalid).length}
+      />
+
+      <NoDataToImportConfirmModal
+        isOpen={showNoDataConfirm}
+        onClose={() => setShowNoDataConfirm(false)}
       />
 
       <InputDataConfirmModal

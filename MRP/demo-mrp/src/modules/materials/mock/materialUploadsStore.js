@@ -72,6 +72,12 @@ const STATUS_LOG_COPY = {
 //             renders in its unset/error state.
 //  - row[4] — Material Type came in as a raw source-file spelling ("Semi
 //             Finished") that wasn't normalized to the canonical enum value.
+//  - row[5] — Name came in longer than the 100-char cap — already truncated
+//             to 100 chars here (mirroring what normalizeMappedRows would do
+//             for a real import) and flagged via __truncatedFields so the
+//             Review step shows "Max. 100 characters. Extra text removed." Given
+//             an "Aa " prefix so it still sorts into the first 10 rows under
+//             the Review step's default ascending Name sort.
 const DRAFT_CATEGORIES = ["Raw Material", "Chemicals", "Electronics", "Fasteners", "Components"];
 const DRAFT_MATERIAL_NAMES = [
   "Aluminium Sheet", "Steel Pipe", "Plastic Granule", "Copper Wire", "Hex Bolt",
@@ -99,6 +105,11 @@ const generateDraftMaterialRows = () => {
   rows[2] = { ...rows[2], category: "" };
   rows[3] = { ...rows[3], abcClassification: "D" };
   rows[4] = { ...rows[4], materialType: "Semi Finished" };
+  rows[5] = {
+    ...rows[5],
+    name: "Aa Reinforced Galvanized Steel Pipe Fitting Coupler Heavy Duty Industrial Grade For Structural Use In".slice(0, 100),
+    __truncatedFields: { name: true },
+  };
 
   return rows;
 };

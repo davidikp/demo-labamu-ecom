@@ -19,6 +19,7 @@ import { BackgroundProcessingScreen } from "../components/BackgroundProcessingSc
 import { CancelUploadConfirmModal } from "../components/CancelUploadConfirmModal.jsx";
 import { DiscardChangesConfirmModal } from "../components/DiscardChangesConfirmModal.jsx";
 import { InvalidDataConfirmModal } from "../components/InvalidDataConfirmModal.jsx";
+import { NoDataToImportConfirmModal } from "../components/NoDataToImportConfirmModal.jsx";
 import { InputDataConfirmModal } from "../components/InputDataConfirmModal.jsx";
 import { SkipNormalizationConfirmModal } from "../components/SkipNormalizationConfirmModal.jsx";
 import { UseTemplateSuggestionModal } from "../components/UseTemplateSuggestionModal.jsx";
@@ -114,6 +115,7 @@ export const BulkUploadNewPage = ({ onNavigate, showSnackbar, initialData, isSid
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
   const [showInvalidConfirm, setShowInvalidConfirm] = useState(false);
+  const [showNoDataConfirm, setShowNoDataConfirm] = useState(false);
   const [showInputDataConfirm, setShowInputDataConfirm] = useState(false);
   const [showSkipConfirm, setShowSkipConfirm] = useState(false);
   const [showTemplateSuggestion, setShowTemplateSuggestion] = useState(false);
@@ -340,9 +342,9 @@ export const BulkUploadNewPage = ({ onNavigate, showSnackbar, initialData, isSid
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleCancelUpload = () => {
+  const handleCancelUpload = (reason) => {
     if (editingDraftId) {
-      updateBulkUpload(editingDraftId, { status: "Cancelled" });
+      updateBulkUpload(editingDraftId, { status: "Cancelled", logDesc: reason });
     }
     showSnackbar?.("Upload cancelled", "info");
     onNavigate("product_catalog_bulk-upload-list");
@@ -416,7 +418,9 @@ export const BulkUploadNewPage = ({ onNavigate, showSnackbar, initialData, isSid
   };
 
   const handleInputDataClick = () => {
-    if (normalizedRows.some(isRowInvalid)) {
+    if (normalizedRows.length === 0) {
+      setShowNoDataConfirm(true);
+    } else if (normalizedRows.some(isRowInvalid)) {
       setShowInvalidConfirm(true);
     } else {
       setShowInputDataConfirm(true);
@@ -629,6 +633,11 @@ export const BulkUploadNewPage = ({ onNavigate, showSnackbar, initialData, isSid
         onClose={() => setShowInvalidConfirm(false)}
         onContinue={handleStartUpload}
         invalidCount={normalizedRows.filter(isRowInvalid).length}
+      />
+
+      <NoDataToImportConfirmModal
+        isOpen={showNoDataConfirm}
+        onClose={() => setShowNoDataConfirm(false)}
       />
 
       <InputDataConfirmModal

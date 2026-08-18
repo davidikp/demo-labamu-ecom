@@ -186,7 +186,23 @@ export const TextField = React.forwardRef<HTMLInputElement, TextFieldProps>(
     const charCount = multiline ? editorCharCount : stringValue.length
     const inputSizeClass = size === "md" ? "h-10 px-3" : "h-12 px-4"
     const leftPad = leftIcon ? (size === "md" ? "pl-10" : "pl-11") : ""
-    const rightPad = rightIcon ? (size === "md" ? "pr-10" : "pr-11") : ""
+    // The single-line char counter ("42/100") is absolutely positioned over
+    // the right edge (see the `showCount` span below) — without matching
+    // input padding, typed text runs underneath and overlaps it once the
+    // value gets long. Reserve space for whichever of rightIcon/counter is
+    // wider (counter needs more room since it renders on top of an icon too,
+    // though that combination doesn't occur in current usage).
+    const showsInlineCount = !multiline && showCount && !!maxLength
+    const rightPad =
+      rightIcon || showsInlineCount
+        ? size === "md"
+          ? showsInlineCount
+            ? "pr-14"
+            : "pr-10"
+          : showsInlineCount
+          ? "pr-16"
+          : "pr-11"
+        : ""
     const isDisabled = inputState === "disabled"
     const isReadOnly = inputState === "readonly"
     const showInlineReadView = inlineEditable && !isInlineEditing && !isDisabled

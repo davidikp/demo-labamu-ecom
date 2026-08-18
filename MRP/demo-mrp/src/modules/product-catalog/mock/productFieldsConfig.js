@@ -156,7 +156,10 @@ const hasUnrecognizedLeadTimeUnit = (row) => {
 // them. Used by the Review step's "needs attention" filter/counter;
 // import-blocking logic keeps using `isRowInvalid` as-is.
 export const rowNeedsAttention = (row) =>
-  isRowInvalid(row) || !!row.__skippedNormalization || hasUnrecognizedLeadTimeUnit(row);
+  isRowInvalid(row) ||
+  !!row.__skippedNormalization ||
+  hasUnrecognizedLeadTimeUnit(row) ||
+  Object.keys(row.__truncatedFields || {}).length > 0;
 
 export const NOT_MAPPED = "__not_mapped__";
 
@@ -246,14 +249,26 @@ export const extractSellingPriceCurrency = (raw) => {
 // reference/back-compat) and by the simulated background "Mapping"
 // processing timer in bulkUploadsStore.js, which needs to build normalized
 // rows from the raw parsed rows + chosen field mapping once the delay ends.
+// Fields capped to 100 chars (Name/Category Name) — an uploaded file's value
+// longer than this is silently truncated during normalization, with the row
+// flagged via `__truncatedFields` so the Review step can surface an inline
+// "Max. 100 characters. Extra text removed." error on the affected cell.
+const TRUNCATED_FIELD_MAX_LENGTH = 100;
+const TRUNCATABLE_FIELD_KEYS = new Set(["name", "categoryName"]);
+
 export const normalizeMappedRows = (rawRows, mapping) => {
   const rows = rawRows || [];
   const fieldMapping = mapping || {};
   return rows.map((row, idx) => {
     const normalized = { __rowId: `row-${idx}-${Date.now()}` };
+    const truncatedFields = {};
     PRODUCT_FIELDS_CONFIG.forEach((field) => {
       const sourceHeader = fieldMapping[field.key];
-      const rawValue = sourceHeader && sourceHeader !== NOT_MAPPED ? row[sourceHeader] ?? "" : "";
+      let rawValue = sourceHeader && sourceHeader !== NOT_MAPPED ? row[sourceHeader] ?? "" : "";
+      if (TRUNCATABLE_FIELD_KEYS.has(field.key) && String(rawValue).length > TRUNCATED_FIELD_MAX_LENGTH) {
+        rawValue = String(rawValue).slice(0, TRUNCATED_FIELD_MAX_LENGTH);
+        truncatedFields[field.key] = true;
+      }
       if (field.key === "status") {
         normalized[field.key] = normalizeStatusValue(rawValue);
       } else if (field.key === "sellingPrice") {
@@ -267,6 +282,7 @@ export const normalizeMappedRows = (rawRows, mapping) => {
         normalized[field.key] = rawValue;
       }
     });
+    if (Object.keys(truncatedFields).length > 0) normalized.__truncatedFields = truncatedFields;
     return normalized;
   });
 };

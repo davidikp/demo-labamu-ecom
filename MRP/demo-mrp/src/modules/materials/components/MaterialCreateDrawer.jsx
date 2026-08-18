@@ -19,6 +19,7 @@ export const MaterialCreateDrawer = ({ isOpen, onClose, onSave, initialData }) =
     name: initialData?.name || "",
     sku: initialData?.sku || "",
     category: initialData?.category || "",
+    status: initialData?.status || "Active",
     abcClassification: initialData?.abcClassification || "",
     materialType: initialData?.type || "", // Mapping 'type' from data to 'materialType' in form
     uom: initialData?.unit || "",
@@ -34,6 +35,7 @@ export const MaterialCreateDrawer = ({ isOpen, onClose, onSave, initialData }) =
         name: initialData?.name || "",
         sku: initialData?.sku || "",
         category: initialData?.category || "",
+        status: initialData?.status || "Active",
         abcClassification: initialData?.abcClassification || "",
         materialType: initialData?.type || "",
         uom: initialData?.unit || "",
@@ -62,6 +64,7 @@ export const MaterialCreateDrawer = ({ isOpen, onClose, onSave, initialData }) =
     const newErrors = {};
     if (!formData.name.trim()) newErrors.name = "Field cannot be empty";
     if (!formData.category) newErrors.category = "Field cannot be empty";
+    if (!formData.status) newErrors.status = "Field cannot be empty";
     if (!formData.abcClassification) newErrors.abcClassification = "Field cannot be empty";
     if (!formData.materialType) newErrors.materialType = "Field cannot be empty";
     if (!formData.uom) newErrors.uom = "Field cannot be empty";
@@ -201,28 +204,44 @@ export const MaterialCreateDrawer = ({ isOpen, onClose, onSave, initialData }) =
               />
             </FormField>
 
-            <FormField label="Category" required error={errors.category}>
-              <DropdownSelect 
-                searchable 
-                showDivider
-                maxOptionsVisible={3}
-                value={formData.category}
-                onChange={(val) => handleFieldChange("category", val)}
-                options={categories}
-                placeholder="Select category"
-                hasError={!!errors.category}
-                footer={
-                  <Button 
-                    variant="tertiary" 
-                    leftIcon={AddIcon} 
-                    onClick={() => setIsCategoryModalOpen(true)}
-                    style={{ width: "100%", justifyContent: "flex-start", height: "32px" }}
-                  >
-                    Add Category
-                  </Button>
-                }
-              />
-            </FormField>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+              <FormField label="Category" required error={errors.category}>
+                <DropdownSelect
+                  searchable
+                  showDivider
+                  maxOptionsVisible={3}
+                  value={formData.category}
+                  onChange={(val) => handleFieldChange("category", val)}
+                  options={categories}
+                  placeholder="Select category"
+                  hasError={!!errors.category}
+                  footer={
+                    <Button
+                      variant="tertiary"
+                      leftIcon={AddIcon}
+                      onClick={() => setIsCategoryModalOpen(true)}
+                      style={{ width: "100%", justifyContent: "flex-start", height: "32px" }}
+                    >
+                      Add Category
+                    </Button>
+                  }
+                />
+              </FormField>
+
+              <FormField label="Status" required error={errors.status}>
+                <DropdownSelect
+                  showDivider
+                  value={formData.status}
+                  onChange={(val) => handleFieldChange("status", val)}
+                  options={[
+                    { value: "Active", label: "Active" },
+                    { value: "Inactive", label: "Inactive" }
+                  ]}
+                  placeholder="Select status"
+                  hasError={!!errors.status}
+                />
+              </FormField>
+            </div>
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
               <FormField label="ABC Classification" required error={errors.abcClassification}>
