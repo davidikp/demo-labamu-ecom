@@ -52,6 +52,8 @@ export const Dropdown: React.FC<{
   onLoadMore?: () => void
   /** Custom content pinned below the scrollable option list (e.g. an "Add new" action) — does not scroll with the options. */
   footer?: React.ReactNode
+  /** Whether the trigger shows a "Clear"/"Clear all" button once a value is selected. Default true; set false for fields that should always hold a value (e.g. a status enum). */
+  clearable?: boolean
 }> = ({
   options,
   value,
@@ -85,6 +87,7 @@ export const Dropdown: React.FC<{
   hasMore = false,
   onLoadMore,
   footer,
+  clearable = true,
 }) => {
   const locale = useLocale()
   const resolvedPlaceholder = placeholder ?? locale.dropdown.placeholder
@@ -363,7 +366,7 @@ export const Dropdown: React.FC<{
             )}
 
             <span className="absolute top-1/2 -translate-y-1/2 right-3 flex items-center gap-1 pointer-events-none">
-              {multi && selectedValues.length > 0 && !disabled && (
+              {multi && selectedValues.length > 0 && !disabled && clearable && (
                 <span
                   role="button"
                   tabIndex={0}
@@ -375,7 +378,7 @@ export const Dropdown: React.FC<{
                   <X size={10} strokeWidth={2} aria-hidden="true" />
                 </span>
               )}
-              {!multi && !!displayValue && !disabled && (
+              {!multi && !!displayValue && !disabled && clearable && (
                 <span
                   role="button"
                   tabIndex={0}

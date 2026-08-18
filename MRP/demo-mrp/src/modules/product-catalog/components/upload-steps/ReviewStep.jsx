@@ -68,6 +68,10 @@ const stripNumberFormatting = (formatted) => {
 // "leadTime" string (e.g. "10 Days") so the rest of the schema/upload
 // pipeline is unaffected.
 const LEAD_TIME_UNITS = ["Days", "Weeks", "Months"];
+// Display-only labels for the unit dropdown — the stored/parsed value stays
+// the plural form ("Days"/"Weeks"/"Months") so formatLeadTime/parseLeadTime
+// and the rest of the schema are unaffected.
+const LEAD_TIME_UNIT_LABEL = { Days: "Day(s)", Weeks: "Week(s)", Months: "Month(s)" };
 // When the source file's unit isn't one of our options (e.g. "Fortnights"),
 // the unit is left null so the dropdown renders in its unset/placeholder
 // state instead of silently defaulting to "Days" — the user needs to pick
@@ -197,6 +201,7 @@ export const ReviewStep = ({ rows, onRowsChange, normalizationStats }) => {
                   placeholder="Select status"
                   options={STATUS_OPTIONS.map((s) => ({ value: s, label: s }))}
                   onChange={(val) => updateCell(row.__rowId, "status", val)}
+                  clearable={false}
                 />
               </div>
             );
@@ -232,10 +237,11 @@ export const ReviewStep = ({ rows, onRowsChange, normalizationStats }) => {
                     size="md"
                     value={unit || undefined}
                     placeholder="Select unit"
-                    options={LEAD_TIME_UNITS.map((u) => ({ value: u, label: u }))}
+                    options={LEAD_TIME_UNITS.map((u) => ({ value: u, label: LEAD_TIME_UNIT_LABEL[u] || u }))}
                     onChange={(val) => commit(amount, val)}
                     state={isUnrecognizedUnit ? "error" : "default"}
                     errorText={isUnrecognizedUnit ? "Field cannot be empty" : undefined}
+                    clearable={false}
                   />
                 </div>
               </div>
@@ -329,8 +335,6 @@ export const ReviewStep = ({ rows, onRowsChange, normalizationStats }) => {
         }
         .pc-review-table { border-radius: var(--radius-card) var(--radius-card) 0 0 !important; }
         .pc-review-table > div:last-child { display: none; }
-        .lead-time-unit-dropdown [aria-label="Clear"] { display: none; }
-        .status-dropdown [aria-label="Clear"] { display: none; }
       `}</style>
 
       <div style={{ flex: 1, minHeight: "320px", display: "flex", flexDirection: "column" }}>
@@ -365,7 +369,10 @@ export const ReviewStep = ({ rows, onRowsChange, normalizationStats }) => {
                     <>
                       <div style={{ width: "1px", height: "20px", background: "var(--neutral-line-separator-2)" }} />
                       <StatusBadge variant={normalizationStats.skipped > 0 ? "yellow-light" : "green-light"}>
-                        {normalizationStats.normalized} of {normalizationStats.total} rows normalized by AI
+                        {/* Single template-literal string (not split JSX text nodes) so the
+                            app's DOM-based ID localization can match it with one regex — see
+                            localizationUtils.js's INDONESIAN_DYNAMIC_TEXT. */}
+                        {`${normalizationStats.normalized} of ${normalizationStats.total} rows normalized by AI`}
                         {normalizationStats.skipped > 0 ? ` (${normalizationStats.skipped} skipped)` : ""}
                       </StatusBadge>
                     </>
@@ -390,7 +397,8 @@ export const ReviewStep = ({ rows, onRowsChange, normalizationStats }) => {
                   }}
                 >
                   <span style={{ fontSize: "14px", fontWeight: "var(--font-weight-bold)", color: "var(--neutral-on-surface-primary)" }}>
-                    {selectedIds.length} Selected
+                    {/* Single template-literal string so ID localization can match it as one node. */}
+                    {`${selectedIds.length} Selected`}
                   </span>
                   <Button variant="outlined" leftIcon={DeleteIcon} onClick={() => deleteRows(selectedIds)} style={{ borderColor: "var(--status-red-primary)", color: "var(--status-red-primary)" }}>
                     Delete

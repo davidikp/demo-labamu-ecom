@@ -1070,6 +1070,171 @@ const INDONESIAN_EXACT_TEXT = {
   "Yes, Discard": "Ya, Batalkan",
   "Keep Editing": "Lanjutkan Mengedit",
   "Set to company default": "Gunakan pengaturan default perusahaan",
+
+  // --- Bulk Upload — Product Catalog & Materials (bulk-upload-translation.md) ---
+  "Product Catalog": "Katalog Produk",
+  "New Upload": "Unggah Baru",
+  "Mapping": "Pemetaan",
+  "Normalizing Data": "Normalisasi Data",
+  "Review": "Peninjauan",
+  "Processing": "Diproses",
+  "Search by File Name or Upload ID": "Cari berdasarkan Nama File atau ID Unggah",
+  "File Name": "Nama File",
+  "Upload ID": "ID Unggah",
+  "Created At": "Dibuat Pada",
+  "Total Data": "Total Data",
+  "No uploads found": "Unggahan tidak ditemukan",
+  "Try adjusting your filters or search keywords.": "Coba sesuaikan filter atau kata kunci pencarian Anda.",
+  "Add New Upload": "Tambah Unggahan Baru",
+  "Analyze File": "Analisis File",
+  "Analyzing...": "Menganalisis...",
+  "Normalize and Review": "Normalisasi dan Tinjau",
+  "Import Data": "Impor Data",
+  "No data found in this file": "Tidak ada data dalam file ini",
+  "Failed to analyze file": "Gagal menganalisis file",
+  "Upload cancelled": "Unggahan dibatalkan",
+  "Upload saved as draft": "Unggahan disimpan sebagai draf",
+  "Your file is being normalized": "File Anda sedang dinormalisasi",
+  "We're also validating your data to prepare it for review. You can leave this page and we'll notify you by email when it's ready.": "Kami juga memvalidasi data Anda agar siap ditinjau. Anda dapat meninggalkan halaman ini dan kami akan mengirimkan email saat data siap.",
+  "Back to Bulk Upload": "Kembali ke Unggah Massal",
+  "Skip Process": "Lewati Proses",
+  "Your products are being imported": "Produk Anda sedang diimpor",
+  "Import Products": "Impor Produk",
+  "Upload your product file in any spreadsheet format. We'll map and prepare the data for your product catalog.": "Upload file produk dalam format spreadsheet. Kami akan memetakan dan menyiapkan data untuk katalog produk Anda.",
+  "Download Template": "Unduh Template",
+  "Allowed formats (.csv, .xlsx, .xls)": "Format yang didukung (.csv, .xlsx, .xls)",
+  "Analyzing your file...": "Menganalisis file Anda...",
+  "We're reading your file and getting it ready for column mapping. This usually takes a few seconds.": "Kami sedang membaca file Anda dan menyiapkannya untuk pemetaan kolom. Proses ini biasanya membutuhkan beberapa detik.",
+  "Demo: simulate a failure": "Demo: simulasikan kegagalan",
+  "Simulate Timeout": "Simulasikan Timeout",
+  "Simulate Empty File": "Simulasikan File Kosong",
+  "Untitled Column": "Kolom Tanpa Nama",
+  "Untitled Column (1)": "Kolom Tanpa Nama (1)",
+  "Check that each product field matches the correct column from your file. Once everything looks right, continue to normalize and review your data.": "Pastikan setiap kolom produk sesuai dengan kolom yang benar dari file Anda. Setelah semuanya sesuai, lanjutkan untuk menormalisasi dan meninjau data.",
+  "Product Field": "Kolom Produk",
+  "Source Column": "Kolom Sumber",
+  "Example Value": "Contoh Nilai",
+  "AI Recommendation": "Rekomendasi AI",
+  "— Not mapped —": "— Belum dipetakan —",
+  "No match found": "Tidak ada kecocokan",
+  "Search by SKU, Name, or Category": "Cari berdasarkan SKU, Nama, atau Kategori",
+  "New Row": "Baris Baru",
+  "No rows found": "Baris tidak ditemukan",
+  "Try adjusting your search or the needs-attention filter.": "Coba sesuaikan pencarian atau filter data yang perlu diperiksa.",
+  "Select status": "Pilih status",
+  "Select unit": "Pilih satuan",
+  "Day(s)": "Hari",
+  "Week(s)": "Minggu",
+  "Month(s)": "Bulan",
+  "Max. 100 characters. Extra text removed.": "Maks. 100 karakter. Teks tambahan dihapus.",
+  "Different currency detected. Value kept as is.": "Mata uang berbeda terdeteksi. Nilai tetap digunakan.",
+  "Cancel this upload?": "Batalkan unggahan ini?",
+  "You won't be able to continue this upload. It will remain in the Bulk Upload list with a Cancelled status.": "Anda tidak dapat melanjutkan unggahan ini. Unggahan akan tetap ada di daftar Unggah Massal dengan status Dibatalkan.",
+  "Cancellation Reason": "Alasan Pembatalan",
+  "Add a reason for canceling this upload.": "Tambahkan alasan pembatalan unggahan ini.",
+  "Yes, Cancel": "Ya, Batalkan",
+  "Any changes you made on this page will be lost.": "Semua perubahan yang Anda buat di halaman ini akan hilang.",
+  "Some required information is missing. You can update these products now or continue importing the products that are ready.": "Beberapa informasi wajib belum lengkap. Anda dapat memperbarui produk ini sekarang atau melanjutkan impor produk yang sudah siap.",
+  "Import Ready Products": "Impor Produk yang Siap",
+  "These products will be added to your product catalog.": "Produk ini akan ditambahkan ke katalog produk Anda.",
+  "Yes, Import Products": "Ya, Impor Produk",
+  "Skip normalization?": "Lewati normalisasi?",
+  "The remaining data won't be normalized by AI. Those rows will need your attention later in the Review step.": "Data yang tersisa tidak akan dinormalisasi oleh AI. Baris tersebut perlu Anda periksa pada tahap Peninjauan.",
+  "Keep Waiting": "Tetap Tunggu",
+  "Yes, Skip": "Ya, Lewati",
+  "Try uploading with our template": "Coba unggah dengan template kami",
+  "Use our template to organize your product data in a format that's easier to process.": "Gunakan template kami untuk mengatur data produk dalam format yang lebih mudah diproses.",
+  "Not Now": "Nanti Saja",
+  "No products to import": "Tidak ada produk untuk diimpor",
+  "There are no products ready to import. Add or update your product data before continuing.": "Belum ada produk yang siap diimpor. Tambahkan atau perbarui data produk sebelum melanjutkan.",
+  "Back to Review": "Kembali ke Peninjauan",
+  "Bulk Upload Detail": "Detail Unggahan Massal",
+  "**Import in progress:** Your products are being added to the product catalog. We'll notify you by email when it's complete.": "**Proses impor sedang berlangsung:** Produk Anda sedang ditambahkan ke katalog produk. Kami akan memberi tahu Anda melalui email setelah selesai.",
+  "Imported Data": "Data yang Diimpor",
+  "Invalid Data": "Data yang Tidak Valid",
+  "No activity yet.": "Belum ada aktivitas.",
+  "Download Invalid Data": "Unduh Data yang Tidak Valid",
+  "The uploaded data is being normalized in the background.": "Data yang diunggah sedang dinormalisasi di latar belakang.",
+  "Data is ready for review.": "Data siap ditinjau.",
+  "AI normalization was skipped by the user — remaining rows need attention.": "Normalisasi AI dilewati oleh pengguna — baris yang tersisa perlu diperiksa.",
+  "Reviewed products are being imported into the catalog.": "Produk yang telah ditinjau sedang diimpor ke katalog.",
+  "Products were added to the product catalog.": "Produk telah ditambahkan ke katalog produk.",
+  "Lead Time": "Waktu Tunggu",
+  "Selling Price": "Harga Jual",
+  "Primary Material": "Material Utama",
+  "Finishing": "Finishing",
+  "Weight (Kg)": "Berat (Kg)",
+  "Finished Height (cm)": "Tinggi Produk Jadi (cm)",
+  "Finished Width (cm)": "Lebar Produk Jadi (cm)",
+  "Finished Length (cm)": "Panjang Produk Jadi (cm)",
+  "Packed Height (cm)": "Tinggi Kemasan (cm)",
+  "Packed Width (cm)": "Lebar Kemasan (cm)",
+  "Packed Length (cm)": "Panjang Kemasan (cm)",
+  "Container 20ft (Qty)": "Kontainer 20ft (Jml.)",
+  "Container 40ft (Qty)": "Kontainer 40ft (Jml.)",
+  "Container 40ft High Cube (Qty)": "Kontainer 40ft High Cube (Jml.)",
+
+  // Same fields as above, but as the bare label without its "(Unit)" suffix —
+  // the Review step's table header splits that suffix out into a separate
+  // unit badge (see splitLabelUom in ReviewStep.jsx), so the header text node
+  // itself is just the base label. The full-parenthetical entries above are
+  // still needed for the Mapping step, which shows the untouched field.label.
+  "Weight": "Berat",
+  "Finished Height": "Tinggi Produk Jadi",
+  "Finished Width": "Lebar Produk Jadi",
+  "Finished Length": "Panjang Produk Jadi",
+  "Packed Height": "Tinggi Kemasan",
+  "Packed Width": "Lebar Kemasan",
+  "Packed Length": "Panjang Kemasan",
+  "Container 20ft": "Kontainer 20ft",
+  "Container 40ft": "Kontainer 40ft",
+  "Container 40ft High Cube": "Kontainer 40ft High Cube",
+  "Your materials are being imported": "Material Anda sedang diimpor",
+  "Import Materials": "Impor Material",
+  "Upload your material file in any spreadsheet format. We'll map and prepare the data for your material catalog.": "Upload file material dalam format spreadsheet. Kami akan memetakan dan menyiapkan data untuk katalog material Anda.",
+  "Check that each material field matches the correct column from your file. Once everything looks right, continue to normalize and review your data.": "Pastikan setiap kolom material sesuai dengan kolom yang benar dari file Anda. Setelah semuanya sesuai, lanjutkan untuk menormalisasi dan meninjau data.",
+  "Material Field": "Kolom Material",
+  "Raw Material": "Material Belum Jadi",
+  "Semi-Finished Material": "Material Setengah Jadi",
+  "Finished Material": "Material Jadi",
+  "Some required information is missing. You can update these materials now or continue importing the materials that are ready.": "Beberapa informasi wajib belum lengkap. Anda dapat memperbarui material ini sekarang atau melanjutkan impor material yang sudah siap.",
+  "Import Ready Materials": "Impor Material yang Siap",
+  "These materials will be added to your material catalog.": "Material ini akan ditambahkan ke katalog material Anda.",
+  "Yes, Import Materials": "Ya, Impor Material",
+  "Use our template to organize your material data in a format that's easier to process.": "Gunakan template kami untuk mengatur data material dalam format yang lebih mudah diproses.",
+  "No materials to import": "Tidak ada material untuk diimpor",
+  "There are no materials ready to import. Add or update your material data before continuing.": "Belum ada material yang siap diimpor. Tambahkan atau perbarui data material sebelum melanjutkan.",
+  "**Import in progress:** Your materials are being added to the material catalog. We'll notify you by email when it's complete.": "**Proses impor sedang berlangsung:** Material Anda sedang ditambahkan ke katalog material. Kami akan memberi tahu Anda melalui email setelah selesai.",
+  "Reviewed materials are being imported into the catalog.": "Material yang telah ditinjau sedang diimpor ke katalog.",
+  "Materials were added to the material catalog.": "Material telah ditambahkan ke katalog material.",
+  "Unit of Measurement (UOM)": "Satuan Ukur (UOM)",
+  "Stock Risk": "Risiko Stok",
+  "Show only products that need attention": "Tampilkan hanya produk yang perlu perhatian lebih",
+  "Show only materials that need attention": "Tampilkan hanya material yang perlu diperiksa",
+
+  // Review step table headers — rendered as a single "* Label" text node for
+  // required fields (see MATERIAL_FIELDS_CONFIG/PRODUCT_FIELDS_CONFIG), so the
+  // asterisk-prefixed form needs its own exact-match entry; the bare label
+  // above only covers optional (non-prefixed) columns.
+  "* Name": "* Nama",
+  "* Category Name": "* Nama Kategori",
+  "* Lead Time": "* Waktu Tunggu",
+  "* Selling Price": "* Harga Jual",
+  "* Material Name": "* Nama Material",
+  "* Category": "* Kategori",
+  "* ABC Classification": "* Klasifikasi ABC",
+  "* Material Type": "* Jenis Material",
+  "* Unit of Measurement (UOM)": "* Satuan Ukur (UOM)",
+
+  // Bulk Upload Detail modal — Activity Logs "Aktivitas" column (log titles;
+  // shared verbatim by both Product Catalog and Materials bulk upload).
+  "Upload Created": "Unggahan Dibuat",
+  "Normalization Started": "Normalisasi Dimulai",
+  "Normalization Finished": "Normalisasi Selesai",
+  "Normalization Skipped": "Normalisasi Dilewati",
+  "Import Started": "Impor Dimulai",
+  "Import Completed": "Impor Selesai",
+  "Upload Cancelled": "Unggahan Dibatalkan",
 };
 
 const INDONESIAN_FRAGMENT_REPLACEMENTS = [
@@ -1256,6 +1421,70 @@ const INDONESIAN_DYNAMIC_TEXT = [
     pattern: /^(.+) with Total Cost per Unit: (.+) and Total Cost This WO: (.+)$/i,
     replacer: (_, itemName, perUnit, totalWo) =>
       `${itemName} dengan Biaya Aktual per Unit: ${perUnit} dan Total Biaya Perintah Kerja Ini: ${totalWo}`,
+  },
+
+  // --- Bulk Upload — Product Catalog & Materials (bulk-upload-translation.md) ---
+  {
+    // Review step normalization badge, e.g. "18 of 20 rows normalized by AI".
+    pattern: /^(\d+) of (\d+) rows normalized by AI$/,
+    replacer: (_, normalized, total) => `${normalized} dari ${total} baris dinormalisasi oleh AI`,
+  },
+  {
+    // Trailing "(n skipped)" appended to the normalization badge above.
+    pattern: /^\s*\((\d+) skipped\)\s*$/,
+    replacer: (_, skipped) => ` (${skipped} dilewati)`,
+  },
+  {
+    // Review step selection bar, e.g. "3 Selected".
+    pattern: /^(\d+) Selected$/,
+    replacer: (_, count) => `${count} Dipilih`,
+  },
+  {
+    // Invalid Data confirm modal title (Product Catalog).
+    pattern: /^(\d+) products? needs? attention$/i,
+    replacer: (_, count) => `${count} produk perlu perhatian lebih`,
+  },
+  {
+    // Input Data confirm modal title (Product Catalog).
+    pattern: /^Import (\d+) products?\?$/i,
+    replacer: (_, count) => `Impor ${count} produk?`,
+  },
+  {
+    // Invalid Data confirm modal title (Materials).
+    pattern: /^(\d+) materials? needs? attention$/i,
+    replacer: (_, count) => `${count} material perlu diperiksa`,
+  },
+  {
+    // Input Data confirm modal title (Materials).
+    pattern: /^Import (\d+) materials?\?$/i,
+    replacer: (_, count) => `Impor ${count} material?`,
+  },
+  {
+    // Mapping step AI recommendation text.
+    pattern: /^Matched to "(.+)"$/,
+    replacer: (_, sourceColumn) => `Cocok dengan "${sourceColumn}"`,
+  },
+  {
+    // "Normalizing Data" background screen message (Product Catalog).
+    pattern: /^We’re adding the reviewed data from “(.+)” to your product catalog\. You can leave this page and we’ll notify you by email when it’s ready\.$/,
+    replacer: (_, fileName) =>
+      `Kami sedang menambahkan data yang telah ditinjau dari “${fileName}” ke katalog produk Anda. Anda dapat meninggalkan halaman ini dan kami akan mengirimkan email setelah proses selesai.`,
+  },
+  {
+    // "Normalizing Data" background screen message (Materials).
+    pattern: /^We’re adding the reviewed data from “(.+)” to your material catalog\. You can leave this page and we’ll notify you by email when it’s ready\.$/,
+    replacer: (_, fileName) =>
+      `Kami sedang menambahkan data yang telah ditinjau dari “${fileName}” ke katalog material Anda. Anda dapat meninggalkan halaman ini dan kami akan mengirimkan email setelah proses selesai.`,
+  },
+  {
+    // Activity log "Upload Created" description (Product Catalog).
+    pattern: /^File "(.+)" was uploaded \((\d+) products?\)\.$/,
+    replacer: (_, fileName, count) => `File "${fileName}" diunggah (${count} produk).`,
+  },
+  {
+    // Activity log "Upload Created" description (Materials).
+    pattern: /^File "(.+)" was uploaded \((\d+) materials?\)\.$/,
+    replacer: (_, fileName, count) => `File "${fileName}" diunggah (${count} material).`,
   },
 ];
 

@@ -172,6 +172,7 @@ export const ReviewStep = ({ rows, onRowsChange, normalizationStats }) => {
                   placeholder="Select status"
                   options={STATUS_OPTIONS.map((s) => ({ value: s, label: s }))}
                   onChange={(val) => updateCell(row.__rowId, "status", val)}
+                  clearable={false}
                 />
               </div>
             );
@@ -304,7 +305,6 @@ export const ReviewStep = ({ rows, onRowsChange, normalizationStats }) => {
         .mc-review-table > div:last-child { display: none; }
         .abc-dropdown [aria-label="Clear"] { display: none; }
         .material-type-dropdown [aria-label="Clear"] { display: none; }
-        .status-dropdown [aria-label="Clear"] { display: none; }
       `}</style>
 
       <div style={{ flex: 1, minHeight: "320px", display: "flex", flexDirection: "column" }}>
@@ -339,7 +339,10 @@ export const ReviewStep = ({ rows, onRowsChange, normalizationStats }) => {
                     <>
                       <div style={{ width: "1px", height: "20px", background: "var(--neutral-line-separator-2)" }} />
                       <StatusBadge variant={normalizationStats.skipped > 0 ? "yellow-light" : "green-light"}>
-                        {normalizationStats.normalized} of {normalizationStats.total} rows normalized by AI
+                        {/* Single template-literal string (not split JSX text nodes) so the
+                            app's DOM-based ID localization can match it with one regex — see
+                            localizationUtils.js's INDONESIAN_DYNAMIC_TEXT. */}
+                        {`${normalizationStats.normalized} of ${normalizationStats.total} rows normalized by AI`}
                         {normalizationStats.skipped > 0 ? ` (${normalizationStats.skipped} skipped)` : ""}
                       </StatusBadge>
                     </>
@@ -364,7 +367,8 @@ export const ReviewStep = ({ rows, onRowsChange, normalizationStats }) => {
                   }}
                 >
                   <span style={{ fontSize: "14px", fontWeight: "var(--font-weight-bold)", color: "var(--neutral-on-surface-primary)" }}>
-                    {selectedIds.length} Selected
+                    {/* Single template-literal string so ID localization can match it as one node. */}
+                    {`${selectedIds.length} Selected`}
                   </span>
                   <Button variant="outlined" leftIcon={DeleteIcon} onClick={() => deleteRows(selectedIds)} style={{ borderColor: "var(--status-red-primary)", color: "var(--status-red-primary)" }}>
                     Delete
