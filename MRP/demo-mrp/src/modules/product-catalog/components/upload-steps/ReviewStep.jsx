@@ -8,6 +8,7 @@ import { StatusBadge } from "../../../../components/common/StatusBadge.jsx";
 import { DropdownSelect } from "../../../../components/common/DropdownSelect.jsx";
 import { TableSearchField } from "../../../../components/table/TableSearchField.jsx";
 import { TablePaginationFooter } from "../../../../components/table/TablePaginationFooter.jsx";
+import { UnsavedChangesBanner } from "../../../../components/common/UnsavedChangesBanner.jsx";
 import { PRODUCT_FIELDS_CONFIG, isRowInvalid, rowNeedsAttention, STATUS_OPTIONS } from "../../mock/productFieldsConfig.js";
 
 let blankRowSeq = 0;
@@ -76,15 +77,18 @@ const LEAD_TIME_UNIT_LABEL = { Days: "Day(s)", Weeks: "Week(s)", Months: "Month(
 // the unit is left null so the dropdown renders in its unset/placeholder
 // state instead of silently defaulting to "Days" — the user needs to pick
 // the correct one themselves.
+// `rawUnit` is the original (un-normalized) unit text from the source value —
+// only set when there WAS a unit token but it didn't match Days/Weeks/Months,
+// so callers can distinguish "genuinely unrecognized format" from "blank".
 const parseLeadTime = (value) => {
   const str = String(value ?? "").trim();
   const match = str.match(/^([\d,.]+)\s*(\w+)?/);
-  if (!match) return { amount: "", unit: null };
+  if (!match) return { amount: "", unit: null, rawUnit: null };
   const amount = match[1].replace(/,/g, "");
-  if (!match[2]) return { amount, unit: "Days" };
-  const rawUnit = match[2].toLowerCase().replace(/s$/, "");
-  const unit = LEAD_TIME_UNITS.find((u) => u.toLowerCase().startsWith(rawUnit)) || null;
-  return { amount, unit };
+  if (!match[2]) return { amount, unit: "Days", rawUnit: null };
+  const normalizedUnit = match[2].toLowerCase().replace(/s$/, "");
+  const unit = LEAD_TIME_UNITS.find((u) => u.toLowerCase().startsWith(normalizedUnit)) || null;
+  return { amount, unit, rawUnit: unit ? null : match[2] };
 };
 const formatLeadTime = (amount, unit) => (amount ? (unit ? `${amount} ${unit}` : String(amount)) : "");
 
@@ -103,7 +107,14 @@ const splitLabelUom = (label) => {
 // `normalizationStats`, if provided, reflects the just-completed simulated
 // AI normalization pass (see BulkUploadNewPage) — including any rows that
 // were skipped mid-process (e.g. the AI ran out of tokens).
-export const ReviewStep = ({ rows, onRowsChange, normalizationStats }) => {
+// `isDirty`/`onSaveAndCheck` drive the "unsaved changes" banner above the
+// table: BulkUploadNewPage passes `isDirty` from its own Review-step dirty
+// check (the same one gating the discard-changes confirm), and `onSaveAndCheck`
+// persists the current rows to the draft record and runs the duplicate-value
+// scan — without navigating away, unlike "Save as Draft". `duplicates` is
+// that scan's result ({ [rowId]: { sku, name } }), used to flag SKU/Name
+// cells the same way required-field/truncation errors are flagged.
+export const ReviewStep = ({ rows, onRowsChange, normalizationStats, isDirty, onSaveAndCheck, duplicates }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [showOnlyInvalid, setShowOnlyInvalid] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
@@ -215,7 +226,7 @@ export const ReviewStep = ({ rows, onRowsChange, normalizationStats }) => {
           header,
           width,
           render: (value, row) => {
-            const { amount, unit } = parseLeadTime(row.leadTime);
+            const { amount, unit, rawUnit } = parseLeadTime(row.leadTime);
             const isEmptyRequired = !String(row.leadTime || "").trim();
             // Errors whenever there's no valid unit — whether the whole
             // field is blank or the amount is filled in but the unit didn't
@@ -240,7 +251,13 @@ export const ReviewStep = ({ rows, onRowsChange, normalizationStats }) => {
                     options={LEAD_TIME_UNITS.map((u) => ({ value: u, label: LEAD_TIME_UNIT_LABEL[u] || u }))}
                     onChange={(val) => commit(amount, val)}
                     state={isUnrecognizedUnit ? "error" : "default"}
-                    errorText={isUnrecognizedUnit ? "Field cannot be empty" : undefined}
+                    errorText={
+                      isEmptyRequired
+                        ? "Field cannot be empty"
+                        : rawUnit
+                        ? `“${rawUnit}” couldn’t be applied due to its format.`
+                        : undefined
+                    }
                     clearable={false}
                   />
                 </div>
@@ -265,6 +282,7 @@ export const ReviewStep = ({ rows, onRowsChange, normalizationStats }) => {
           const currencyWarning = field.key === "sellingPrice" ? row.sellingPriceSourceCurrency : null;
           const isCapped = field.key === "name" || field.key === "categoryName";
           const wasTruncated = isCapped && !!row.__truncatedFields?.[field.key];
+          const isDuplicate = (field.key === "sku" || field.key === "name") && !!duplicates?.[row.__rowId]?.[field.key];
           return (
             <div onClick={stopRowToggle} onMouseDown={stopRowToggle}>
               <TextField
@@ -276,6 +294,8 @@ export const ReviewStep = ({ rows, onRowsChange, normalizationStats }) => {
                     ? "Field cannot be empty"
                     : wasTruncated
                     ? "Max. 100 characters. Extra text removed."
+                    : isDuplicate
+                    ? (field.key === "sku" ? "Duplicate SKU found in this file" : "Duplicate name found in this file")
                     : currencyWarning
                     ? "Different currency detected. Value kept as is."
                     : undefined
@@ -383,6 +403,15 @@ export const ReviewStep = ({ rows, onRowsChange, normalizationStats }) => {
                   <Button variant="outlined" leftIcon={AddIcon} onClick={addRow}>New Row</Button>
                 </div>
               </div>
+
+              {isDirty && (
+                <div style={{ marginTop: "12px" }}>
+                  <UnsavedChangesBanner
+                    message="Save your changes to check for duplicate data before importing."
+                    onSave={onSaveAndCheck}
+                  />
+                </div>
+              )}
 
               {selectedIds.length > 0 && (
                 <div

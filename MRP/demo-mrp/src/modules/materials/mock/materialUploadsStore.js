@@ -69,9 +69,12 @@ const STATUS_LOG_COPY = {
 //  - row[1] — missing Name/SKU (blank required field).
 //  - row[2] — missing Category (blank required field).
 //  - row[3] — ABC Classification isn't one of A/B/C ("D"), so the dropdown
-//             renders in its unset/error state.
-//  - row[4] — Material Type came in as a raw source-file spelling ("Semi
-//             Finished") that wasn't normalized to the canonical enum value.
+//             renders in its unset/error state with
+//             "“D” couldn’t be applied due to its format."
+//  - row[4] — Material Type came in as a value with no matching alias
+//             ("Composite" — unlike e.g. "Semi Finished", which normalizeMaterialTypeValue
+//             *would* map to "SemiFinished"), showing
+//             "“Composite” couldn’t be applied due to its format."
 //  - row[5] — Name came in longer than the 100-char cap — already truncated
 //             to 100 chars here (mirroring what normalizeMappedRows would do
 //             for a real import) and flagged via __truncatedFields so the
@@ -104,7 +107,7 @@ const generateDraftMaterialRows = () => {
   rows[1] = { ...rows[1], sku: "", name: "" };
   rows[2] = { ...rows[2], category: "" };
   rows[3] = { ...rows[3], abcClassification: "D" };
-  rows[4] = { ...rows[4], materialType: "Semi Finished" };
+  rows[4] = { ...rows[4], materialType: "Composite" };
   rows[5] = {
     ...rows[5],
     name: "Aa Reinforced Galvanized Steel Pipe Fitting Coupler Heavy Duty Industrial Grade For Structural Use In".slice(0, 100),

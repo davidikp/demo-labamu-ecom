@@ -1235,6 +1235,13 @@ const INDONESIAN_EXACT_TEXT = {
   "Import Started": "Impor Dimulai",
   "Import Completed": "Impor Selesai",
   "Upload Cancelled": "Unggahan Dibatalkan",
+
+  // Review step — "unsaved changes" banner / Save & Check / duplicate-value check.
+  "Save your changes to check for duplicate data before importing.": "Simpan perubahan untuk memeriksa data duplikat sebelum mengimpor.",
+  "Save & Check": "Simpan & Periksa",
+  "Duplicate SKU found in this file": "SKU duplikat ditemukan pada file ini",
+  "Duplicate name found in this file": "Nama duplikat ditemukan pada file ini",
+  "Saved — no duplicate values found.": "Tersimpan — tidak ditemukan nilai duplikat.",
 };
 
 const INDONESIAN_FRAGMENT_REPLACEMENTS = [
@@ -1485,6 +1492,17 @@ const INDONESIAN_DYNAMIC_TEXT = [
     // Activity log "Upload Created" description (Materials).
     pattern: /^File "(.+)" was uploaded \((\d+) materials?\)\.$/,
     replacer: (_, fileName, count) => `File "${fileName}" diunggah (${count} material).`,
+  },
+  {
+    // "Save & Check" snackbar when the duplicate-value scan finds matches.
+    pattern: /^Saved — (\d+) rows? with duplicate values found\.$/,
+    replacer: (_, count) => `Tersimpan — ${count} baris dengan nilai duplikat ditemukan.`,
+  },
+  {
+    // Review step — unsupported-format error (Lead Time unit / ABC
+    // Classification / Material Type all share this one message shape).
+    pattern: /^“(.+)” couldn’t be applied due to its format\.$/,
+    replacer: (_, sourceValue) => `“${sourceValue}” tidak dapat diterapkan karena formatnya tidak sesuai.`,
   },
 ];
 

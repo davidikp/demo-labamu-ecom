@@ -14,6 +14,7 @@ import {
   NOT_MAPPED,
   isRowInvalid,
   withDefaultStatus,
+  findDuplicateRowFields,
 } from "../mock/materialFieldsConfig.js";
 import { BackgroundProcessingScreen } from "../components/BackgroundProcessingScreen.jsx";
 import { CancelUploadConfirmModal } from "../components/CancelUploadConfirmModal.jsx";
@@ -89,6 +90,13 @@ export const MaterialUploadNewPage = ({ onNavigate, showSnackbar, initialData, i
   const [parsedHeaders, setParsedHeaders] = useState(resumeRecord?.sourceHeaders || []);
   const [parsedRows, setParsedRows] = useState(resumeRecord?.rawRows || []);
   const [normalizedRows, setNormalizedRows] = useState(withDefaultStatus(resumeRecord?.rows));
+  // Result of the last "Save & Check" duplicate-value scan ({ [rowId]: { sku, name } }).
+  // Cleared on every row edit — stale until the user re-runs the check.
+  const [duplicates, setDuplicates] = useState({});
+  const handleReviewRowsChange = (nextRows) => {
+    setNormalizedRows(nextRows);
+    setDuplicates({});
+  };
   const [fieldMapping, setFieldMapping] = useState(resumeRecord?.fieldMapping || {});
   const [sourceHeaders, setSourceHeaders] = useState(resumeRecord?.sourceHeaders || []);
   const [editingDraftId, setEditingDraftId] = useState(resumeRecord?.id || null);
@@ -350,7 +358,10 @@ export const MaterialUploadNewPage = ({ onNavigate, showSnackbar, initialData, i
     onNavigate("materials_bulk-upload-list");
   };
 
-  const handleSaveDraft = () => {
+  // Shared by "Save as Draft" and "Save & Check" — writes the current Review
+  // rows to the draft record (creating it on first save) without deciding
+  // what happens afterward (navigate away vs. stay and check duplicates).
+  const persistDraftRows = () => {
     const payload = {
       fileName: fileName || "untitled-upload.csv",
       totalMaterials: normalizedRows.length,
@@ -366,10 +377,33 @@ export const MaterialUploadNewPage = ({ onNavigate, showSnackbar, initialData, i
     if (editingDraftId) {
       updateMaterialUpload(editingDraftId, payload);
     } else {
-      addMaterialUpload(payload);
+      const record = addMaterialUpload(payload);
+      setEditingDraftId(record.id);
     }
+  };
+
+  const handleSaveDraft = () => {
+    persistDraftRows();
     showSnackbar?.("Upload saved as draft", "success");
     onNavigate("materials_bulk-upload-list");
+  };
+
+  // "Save & Check" — persists the rows (same write as "Save as Draft") and
+  // runs the duplicate SKU/Name scan, but stays on the Review step instead of
+  // navigating back to the list. Marks the Review step clean (rowsSnapshot)
+  // so the unsaved-changes banner hides until the next edit.
+  const handleSaveAndCheck = () => {
+    persistDraftRows();
+    setRowsSnapshot(JSON.stringify(normalizedRows));
+    const found = findDuplicateRowFields(normalizedRows);
+    setDuplicates(found);
+    const dupCount = Object.keys(found).length;
+    showSnackbar?.(
+      dupCount > 0
+        ? `Saved — ${dupCount} row${dupCount > 1 ? "s" : ""} with duplicate values found.`
+        : "Saved — no duplicate values found.",
+      dupCount > 0 ? "warning" : "success"
+    );
   };
 
   const handleStartUpload = () => {
@@ -544,8 +578,11 @@ export const MaterialUploadNewPage = ({ onNavigate, showSnackbar, initialData, i
         {step === "review" && (
           <ReviewStep
             rows={normalizedRows}
-            onRowsChange={setNormalizedRows}
+            onRowsChange={handleReviewRowsChange}
             normalizationStats={normalizationStats}
+            isDirty={isStepDirty}
+            onSaveAndCheck={handleSaveAndCheck}
+            duplicates={duplicates}
           />
         )}
         {step === "mapping-processing" && (

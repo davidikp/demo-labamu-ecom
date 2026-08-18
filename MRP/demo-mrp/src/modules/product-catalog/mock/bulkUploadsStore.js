@@ -65,7 +65,8 @@ const STATUS_LOG_COPY = {
 // Review step has enough data to demo pagination/search/filtering, with a
 // few deliberate edge cases mixed in alongside the original 3 invalid rows:
 //  - row[4] — Lead Time unit isn't one of our options ("Fortnights"), so the
-//             unit dropdown renders in its unset/error state.
+//             unit dropdown renders in its unset/error state with
+//             "“Fortnights” couldn’t be applied due to its format."
 //  - row[5] — Selling Price came in a foreign currency ($) — the numeric
 //             value is kept as-is and flagged for the user to verify.
 //  - row[6] — Name came in longer than the 100-char cap — already truncated

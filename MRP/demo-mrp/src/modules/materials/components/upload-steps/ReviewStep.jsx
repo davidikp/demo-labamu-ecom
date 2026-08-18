@@ -8,6 +8,7 @@ import { StatusBadge } from "../../../../components/common/StatusBadge.jsx";
 import { DropdownSelect } from "../../../../components/common/DropdownSelect.jsx";
 import { TableSearchField } from "../../../../components/table/TableSearchField.jsx";
 import { TablePaginationFooter } from "../../../../components/table/TablePaginationFooter.jsx";
+import { UnsavedChangesBanner } from "../../../../components/common/UnsavedChangesBanner.jsx";
 import {
   MATERIAL_FIELDS_CONFIG,
   isRowInvalid,
@@ -50,7 +51,14 @@ const MATERIAL_TYPE_LABEL = {
 // `normalizationStats`, if provided, reflects the just-completed simulated
 // AI normalization pass (see MaterialUploadNewPage) — including any rows
 // that were skipped mid-process (e.g. the AI ran out of tokens).
-export const ReviewStep = ({ rows, onRowsChange, normalizationStats }) => {
+// `isDirty`/`onSaveAndCheck` drive the "unsaved changes" banner above the
+// table: MaterialUploadNewPage passes `isDirty` from its own Review-step dirty
+// check (the same one gating the discard-changes confirm), and `onSaveAndCheck`
+// persists the current rows to the draft record and runs the duplicate-value
+// scan — without navigating away, unlike "Save as Draft". `duplicates` is
+// that scan's result ({ [rowId]: { sku, name } }), used to flag SKU/Name
+// cells the same way required-field/truncation errors are flagged.
+export const ReviewStep = ({ rows, onRowsChange, normalizationStats, isDirty, onSaveAndCheck, duplicates }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [showOnlyInvalid, setShowOnlyInvalid] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
@@ -146,7 +154,13 @@ export const ReviewStep = ({ rows, onRowsChange, normalizationStats }) => {
                   options={ABC_CLASSIFICATION_OPTIONS.map((v) => ({ value: v, label: v }))}
                   onChange={(val) => updateCell(row.__rowId, "abcClassification", val)}
                   state={isUnrecognized || isEmpty ? "error" : "default"}
-                  errorText={isUnrecognized || isEmpty ? "Field cannot be empty" : undefined}
+                  errorText={
+                    isEmpty
+                      ? "Field cannot be empty"
+                      : isUnrecognized
+                      ? `“${row.abcClassification}” couldn’t be applied due to its format.`
+                      : undefined
+                  }
                 />
               </div>
             );
@@ -218,7 +232,13 @@ export const ReviewStep = ({ rows, onRowsChange, normalizationStats }) => {
                   options={MATERIAL_TYPE_OPTIONS.map((v) => ({ value: v, label: MATERIAL_TYPE_LABEL[v] || v }))}
                   onChange={(val) => updateCell(row.__rowId, "materialType", val)}
                   state={isUnrecognized || isEmpty ? "error" : "default"}
-                  errorText={isUnrecognized || isEmpty ? "Field cannot be empty" : undefined}
+                  errorText={
+                    isEmpty
+                      ? "Field cannot be empty"
+                      : isUnrecognized
+                      ? `“${row.materialType}” couldn’t be applied due to its format.`
+                      : undefined
+                  }
                 />
               </div>
             );
@@ -237,6 +257,7 @@ export const ReviewStep = ({ rows, onRowsChange, normalizationStats }) => {
           const isEmptyRequired = field.required && !String(row[field.key] || "").trim();
           const isCapped = field.key === "name" || field.key === "category";
           const wasTruncated = !!row.__truncatedFields?.[field.key];
+          const isDuplicate = (field.key === "sku" || field.key === "name") && !!duplicates?.[row.__rowId]?.[field.key];
           return (
             <div onClick={stopRowToggle} onMouseDown={stopRowToggle}>
               <TextField
@@ -248,6 +269,8 @@ export const ReviewStep = ({ rows, onRowsChange, normalizationStats }) => {
                     ? "Field cannot be empty"
                     : wasTruncated
                     ? "Max. 100 characters. Extra text removed."
+                    : isDuplicate
+                    ? (field.key === "sku" ? "Duplicate SKU found in this file" : "Duplicate name found in this file")
                     : undefined
                 }
                 showCount={isCapped}
@@ -353,6 +376,15 @@ export const ReviewStep = ({ rows, onRowsChange, normalizationStats }) => {
                   <Button variant="outlined" leftIcon={AddIcon} onClick={addRow}>New Row</Button>
                 </div>
               </div>
+
+              {isDirty && (
+                <div style={{ marginTop: "12px" }}>
+                  <UnsavedChangesBanner
+                    message="Save your changes to check for duplicate data before importing."
+                    onSave={onSaveAndCheck}
+                  />
+                </div>
+              )}
 
               {selectedIds.length > 0 && (
                 <div

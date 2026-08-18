@@ -161,6 +161,38 @@ export const rowNeedsAttention = (row) =>
   hasUnrecognizedMaterialType(row) ||
   Object.keys(row.__truncatedFields || {}).length > 0;
 
+// Flags rows whose SKU or Name repeats (case-insensitive, trimmed) elsewhere
+// in the same batch — run on demand by the Review step's "Save & Check"
+// action rather than live on every keystroke. Blank values never count as
+// duplicates of each other. Returns { [rowId]: { sku: bool, name: bool } },
+// only including rows that actually have a duplicate on at least one field.
+export const findDuplicateRowFields = (rows) => {
+  const list = rows || [];
+  const countValues = (key) => {
+    const counts = new Map();
+    list.forEach((row) => {
+      const value = String(row[key] || "").trim().toLowerCase();
+      if (!value) return;
+      counts.set(value, (counts.get(value) || 0) + 1);
+    });
+    return counts;
+  };
+  const skuCounts = countValues("sku");
+  const nameCounts = countValues("name");
+
+  const result = {};
+  list.forEach((row) => {
+    const sku = String(row.sku || "").trim().toLowerCase();
+    const name = String(row.name || "").trim().toLowerCase();
+    const dupSku = !!sku && skuCounts.get(sku) > 1;
+    const dupName = !!name && nameCounts.get(name) > 1;
+    if (dupSku || dupName) {
+      result[row.__rowId] = { sku: dupSku, name: dupName };
+    }
+  });
+  return result;
+};
+
 // Strips everything except letters/digits so headers like "Unit of
 // Measurement (UOM)", "uom", "Unit-Of-Measurement" all normalize the same.
 const normalizeHeader = (s) => String(s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
