@@ -3,6 +3,7 @@ import { Table } from "../../../../ce-ui";
 import { Info } from "../../../../components/icons/Icons.jsx";
 import { StatusBadge } from "../../../../components/common/StatusBadge.jsx";
 import { DropdownSelect } from "../../../../components/common/DropdownSelect.jsx";
+import { Tooltip } from "../../../../components/atoms/Tooltip.jsx";
 import { PRODUCT_FIELDS_CONFIG, NOT_MAPPED } from "../../mock/productFieldsConfig.js";
 
 // Presentational/controlled: `mapping` and `recommendation` are owned by the
@@ -38,6 +39,13 @@ export const MappingStep = ({ headers, rows = [], mapping, recommendation, onMap
         <div style={{ display: "flex", alignItems: "center", gap: "8px", padding: "12px 0" }}>
           <span style={{ fontSize: "var(--text-title-3)" }}>{row.field.label}</span>
           {row.field.required && <StatusBadge variant="blue-light">Required</StatusBadge>}
+          {row.field.helpText && (
+            <Tooltip content={row.field.helpText}>
+              <span style={{ display: "inline-flex", cursor: "help", color: "var(--neutral-on-surface-tertiary)" }}>
+                <Info size={14} />
+              </span>
+            </Tooltip>
+          )}
         </div>
       ),
     },
@@ -123,7 +131,7 @@ export const MappingStep = ({ headers, rows = [], mapping, recommendation, onMap
           <Info size={20} color="var(--feature-brand-primary)" />
         </div>
         <span style={{ fontSize: "var(--text-title-3)", color: "var(--neutral-on-surface-primary)" }}>
-          Check that each product field matches the correct column from your file. Once everything looks right, continue to normalize and review your data.
+          Your file columns have been mapped automatically. Review the mappings before continuing.
         </span>
       </div>
 

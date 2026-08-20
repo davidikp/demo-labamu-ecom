@@ -9,6 +9,7 @@ export const PRODUCT_FIELDS_CONFIG = [
     required: false,
     example: "WBD-TEAK-120",
     synonyms: ["sku", "productsku", "code", "productcode", "itemcode"],
+    helpText: "If empty, the system will auto-generate the SKU",
   },
   {
     key: "name",
@@ -23,6 +24,13 @@ export const PRODUCT_FIELDS_CONFIG = [
     required: true,
     example: "Sport",
     synonyms: ["categoryname", "category", "productcategory"],
+  },
+  {
+    key: "description",
+    label: "Description",
+    required: false,
+    example: "Handwoven rattan tray with teak base",
+    synonyms: ["description", "productdescription", "notes", "desc"],
   },
   {
     key: "status",
@@ -162,10 +170,10 @@ export const rowNeedsAttention = (row) =>
   Object.keys(row.__truncatedFields || {}).length > 0;
 
 // Flags rows whose SKU or Name repeats (case-insensitive, trimmed) elsewhere
-// in the same batch — run on demand by the Review step's "Save & Check"
-// action rather than live on every keystroke. Blank values never count as
-// duplicates of each other. Returns { [rowId]: { sku: bool, name: bool } },
-// only including rows that actually have a duplicate on at least one field.
+// in the same batch — recomputed live as rows change. Blank values never
+// count as duplicates of each other. Returns { [rowId]: { sku: bool, name:
+// bool } }, only including rows that actually have a duplicate on at least
+// one field.
 export const findDuplicateRowFields = (rows) => {
   const list = rows || [];
   const countValues = (key) => {

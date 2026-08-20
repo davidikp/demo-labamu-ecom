@@ -24,6 +24,8 @@ import { NoDataToImportConfirmModal } from "../components/NoDataToImportConfirmM
 import { InputDataConfirmModal } from "../components/InputDataConfirmModal.jsx";
 import { SkipNormalizationConfirmModal } from "../components/SkipNormalizationConfirmModal.jsx";
 import { UseTemplateSuggestionModal } from "../components/UseTemplateSuggestionModal.jsx";
+import { AnalyzingFileBlockerModal } from "../components/AnalyzingFileBlockerModal.jsx";
+import { setNavigationGuard, clearNavigationGuard } from "../../../utils/navigationGuard.js";
 
 const STEPS = [
   { key: "upload", label: "Upload" },
@@ -90,9 +92,11 @@ export const BulkUploadNewPage = ({ onNavigate, showSnackbar, initialData, isSid
   const [parsedHeaders, setParsedHeaders] = useState(resumeRecord?.sourceHeaders || []);
   const [parsedRows, setParsedRows] = useState(resumeRecord?.rawRows || []);
   const [normalizedRows, setNormalizedRows] = useState(withDefaultStatus(resumeRecord?.rows));
-  // Result of the last "Save & Check" duplicate-value scan ({ [rowId]: { sku, name } }).
-  // Cleared on every row edit — stale until the user re-runs the check.
-  const [duplicates, setDuplicates] = useState({});
+  // Result of the last save's duplicate SKU/Name scan ({ [rowId]: { sku, name } }).
+  // Seeded from the resumed draft's own rows so reopening a saved draft shows
+  // duplicates immediately, without requiring another save first. Cleared on
+  // every row edit — stale until the next save.
+  const [duplicates, setDuplicates] = useState(() => findDuplicateRowFields(resumeRecord?.rows));
   const handleReviewRowsChange = (nextRows) => {
     setNormalizedRows(nextRows);
     setDuplicates({});
@@ -127,6 +131,7 @@ export const BulkUploadNewPage = ({ onNavigate, showSnackbar, initialData, isSid
   const [showInputDataConfirm, setShowInputDataConfirm] = useState(false);
   const [showSkipConfirm, setShowSkipConfirm] = useState(false);
   const [showTemplateSuggestion, setShowTemplateSuggestion] = useState(false);
+  const [showAnalyzingBlocker, setShowAnalyzingBlocker] = useState(false);
   const [normalizationStats, setNormalizationStats] = useState(() => {
     if (!resumeRecord || resumeRecord.status !== "Review") return null;
     // Fall back to "fully normalized" for records that already have saved
@@ -153,6 +158,22 @@ export const BulkUploadNewPage = ({ onNavigate, showSnackbar, initialData, isSid
       : false;
 
   const analyzeCancelRef = useRef(null);
+
+  // Blocks sidebar module navigation while the file is being analyzed —
+  // there's no "leave anyway" here, just a modal telling the user to wait.
+  const isAnalyzingRef = useRef(false);
+  useEffect(() => {
+    isAnalyzingRef.current = isAnalyzing;
+  }, [isAnalyzing]);
+  useEffect(() => {
+    const guard = (proceed) => {
+      if (!isAnalyzingRef.current) return true;
+      setShowAnalyzingBlocker(true);
+      return false;
+    };
+    setNavigationGuard(guard);
+    return () => clearNavigationGuard(guard);
+  }, []);
 
   const handleDownloadTemplate = () => downloadProductTemplateCsv();
 
@@ -358,9 +379,8 @@ export const BulkUploadNewPage = ({ onNavigate, showSnackbar, initialData, isSid
     onNavigate("product_catalog_bulk-upload-list");
   };
 
-  // Shared by "Save as Draft" and "Save & Check" — writes the current Review
-  // rows to the draft record (creating it on first save) without deciding
-  // what happens afterward (navigate away vs. stay and check duplicates).
+  // Writes the current Review rows to the draft record (creating it on
+  // first save) without deciding what happens afterward.
   const persistDraftRows = () => {
     const payload = {
       fileName: fileName || "untitled-upload.csv",
@@ -380,6 +400,7 @@ export const BulkUploadNewPage = ({ onNavigate, showSnackbar, initialData, isSid
       const record = addBulkUpload(payload);
       setEditingDraftId(record.id);
     }
+    setDuplicates(findDuplicateRowFields(normalizedRows));
   };
 
   const handleSaveDraft = () => {
@@ -388,23 +409,6 @@ export const BulkUploadNewPage = ({ onNavigate, showSnackbar, initialData, isSid
     onNavigate("product_catalog_bulk-upload-list");
   };
 
-  // "Save & Check" — persists the rows (same write as "Save as Draft") and
-  // runs the duplicate SKU/Name scan, but stays on the Review step instead of
-  // navigating back to the list. Marks the Review step clean (rowsSnapshot)
-  // so the unsaved-changes banner hides until the next edit.
-  const handleSaveAndCheck = () => {
-    persistDraftRows();
-    setRowsSnapshot(JSON.stringify(normalizedRows));
-    const found = findDuplicateRowFields(normalizedRows);
-    setDuplicates(found);
-    const dupCount = Object.keys(found).length;
-    showSnackbar?.(
-      dupCount > 0
-        ? `Saved — ${dupCount} row${dupCount > 1 ? "s" : ""} with duplicate values found.`
-        : "Saved — no duplicate values found.",
-      dupCount > 0 ? "warning" : "success"
-    );
-  };
 
   const handleStartUpload = () => {
     const validRows = normalizedRows.filter((r) => !isRowInvalid(r));
@@ -580,15 +584,13 @@ export const BulkUploadNewPage = ({ onNavigate, showSnackbar, initialData, isSid
             rows={normalizedRows}
             onRowsChange={handleReviewRowsChange}
             normalizationStats={normalizationStats}
-            isDirty={isStepDirty}
-            onSaveAndCheck={handleSaveAndCheck}
             duplicates={duplicates}
           />
         )}
         {step === "mapping-processing" && (
           <BackgroundProcessingScreen
             title="Your file is being normalized"
-            message="We’re also validating your data to prepare it for review. You can leave this page and we’ll notify you by email when it’s ready."
+            message="AI is normalizing and validating your data to prepare it for review. You can leave this page and we’ll email you when it’s ready."
             buttonLabel="Back to Bulk Upload"
             onBackToList={() => onNavigate("product_catalog_bulk-upload-list")}
             secondaryActionLabel="Skip Process"
@@ -663,6 +665,11 @@ export const BulkUploadNewPage = ({ onNavigate, showSnackbar, initialData, isSid
         isOpen={showDiscardConfirm}
         onClose={() => setShowDiscardConfirm(false)}
         onConfirm={() => onNavigate("product_catalog_bulk-upload-list")}
+      />
+
+      <AnalyzingFileBlockerModal
+        isOpen={showAnalyzingBlocker}
+        onClose={() => setShowAnalyzingBlocker(false)}
       />
 
       <InvalidDataConfirmModal

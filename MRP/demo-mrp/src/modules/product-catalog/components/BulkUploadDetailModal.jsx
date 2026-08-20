@@ -150,7 +150,7 @@ export const BulkUploadDetailModal = ({ isOpen, onClose, batch }) => {
       isOpen={isOpen}
       onClose={onClose}
       title="Bulk Upload Detail"
-      width="680px"
+      width="880px"
       footer={
         batch.failedCount > 0 && (
           <Button variant="secondary" size="large" leftIcon={DownloadIcon} onClick={() => downloadFailedRowsCsv(batch)} style={{ flex: 1 }}>
@@ -188,7 +188,12 @@ export const BulkUploadDetailModal = ({ isOpen, onClose, batch }) => {
             border: "1px solid var(--neutral-line-separator-1)",
           }}
         >
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "16px" }}>
+          {/* One shared 5-column grid (not two separate ones) so the second
+              row lines up under the first — both start at column 1 (Upload
+              ID / Data in File), since the first row exactly fills all 5
+              columns and CSS grid auto-wraps the next item to a new row. */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "16px" }}>
+            <LabelValue label="Upload ID" value={batch.id} />
             <div style={{ display: "flex", flexDirection: "column", gap: "4px", minWidth: 0 }}>
               <span style={{ fontSize: "var(--text-body)", color: "var(--neutral-on-surface-secondary)" }}>File Name</span>
               <a
@@ -218,10 +223,14 @@ export const BulkUploadDetailModal = ({ isOpen, onClose, batch }) => {
                 <StatusBadge variant={STATUS_VARIANT[batch.status] || "grey"}>{batch.status}</StatusBadge>
               </div>
             </div>
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "16px" }}>
-            <LabelValue label="Upload ID" value={batch.id} />
-            <LabelValue label="Total Data" value={batch.totalProducts} />
+
+            {/* "Data in File" = the original parsed row count before any Review
+                edits (rawRows, set once at Mapping); falls back to the seeded
+                sourceRowCount, then to the reviewed count for older records
+                that have neither. "Data after Review" is that reviewed count
+                (the field this modal used to just call "Total Data"). */}
+            <LabelValue label="Data in File" value={batch.rawRows?.length ?? batch.sourceRowCount ?? batch.totalProducts} />
+            <LabelValue label="Data after Review" value={batch.totalProducts} />
             <LabelValue label="Imported Data" value={batch.successCount} />
             <LabelValue label="Invalid Data" value={batch.failedCount} />
           </div>

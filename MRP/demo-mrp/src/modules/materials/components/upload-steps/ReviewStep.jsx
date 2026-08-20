@@ -8,7 +8,6 @@ import { StatusBadge } from "../../../../components/common/StatusBadge.jsx";
 import { DropdownSelect } from "../../../../components/common/DropdownSelect.jsx";
 import { TableSearchField } from "../../../../components/table/TableSearchField.jsx";
 import { TablePaginationFooter } from "../../../../components/table/TablePaginationFooter.jsx";
-import { UnsavedChangesBanner } from "../../../../components/common/UnsavedChangesBanner.jsx";
 import {
   MATERIAL_FIELDS_CONFIG,
   isRowInvalid,
@@ -51,14 +50,10 @@ const MATERIAL_TYPE_LABEL = {
 // `normalizationStats`, if provided, reflects the just-completed simulated
 // AI normalization pass (see MaterialUploadNewPage) — including any rows
 // that were skipped mid-process (e.g. the AI ran out of tokens).
-// `isDirty`/`onSaveAndCheck` drive the "unsaved changes" banner above the
-// table: MaterialUploadNewPage passes `isDirty` from its own Review-step dirty
-// check (the same one gating the discard-changes confirm), and `onSaveAndCheck`
-// persists the current rows to the draft record and runs the duplicate-value
-// scan — without navigating away, unlike "Save as Draft". `duplicates` is
-// that scan's result ({ [rowId]: { sku, name } }), used to flag SKU/Name
-// cells the same way required-field/truncation errors are flagged.
-export const ReviewStep = ({ rows, onRowsChange, normalizationStats, isDirty, onSaveAndCheck, duplicates }) => {
+// `duplicates` is the result of the last save's duplicate SKU/Name scan
+// ({ [rowId]: { sku, name } }), passed down from MaterialUploadNewPage — it
+// only updates when the page saves the draft, not on every keystroke here.
+export const ReviewStep = ({ rows, onRowsChange, normalizationStats, duplicates }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [showOnlyInvalid, setShowOnlyInvalid] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
@@ -376,15 +371,6 @@ export const ReviewStep = ({ rows, onRowsChange, normalizationStats, isDirty, on
                   <Button variant="outlined" leftIcon={AddIcon} onClick={addRow}>New Row</Button>
                 </div>
               </div>
-
-              {isDirty && (
-                <div style={{ marginTop: "12px" }}>
-                  <UnsavedChangesBanner
-                    message="Save your changes to check for duplicate data before importing."
-                    onSave={onSaveAndCheck}
-                  />
-                </div>
-              )}
 
               {selectedIds.length > 0 && (
                 <div

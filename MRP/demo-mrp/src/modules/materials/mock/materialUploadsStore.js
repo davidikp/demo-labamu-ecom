@@ -124,6 +124,10 @@ const SEED_BATCHES = [
     createdAt: "2026-08-02T09:20:00Z",
     createdBy: CURRENT_USER.name,
     totalMaterials: 14,
+    // No `rawRows` kept for this seed — sourceRowCount stands in as the
+    // Bulk Upload Detail modal's "Data in File" count (one row was removed
+    // during Review before import, hence 15 in the file vs. 14 reviewed).
+    sourceRowCount: 15,
     status: "Completed",
     successCount: 14,
     failedCount: 0,
@@ -143,6 +147,7 @@ const SEED_BATCHES = [
     createdAt: "2026-08-05T13:10:00Z",
     createdBy: NOTIFICATION_USERS[1].name,
     totalMaterials: 10,
+    sourceRowCount: 11,
     status: "Completed",
     successCount: 8,
     failedCount: 2,
@@ -165,6 +170,7 @@ const SEED_BATCHES = [
     createdAt: "2026-08-07T15:40:00Z",
     createdBy: NOTIFICATION_USERS[2].name,
     totalMaterials: 12,
+    sourceRowCount: 12,
     status: "Processing",
     successCount: 0,
     failedCount: 0,
@@ -183,6 +189,7 @@ const SEED_BATCHES = [
     createdAt: "2026-08-08T10:05:00Z",
     createdBy: NOTIFICATION_USERS[3].name,
     totalMaterials: 20,
+    sourceRowCount: 22,
     status: "Review",
     successCount: 0,
     failedCount: 0,
@@ -269,6 +276,7 @@ const SEED_BATCHES = [
     createdAt: "2026-07-29T09:00:00Z",
     createdBy: CURRENT_USER.name,
     totalMaterials: 16,
+    sourceRowCount: 16,
     status: "Cancelled",
     successCount: 0,
     failedCount: 16,

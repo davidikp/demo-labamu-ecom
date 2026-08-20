@@ -65,8 +65,8 @@ export const MaterialUploadListPage = ({ onNavigate }) => {
   }, [searchQuery, activeFilters]);
 
   const tableColumns = [
-    { label: "File Name", key: "fileName", flex: "2" },
     { label: "Upload ID", key: "id", flex: "1.4" },
+    { label: "File Name", key: "fileName", flex: "2" },
     { label: "Created At", key: "createdAt", flex: "1.6", sortable: true },
     { label: "Created By", key: "createdBy", flex: "1.4" },
     { label: "Total Data", key: "totalMaterials", flex: "1.2" },
@@ -193,8 +193,8 @@ export const MaterialUploadListPage = ({ onNavigate }) => {
                   onMouseEnter={(e) => (e.currentTarget.style.background = "var(--neutral-surface-grey-lighter)")}
                   onMouseLeave={(e) => (e.currentTarget.style.background = "var(--neutral-surface-primary)")}
                 >
-                  <div style={{ flex: tableColumns[0].flex, padding: "12px", fontSize: "var(--text-title-3)", fontWeight: "var(--font-weight-bold)" }}>{row.fileName}</div>
-                  <div style={{ flex: tableColumns[1].flex, padding: "12px", fontSize: "var(--text-title-3)", color: "var(--neutral-on-surface-primary)" }}>{row.id}</div>
+                  <div style={{ flex: tableColumns[0].flex, padding: "12px", fontSize: "var(--text-title-3)", color: "var(--feature-brand-primary)" }}>{row.id}</div>
+                  <div style={{ flex: tableColumns[1].flex, padding: "12px", fontSize: "var(--text-title-3)" }}>{row.fileName}</div>
                   <div style={{ flex: tableColumns[2].flex, padding: "12px", fontSize: "var(--text-title-3)" }}>{formatDate(row.createdAt)}</div>
                   <div style={{ flex: tableColumns[3].flex, padding: "12px", fontSize: "var(--text-title-3)" }}>{row.createdBy}</div>
                   <div style={{ flex: tableColumns[4].flex, padding: "12px", fontSize: "var(--text-title-3)" }}>{row.totalMaterials}</div>

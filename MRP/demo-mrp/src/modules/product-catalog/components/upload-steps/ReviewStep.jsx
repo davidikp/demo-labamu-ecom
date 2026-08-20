@@ -8,7 +8,6 @@ import { StatusBadge } from "../../../../components/common/StatusBadge.jsx";
 import { DropdownSelect } from "../../../../components/common/DropdownSelect.jsx";
 import { TableSearchField } from "../../../../components/table/TableSearchField.jsx";
 import { TablePaginationFooter } from "../../../../components/table/TablePaginationFooter.jsx";
-import { UnsavedChangesBanner } from "../../../../components/common/UnsavedChangesBanner.jsx";
 import { PRODUCT_FIELDS_CONFIG, isRowInvalid, rowNeedsAttention, STATUS_OPTIONS } from "../../mock/productFieldsConfig.js";
 
 let blankRowSeq = 0;
@@ -23,6 +22,7 @@ const COLUMN_WIDTH = {
   sku: 160,
   name: 200,
   categoryName: 200,
+  description: 280,
   status: 160,
   primaryMaterial: 200,
   finishing: 200,
@@ -107,14 +107,10 @@ const splitLabelUom = (label) => {
 // `normalizationStats`, if provided, reflects the just-completed simulated
 // AI normalization pass (see BulkUploadNewPage) — including any rows that
 // were skipped mid-process (e.g. the AI ran out of tokens).
-// `isDirty`/`onSaveAndCheck` drive the "unsaved changes" banner above the
-// table: BulkUploadNewPage passes `isDirty` from its own Review-step dirty
-// check (the same one gating the discard-changes confirm), and `onSaveAndCheck`
-// persists the current rows to the draft record and runs the duplicate-value
-// scan — without navigating away, unlike "Save as Draft". `duplicates` is
-// that scan's result ({ [rowId]: { sku, name } }), used to flag SKU/Name
-// cells the same way required-field/truncation errors are flagged.
-export const ReviewStep = ({ rows, onRowsChange, normalizationStats, isDirty, onSaveAndCheck, duplicates }) => {
+// `duplicates` is the result of the last save's duplicate SKU/Name scan
+// ({ [rowId]: { sku, name } }), passed down from BulkUploadNewPage — it only
+// updates when the page saves the draft, not on every keystroke here.
+export const ReviewStep = ({ rows, onRowsChange, normalizationStats, duplicates }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [showOnlyInvalid, setShowOnlyInvalid] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
@@ -267,6 +263,27 @@ export const ReviewStep = ({ rows, onRowsChange, normalizationStats, isDirty, on
         };
       }
 
+      if (field.key === "description") {
+        return {
+          key: field.key,
+          header,
+          width,
+          render: (value, row) => (
+            <div onClick={stopRowToggle} onMouseDown={stopRowToggle}>
+              <TextField
+                size="md"
+                multiline
+                rows={2}
+                showCount
+                maxLength={1000}
+                value={row.description || ""}
+                onChange={(e) => updateCell(row.__rowId, "description", e.target.value)}
+              />
+            </div>
+          ),
+        };
+      }
+
       const isNumberField = NUMBER_FIELD_KEYS.has(field.key);
       // Only SKU and Name are user-sortable — they're the fields people
       // actually scan/search by; everything else stays presentation-order.
@@ -275,6 +292,7 @@ export const ReviewStep = ({ rows, onRowsChange, normalizationStats, isDirty, on
         key: field.key,
         header,
         width,
+        tooltip: field.helpText,
         sortable,
         render: (value, row) => {
           const isEmptyRequired = field.required && !String(row[field.key] || "").trim();
@@ -383,7 +401,7 @@ export const ReviewStep = ({ rows, onRowsChange, normalizationStats, isDirty, on
                 <div style={{ display: "flex", alignItems: "center", gap: "16px", flexWrap: "wrap" }}>
                   <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", fontSize: "14px" }}>
                     <Checkbox checked={showOnlyInvalid} onChange={(checked) => setShowOnlyInvalid(checked)} />
-                    Show only products that need attention{attentionCount > 0 ? ` (${attentionCount})` : ""}
+                    Show only need attention data{attentionCount > 0 ? ` (${attentionCount})` : ""}
                   </label>
                   {normalizationStats && (
                     <>
@@ -403,15 +421,6 @@ export const ReviewStep = ({ rows, onRowsChange, normalizationStats, isDirty, on
                   <Button variant="outlined" leftIcon={AddIcon} onClick={addRow}>New Row</Button>
                 </div>
               </div>
-
-              {isDirty && (
-                <div style={{ marginTop: "12px" }}>
-                  <UnsavedChangesBanner
-                    message="Save your changes to check for duplicate data before importing."
-                    onSave={onSaveAndCheck}
-                  />
-                </div>
-              )}
 
               {selectedIds.length > 0 && (
                 <div
