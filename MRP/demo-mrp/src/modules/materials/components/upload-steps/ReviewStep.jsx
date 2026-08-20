@@ -245,6 +245,7 @@ export const ReviewStep = ({ rows, onRowsChange, normalizationStats, duplicates 
         key: field.key,
         header,
         width,
+        tooltip: field.helpText,
         // Only SKU and Name are user-sortable — they're the fields people
         // actually scan/search by; everything else stays presentation-order.
         sortable: field.key === "sku" || field.key === "name",
@@ -351,7 +352,7 @@ export const ReviewStep = ({ rows, onRowsChange, normalizationStats, duplicates 
                 <div style={{ display: "flex", alignItems: "center", gap: "16px", flexWrap: "wrap" }}>
                   <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", fontSize: "14px" }}>
                     <Checkbox checked={showOnlyInvalid} onChange={(checked) => setShowOnlyInvalid(checked)} />
-                    Show only materials that need attention{attentionCount > 0 ? ` (${attentionCount})` : ""}
+                    Show only need attention data{attentionCount > 0 ? ` (${attentionCount})` : ""}
                   </label>
                   {normalizationStats && (
                     <>

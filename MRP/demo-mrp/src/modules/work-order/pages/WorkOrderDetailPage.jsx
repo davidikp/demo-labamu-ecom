@@ -37,6 +37,7 @@ import {
 import { WorkOrderEditDrawer } from "../components/WorkOrderEditDrawer.jsx";
 
 export let activityLogsCache = {};
+export let costingLogsCache = {};
 
 let nextActualCostLineId = 1;
 
@@ -529,7 +530,7 @@ const PRIORITY_BADGE_VARIANT = {
   Low: "grey-light",
 };
 
-export const WorkOrderDetailPage = ({ onNavigate, isSidebarCollapsed, initialData }) => {
+export const WorkOrderDetailPage = ({ onNavigate, isSidebarCollapsed, initialData, woSettings }) => {
   const scrollToTop = () => {
     if (typeof window !== "undefined") {
       window.scrollTo({ top: 0, behavior: "auto" });
@@ -668,8 +669,44 @@ export const WorkOrderDetailPage = ({ onNavigate, isSidebarCollapsed, initialDat
     const hrs = String(d.getHours()).padStart(2, '0');
     const mins = String(d.getMinutes()).padStart(2, '0');
     const formattedTimestamp = `${isoDate} at ${hrs}:${mins}`;
-    
+
     setActivityLogs(prev => [
+      {
+        name: "Natasha Smith",
+        email: "natasha@company.com",
+        title,
+        desc,
+        timestamp: formattedTimestamp,
+      },
+      ...prev
+    ]);
+  };
+
+  // Costing Log: separate from the Activity Log — only cost line item
+  // add/edit/delete and costing status changes (Ready to Finalize/Confirmed)
+  // land here, so Finance/PIC can audit who touched Actual COGS and when
+  // without wading through production/operational activity.
+  const [costingLogs, setCostingLogs] = useState(() => {
+    if (initialData?.wo && costingLogsCache[initialData.wo]) {
+      return costingLogsCache[initialData.wo];
+    }
+    return [];
+  });
+
+  useEffect(() => {
+    if (initialData?.wo) {
+      costingLogsCache[initialData.wo] = costingLogs;
+    }
+  }, [costingLogs, initialData?.wo]);
+
+  const addCostingLog = (title, desc = undefined) => {
+    const d = new Date();
+    const isoDate = d.toISOString().split('T')[0];
+    const hrs = String(d.getHours()).padStart(2, '0');
+    const mins = String(d.getMinutes()).padStart(2, '0');
+    const formattedTimestamp = `${isoDate} at ${hrs}:${mins}`;
+
+    setCostingLogs(prev => [
       {
         name: "Natasha Smith",
         email: "natasha@company.com",
@@ -944,6 +981,20 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
     initialData?.statusKey || "not_started"
   );
   const isCancelled = woStatus === "cancelled";
+
+  // Costing Status ("Open" → "Ready to Finalize" → "Confirmed") is driven by
+  // the global Actual COGS setting (Work Order Settings) — read live here, not
+  // snapshotted per WO, so changing it takes effect for every WO immediately.
+  const actualCogsMode = woSettings?.actualCogsMode || "disabled";
+  const [costingStatus, setCostingStatus] = useState(() => {
+    const cached = initialData?.wo ? MOCK_WO_TABLE_DATA.find((w) => w.wo === initialData.wo) : null;
+    return initialData?.costingStatus || cached?.costingStatus || "Open";
+  });
+  const COSTING_BADGE_VARIANT = {
+    Open: "grey-light",
+    "Ready to Finalize": "blue-light",
+    Confirmed: "green-light",
+  };
   const [showSuccessToast, setShowSuccessToast] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
 
@@ -951,6 +1002,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
   const [readyEndDate, setReadyEndDate] = useState("");
   const [isStockBuildFormModalOpen, setIsStockBuildFormModalOpen] = useState(false);
   const [isFinalCompleteModalOpen, setIsFinalCompleteModalOpen] = useState(false);
+  const [isConfirmCostingModalOpen, setIsConfirmCostingModalOpen] = useState(false);
   const [completedDate, setCompletedDate] = useState(() => {
     const cached = initialData?.wo ? MOCK_WO_TABLE_DATA.find((w) => w.wo === initialData.wo) : null;
     return initialData?.completedDate || cached?.completedDate || null;
@@ -1475,7 +1527,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
   const logCostItemChange = (actionTitle, key, label, amount) => {
     const costTypeTitle = ACTUAL_COGS_FIELDS.find((f) => f.key === key)?.title || key;
     const perUnit = TOTAL_QTY > 0 ? Math.round((Number(amount) || 0) / TOTAL_QTY) : 0;
-    addActivityLog(
+    addCostingLog(
       `${costTypeTitle} ${actionTitle}`,
       `${label} with Total Cost per Unit: ${formatIDR(perUnit)} and Total Cost This WO: ${formatIDR(amount)}`
     );
@@ -1529,7 +1581,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
     if (line) {
       const costTypeTitle = ACTUAL_COGS_FIELDS.find((f) => f.key === key)?.title || key;
       const perUnit = TOTAL_QTY > 0 ? Math.round((Number(line.amount) || 0) / TOTAL_QTY) : 0;
-      addActivityLog(
+      addCostingLog(
         `${costTypeTitle} Item Deleted`,
         `${line.label} with Total Cost per Unit: ${formatIDR(perUnit)} and Total Cost This WO: ${formatIDR(line.amount)}. Reason: ${deleteCostItemReason.trim()}`
       );
@@ -1599,6 +1651,8 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
         end: displayEndDate,
         bomId: actualCogsBomId,
         actualCogs,
+        costingStatus,
+        costingBadge: COSTING_BADGE_VARIANT[costingStatus] || "grey-light",
         completedDate,
         postedToStock,
         requestHistory,
@@ -1614,7 +1668,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
         confirmedStockBuild,
       };
     }
-  }, [vendors, routingStages, outsourceSteps, woStatus, displayStartDate, displayEndDate, actualCogsBomId, actualCogs, completedDate, postedToStock, requestHistory, materials, priority, notes, orderType, product, sku, mainQty, outputs, confirmedStockBuild]);
+  }, [vendors, routingStages, outsourceSteps, woStatus, displayStartDate, displayEndDate, actualCogsBomId, actualCogs, costingStatus, completedDate, postedToStock, requestHistory, materials, priority, notes, orderType, product, sku, mainQty, outputs, confirmedStockBuild]);
 
   const hasStages = routingStages.length > 0;
   const allStagesCompleted =
@@ -1644,11 +1698,28 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
   // rather than trusting a one-time bump made only when the request was
   // first submitted (which never reflected later progress/completion).
 
+  // Completion is purely routing-driven — Costing Status is a separate,
+  // parallel track and never blocks the Work Order from completing.
   const canCompleteWorkOrder =
     allStagesCompleted &&
     !hasOngoingMaterialRequest &&
     woStatus !== "completed" &&
     (fulfillmentType !== "StockBuild" || woStatus === "in_progress");
+
+  // When the Actual COGS setting is enabled, once routing stages finish,
+  // Costing Status flips to "Ready to Finalize" so Finance/PIC can review and
+  // confirm Actual COGS — independently of (and without blocking) the Work
+  // Order's own completion.
+  useEffect(() => {
+    if (
+      actualCogsMode === "enabled" &&
+      allStagesCompleted &&
+      !hasOngoingMaterialRequest &&
+      costingStatus === "Open"
+    ) {
+      setCostingStatus("Ready to Finalize");
+    }
+  }, [actualCogsMode, allStagesCompleted, hasOngoingMaterialRequest, costingStatus]);
 
   // Whether this WO ever had any material request activity — drives which
   // completion-confirmation copy shows (see handleOpenFinalCompleteModal).
@@ -1750,6 +1821,15 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
 
   // Final step for both flows: actually marks the WO Completed, and for
   // Stock Build also creates the Stock Batch + an "In" Stock Transaction.
+  const handleConfirmCosting = () => {
+    setCostingStatus("Confirmed");
+    addCostingLog(
+      "Costing Confirmed",
+      "Actual COGS reviewed and confirmed. Cost items are now read-only."
+    );
+    setIsConfirmCostingModalOpen(false);
+  };
+
   const handleFinalComplete = () => {
     const today = new Date().toISOString().slice(0, 10);
 
@@ -1818,6 +1898,14 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
     );
     setWoStatus("completed");
     setCompletedDate(today);
+    // Actual COGS setting disabled: costing auto-confirms once the WO is
+    // done — no separate Finance/PIC review step. When enabled, completion
+    // doesn't wait on costing — Costing Status stays whatever it currently is
+    // (Open/Ready to Finalize) and gets confirmed independently afterward.
+    if (actualCogsMode !== "enabled" && costingStatus !== "Confirmed") {
+      setCostingStatus("Confirmed");
+      addCostingLog("Costing Confirmed", "Costing auto-confirmed on Work Order completion.");
+    }
     addActivityLog("Completed");
     setIsFinalCompleteModalOpen(false);
     setToastMessage(
@@ -4466,6 +4554,14 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
               value={fulfillmentType === "StockBuild" ? "Stock Build" : "Customer Order"}
             />
             <LabelValue label="Notes" value={notes || "-"} />
+            <LabelValue
+              label="Costing Status"
+              value={costingStatus}
+              badge={{
+                variant: COSTING_BADGE_VARIANT[costingStatus] || "grey-light",
+                text: costingStatus,
+              }}
+            />
           </div>
         </Card>
 
@@ -6187,7 +6283,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                                 </span>
                                 <span style={{ fontSize: "var(--text-title-3)" }}>{formatIDR(line.amount)}</span>
                                 <div style={{ display: "flex", gap: "4px", justifyContent: "flex-end" }}>
-                                  {woStatus !== "completed" ? (
+                                  {costingStatus !== "Confirmed" ? (
                                     <>
                                       <Tooltip content="Edit Cost Item">
                                         <IconButton
@@ -6232,7 +6328,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                           )}
                         </div>
                         <div style={{ display: "flex", flexDirection: "column", gap: "4px", alignItems: "flex-start" }}>
-                          {woStatus !== "completed" ? (
+                          {costingStatus !== "Confirmed" ? (
                           <Button
                             variant="outlined"
                             size="small"
@@ -6264,6 +6360,11 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                   {initialData?.product || "Wooden Chair"} Classic Model BOM
                 </span>
               </span>
+              {costingStatus === "Confirmed" ? (
+                <span style={{ fontSize: "14px", color: "var(--neutral-on-surface-secondary)", marginTop: "-12px" }}>
+                  Costing has been confirmed. Cost items are read-only.
+                </span>
+              ) : null}
 
               <div
                 style={{
@@ -6718,123 +6819,145 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
           </Card>
         )}
 
-        {activeTab === "logs" && (
-          <div
-            style={{
-              background: "var(--neutral-surface-primary)",
-              borderRadius: "16px",
-              border: "1px solid var(--neutral-line-separator-1)",
-              overflow: "hidden",
-            }}
-          >
+        {activeTab === "logs" && (() => {
+          const renderLogCard = (title, logs) => (
             <div
               style={{
-                padding: "24px 24px 0 24px",
-                display: "flex",
-                alignItems: "center",
+                background: "var(--neutral-surface-primary)",
+                borderRadius: "16px",
+                border: "1px solid var(--neutral-line-separator-1)",
+                overflow: "hidden",
               }}
             >
-              <span
+              <div
                 style={{
-                  fontSize: "var(--text-title-2)",
-                  fontWeight: "var(--font-weight-bold)",
-                  color: "var(--neutral-on-surface-primary)",
+                  padding: "24px 24px 0 24px",
+                  display: "flex",
+                  alignItems: "center",
                 }}
               >
-                Activity Logs
-              </span>
-            </div>
-            <div style={{ padding: "24px" }}>
-              <div style={{ display: "flex", flexDirection: "column" }}>
-                <div
+                <span
                   style={{
-                    display: "flex",
-                    paddingBottom: "12px",
-                    borderBottom: "1px solid var(--neutral-line-separator-1)",
+                    fontSize: "var(--text-title-2)",
                     fontWeight: "var(--font-weight-bold)",
-                    fontSize: "var(--text-title-3)",
                     color: "var(--neutral-on-surface-primary)",
                   }}
                 >
-                  <div style={{ flex: "1.1" }}>Name</div>
-                  <div style={{ flex: "1.9" }}>Email</div>
-                  <div style={{ flex: "2.8" }}>Activity</div>
-                  <div style={{ width: "190px" }}>Timestamp</div>
-                </div>
-
-                {activityLogs.map((log, idx, arr) => (
+                  {title}
+                </span>
+              </div>
+              <div style={{ padding: "24px" }}>
+                <div style={{ display: "flex", flexDirection: "column" }}>
                   <div
-                    key={idx}
                     style={{
                       display: "flex",
-                      alignItems: "flex-start",
-                      padding: "16px 0",
-                      borderBottom:
-                        idx === arr.length - 1
-                          ? "none"
-                          : "1px solid var(--neutral-line-separator-1)",
+                      paddingBottom: "12px",
+                      borderBottom: "1px solid var(--neutral-line-separator-1)",
+                      fontWeight: "var(--font-weight-bold)",
                       fontSize: "var(--text-title-3)",
+                      color: "var(--neutral-on-surface-primary)",
                     }}
                   >
-                    <div
-                      style={{
-                        flex: "1.1",
-                        color: "var(--neutral-on-surface-primary)",
-                      }}
-                    >
-                      {log.name}
-                    </div>
-                    <div
-                      style={{
-                        flex: "1.9",
-                        color: "var(--neutral-on-surface-secondary)",
-                      }}
-                    >
-                      {log.email}
-                    </div>
-                    <div style={{ flex: "2.8" }}>
+                    <div style={{ flex: "1.1" }}>Name</div>
+                    <div style={{ flex: "1.9" }}>Email</div>
+                    <div style={{ flex: "2.8" }}>Activity</div>
+                    <div style={{ width: "190px" }}>Timestamp</div>
+                  </div>
+
+                  {logs.length ? (
+                    logs.map((log, idx, arr) => (
                       <div
+                        key={idx}
                         style={{
                           display: "flex",
-                          flexDirection: "column",
-                          gap: "4px",
+                          alignItems: "flex-start",
+                          padding: "16px 0",
+                          borderBottom:
+                            idx === arr.length - 1
+                              ? "none"
+                              : "1px solid var(--neutral-line-separator-1)",
+                          fontSize: "var(--text-title-3)",
                         }}
                       >
-                        <span
+                        <div
                           style={{
-                            fontWeight: "var(--font-weight-bold)",
+                            flex: "1.1",
                             color: "var(--neutral-on-surface-primary)",
                           }}
                         >
-                          {log.title}
-                        </span>
-                        {log.desc && (
-                          <span
+                          {log.name}
+                        </div>
+                        <div
+                          style={{
+                            flex: "1.9",
+                            color: "var(--neutral-on-surface-secondary)",
+                          }}
+                        >
+                          {log.email}
+                        </div>
+                        <div style={{ flex: "2.8" }}>
+                          <div
                             style={{
-                              color: "var(--neutral-on-surface-secondary)",
-                              lineHeight: "1.5",
-                              whiteSpace: "pre-wrap",
+                              display: "flex",
+                              flexDirection: "column",
+                              gap: "4px",
                             }}
                           >
-                            {log.desc}
-                          </span>
-                        )}
+                            <span
+                              style={{
+                                fontWeight: "var(--font-weight-bold)",
+                                color: "var(--neutral-on-surface-primary)",
+                              }}
+                            >
+                              {log.title}
+                            </span>
+                            {log.desc && (
+                              <span
+                                style={{
+                                  color: "var(--neutral-on-surface-secondary)",
+                                  lineHeight: "1.5",
+                                  whiteSpace: "pre-wrap",
+                                }}
+                              >
+                                {log.desc}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div
+                          style={{
+                            width: "190px",
+                            color: "var(--neutral-on-surface-secondary)",
+                          }}
+                        >
+                          {log.timestamp}
+                        </div>
                       </div>
-                    </div>
+                    ))
+                  ) : (
                     <div
                       style={{
-                        width: "190px",
-                        color: "var(--neutral-on-surface-secondary)",
+                        padding: "24px 0",
+                        textAlign: "center",
+                        color: "var(--neutral-on-surface-tertiary)",
+                        fontSize: "var(--text-title-3)",
                       }}
                     >
-                      {log.timestamp}
+                      No entries yet.
                     </div>
-                  </div>
-                ))}
+                  )}
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          );
+
+          return (
+            <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+              {renderLogCard("Activity Log", activityLogs)}
+              {renderLogCard("Costing Log", costingLogs)}
+            </div>
+          );
+        })()}
       </div>
 
       {woStatus === "not_started" ? (
@@ -6868,7 +6991,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
         </div>
       ) : null}
 
-      {canCompleteWorkOrder ? (
+      {canCompleteWorkOrder || (woStatus === "completed" && costingStatus === "Ready to Finalize") ? (
         <div
           style={{
             position: "fixed",
@@ -6882,16 +7005,28 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
             display: "flex",
             justifyContent: "flex-end",
             alignItems: "center",
+            gap: "12px",
             zIndex: 100,
           }}
         >
-          <Button
-            variant="filled"
-            size="medium"
-            onClick={openCompleteModal}
-          >
-            {fulfillmentType === "StockBuild" ? "Confirm Stock Build" : "Complete"}
-          </Button>
+          {woStatus === "completed" && costingStatus === "Ready to Finalize" ? (
+            <Button
+              variant="filled"
+              size="medium"
+              onClick={() => setIsConfirmCostingModalOpen(true)}
+            >
+              Confirm Costing
+            </Button>
+          ) : null}
+          {canCompleteWorkOrder ? (
+            <Button
+              variant="filled"
+              size="medium"
+              onClick={openCompleteModal}
+            >
+              {fulfillmentType === "StockBuild" ? "Confirm Stock Build" : "Complete"}
+            </Button>
+          ) : null}
         </div>
       ) : null}
 
@@ -7141,6 +7276,33 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
               onClick={handleFinalComplete}
             >
               Complete
+            </Button>
+          </>
+        }
+      />
+
+      <GeneralModal
+        isOpen={isConfirmCostingModalOpen}
+        onClose={() => setIsConfirmCostingModalOpen(false)}
+        title="Confirm Costing?"
+        description="This action can't be undone. Actual COGS will become read-only once costing is confirmed."
+        footer={
+          <>
+            <Button
+              variant="outlined"
+              size="large"
+              style={{ width: "100%" }}
+              onClick={() => setIsConfirmCostingModalOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="filled"
+              size="large"
+              style={{ width: "100%" }}
+              onClick={handleConfirmCosting}
+            >
+              Confirm
             </Button>
           </>
         }

@@ -1,6 +1,7 @@
 import React from "react";
 import { Table } from "../../../../ce-ui";
 import { Info } from "../../../../components/icons/Icons.jsx";
+import { Tooltip } from "../../../../components/atoms/Tooltip.jsx";
 import { StatusBadge } from "../../../../components/common/StatusBadge.jsx";
 import { DropdownSelect } from "../../../../components/common/DropdownSelect.jsx";
 import { MATERIAL_FIELDS_CONFIG, NOT_MAPPED } from "../../mock/materialFieldsConfig.js";
@@ -35,9 +36,18 @@ export const MappingStep = ({ headers, rows = [], mapping, recommendation, onMap
       header: "Material Field",
       width: 260,
       render: (_, row) => (
-        <div style={{ display: "flex", alignItems: "center", gap: "8px", padding: "12px 0" }}>
-          <span style={{ fontSize: "var(--text-title-3)" }}>{row.field.label}</span>
-          {row.field.required && <StatusBadge variant="blue-light">Required</StatusBadge>}
+        <div style={{ display: "flex", flexDirection: "column", gap: "4px", padding: "12px 0" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <span style={{ fontSize: "var(--text-title-3)" }}>{row.field.label}</span>
+            {row.field.required && <StatusBadge variant="blue-light">Required</StatusBadge>}
+            {row.field.helpText && (
+              <Tooltip content={row.field.helpText}>
+                <span style={{ display: "inline-flex", cursor: "help", color: "var(--neutral-on-surface-tertiary)" }}>
+                  <Info size={14} />
+                </span>
+              </Tooltip>
+            )}
+          </div>
         </div>
       ),
     },

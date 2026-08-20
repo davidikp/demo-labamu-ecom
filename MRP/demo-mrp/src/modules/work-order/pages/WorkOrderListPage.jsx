@@ -13,14 +13,19 @@ import { WorkOrderCreateDrawer } from "../components/WorkOrderCreateDrawer.jsx";
 
 const cellStyle = (overrides) => ({
   minWidth: 0,
-  height: "56px",
-  padding: "0 12px",
+  minHeight: "56px",
+  padding: "8px 12px",
   display: "flex",
   alignItems: "center",
   fontSize: "var(--text-title-3)",
   color: "var(--neutral-on-surface-primary)",
   ...overrides,
 });
+
+const wrapTextStyle = {
+  whiteSpace: "normal",
+  overflowWrap: "anywhere",
+};
 
 export const WorkOrderListPage = ({ onNavigate, t, showSnackbar }) => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -69,15 +74,15 @@ export const WorkOrderListPage = ({ onNavigate, t, showSnackbar }) => {
   ];
   const tableColumns = [
     { label: "Work Order No.", key: "wo", flex: "1.6", sortable: true },
-    { label: "Order Number", key: "ord", flex: "1.6", sortable: true },
+    { label: "Order No", key: "ord", flex: "1.6", sortable: true },
     { label: "Target", key: "product", flex: "1.4", sortable: true },
     { label: "Qty", key: "qty", flex: "0.6", sortable: false },
     { label: "Priority", key: "priority", flex: "0.8", sortable: false },
-    { label: "Planned Start Date", key: "start", flex: "1.2", sortable: false },
-    { label: "Planned End Date", key: "end", flex: "1.2", sortable: false },
+    { label: "Planned Date", key: "plannedDate", flex: "1.6", sortable: false },
     { label: "Created By", key: "createdBy", flex: "1", sortable: false },
     { label: "Fulfillment Type", key: "fulfillmentType", flex: "1.2", sortable: false },
-    { label: "Status", key: "status", flex: "1.2", sortable: false },
+    { label: "Costing Status", key: "costingStatus", flex: "1.2", sortable: false },
+    { label: "WO Status", key: "status", flex: "1.2", sortable: false },
   ];
   const statusCounts = statusCards.reduce((acc, card) => {
     acc[card.key] = MOCK_WO_TABLE_DATA.filter(
@@ -231,7 +236,7 @@ export const WorkOrderListPage = ({ onNavigate, t, showSnackbar }) => {
           {t("work_order.title")}
         </h1>
         <div style={{ display: "flex", gap: "12px" }}>
-          <Button variant="outlined" leftIcon={Settings}>
+          <Button variant="outlined" leftIcon={Settings} onClick={() => onNavigate("settings")}>
             {t("work_order.settings")}
           </Button>
           <Button variant="filled" leftIcon={AddIcon} onClick={() => setIsCreateDrawerOpen(true)}>
@@ -394,8 +399,8 @@ export const WorkOrderListPage = ({ onNavigate, t, showSnackbar }) => {
                   style={{
                     flex: col.flex,
                     minWidth: 0,
-                    height: "49px",
-                    padding: "0 12px",
+                    minHeight: "49px",
+                    padding: "8px 12px",
                     display: "flex",
                     alignItems: "center",
                     gap: "6px",
@@ -405,13 +410,7 @@ export const WorkOrderListPage = ({ onNavigate, t, showSnackbar }) => {
                     cursor: col.sortable ? "pointer" : "default",
                   }}
                 >
-                  <span
-                    style={{
-                      whiteSpace: "nowrap",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                    }}
-                  >
+                  <span style={wrapTextStyle}>
                     {col.label}
                   </span>
                   {col.sortable && (
@@ -468,45 +467,24 @@ export const WorkOrderListPage = ({ onNavigate, t, showSnackbar }) => {
                       color: "var(--feature-brand-primary)",
                     })}
                   >
-                    <span
-                      style={{
-                        whiteSpace: "nowrap",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                      }}
-                    >
+                    <span style={wrapTextStyle}>
                       {row.wo}
                     </span>
                   </div>
                   <div style={cellStyle({ flex: tableColumns[1].flex })}>
-                    <span
-                      style={{
-                        whiteSpace: "nowrap",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                      }}
-                    >
+                    <span style={wrapTextStyle}>
                       {row.fulfillmentType === "StockBuild" ? "-" : row.ord}
                     </span>
                   </div>
-                  <div style={cellStyle({ flex: tableColumns[2].flex, flexDirection: "column", alignItems: "flex-start", justifyContent: "center", gap: "2px", height: "56px" })}>
-                    <span
-                      style={{
-                        whiteSpace: "nowrap",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        maxWidth: "100%",
-                      }}
-                    >
+                  <div style={cellStyle({ flex: tableColumns[2].flex, flexDirection: "column", alignItems: "flex-start", justifyContent: "center", gap: "2px", minHeight: "56px" })}>
+                    <span style={{ ...wrapTextStyle, maxWidth: "100%" }}>
                       {row.product}
                     </span>
                     <span
                       style={{
                         fontSize: "var(--text-body)",
                         color: "var(--neutral-on-surface-secondary)",
-                        whiteSpace: "nowrap",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
+                        ...wrapTextStyle,
                         maxWidth: "100%",
                       }}
                     >
@@ -525,40 +503,22 @@ export const WorkOrderListPage = ({ onNavigate, t, showSnackbar }) => {
                     {row.priority}
                   </div>
                   <div style={cellStyle({ flex: tableColumns[5].flex })}>
-                      <span
-                        style={{
-                          whiteSpace: "nowrap",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                        }}
-                      >
-                      {row.start || "-"}
+                      <span style={wrapTextStyle}>
+                      {row.start || row.end ? `${row.start || "-"} → ${row.end || "-"}` : "-"}
                       </span>
                   </div>
                   <div style={cellStyle({ flex: tableColumns[6].flex })}>
-                    <span
-                      style={{
-                        whiteSpace: "nowrap",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                      }}
-                    >
-                      {row.end || "-"}
-                    </span>
-                  </div>
-                  <div style={cellStyle({ flex: tableColumns[7].flex })}>
-                    <span
-                      style={{
-                        whiteSpace: "nowrap",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                      }}
-                    >
+                    <span style={wrapTextStyle}>
                       {row.createdBy}
                     </span>
                   </div>
-                  <div style={cellStyle({ flex: tableColumns[8].flex })}>
+                  <div style={cellStyle({ flex: tableColumns[7].flex })}>
                     {row.fulfillmentType === "StockBuild" ? "Stock Build" : "Customer Order"}
+                  </div>
+                  <div style={cellStyle({ flex: tableColumns[8].flex })}>
+                    <StatusBadge variant={row.costingBadge || "grey-light"}>
+                      {row.costingStatus || "Open"}
+                    </StatusBadge>
                   </div>
                   <div style={cellStyle({ flex: tableColumns[9].flex })}>
                     <StatusBadge variant={row.sBadge}>{row.status}</StatusBadge>

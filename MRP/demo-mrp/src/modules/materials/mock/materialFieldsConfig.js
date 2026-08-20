@@ -12,6 +12,7 @@ export const MATERIAL_FIELDS_CONFIG = [
     required: false,
     example: "ALU-SH-2MM",
     synonyms: ["sku", "materialsku", "code", "materialcode", "itemcode"],
+    helpText: "If empty, the system will auto-generate the SKU",
   },
   {
     key: "name",

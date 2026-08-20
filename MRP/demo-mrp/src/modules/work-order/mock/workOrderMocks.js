@@ -682,6 +682,24 @@ export const MOCK_WO_TABLE_DATA = [
   },
 ];
 
+// Costing status derivation — whether Actual COGS gets gated by routing
+// completion is a single global setting (Work Order Settings), read live by
+// WorkOrderDetailPage; it isn't snapshotted per WO. Costing Status itself IS
+// still per-WO lifecycle state though: existing seed rows default to "Open"
+// (or "Confirmed" if already Completed), same as today's behavior.
+const COSTING_BADGE_BY_STATUS = {
+  Open: "grey-light",
+  "Ready to Finalize": "blue-light",
+  Confirmed: "green-light",
+};
+
+MOCK_WO_TABLE_DATA.forEach((row) => {
+  if (!row.costingStatus) {
+    row.costingStatus = row.statusKey === "completed" ? "Confirmed" : "Open";
+  }
+  row.costingBadge = COSTING_BADGE_BY_STATUS[row.costingStatus] || "grey-light";
+});
+
 // Runtime WO creation (e.g. the standalone "+ Create Work Order" entry point
 // for a Material Stock Build). MOCK_WO_TABLE_DATA is mutated in place — this
 // mirrors the existing session-caching pattern already used elsewhere in this
@@ -713,6 +731,8 @@ export const createWorkOrder = (data) => {
     targetType: "Material",
     fulfillmentType: "StockBuild",
     postedToStock: false,
+    costingStatus: "Open",
+    costingBadge: "grey-light",
     ...data,
   };
   MOCK_WO_TABLE_DATA.unshift(record);

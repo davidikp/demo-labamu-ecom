@@ -19,6 +19,7 @@ import { PurchaseOrderCreatePage } from "./modules/purchase-order/pages/Purchase
 import { PurchaseOrderSettingsPage } from "./modules/purchase-order/pages/PurchaseOrderSettingsPage.jsx";
 import { WorkOrderListPage } from "./modules/work-order/pages/WorkOrderListPage.jsx";
 import { WorkOrderDetailPage } from "./modules/work-order/pages/WorkOrderDetailPage.jsx";
+import { WorkOrderSettingsPage } from "./modules/work-order/pages/WorkOrderSettingsPage.jsx";
 import { BomListPage } from "./modules/bill-of-materials/pages/BomListPage.jsx";
 import { BomDetailPage } from "./modules/bill-of-materials/pages/BomDetailPage.jsx";
 import { BomCreatePage } from "./modules/bill-of-materials/pages/BomCreatePage.jsx";
@@ -418,6 +419,8 @@ const ModuleRenderer = ({
   isSidebarCollapsed,
   poApprovalSettings,
   setPoApprovalSettings,
+  woSettings,
+  setWoSettings,
   orderApprovalSettings,
   setOrderApprovalSettings,
   showPoSnackbar,
@@ -729,6 +732,7 @@ const ModuleRenderer = ({
           onNavigate={onNavigate}
           isSidebarCollapsed={isSidebarCollapsed}
           initialData={viewState.data}
+          woSettings={woSettings}
         />
       );
     }
@@ -758,6 +762,20 @@ const ModuleRenderer = ({
           poApprovalSettings={poApprovalSettings}
           isSidebarCollapsed={isSidebarCollapsed}
           showPoSnackbar={showPoSnackbar}
+        />
+      );
+    }
+    if (viewState.view === "settings") {
+      return (
+        <WorkOrderSettingsPage
+          onNavigate={onNavigate}
+          isSidebarCollapsed={isSidebarCollapsed}
+          woSettings={woSettings}
+          onSaveSettings={(settings) => {
+            setWoSettings(settings);
+            showPoSnackbar("Work order settings successfully saved", "success");
+            onNavigate("list");
+          }}
         />
       );
     }
@@ -1068,6 +1086,10 @@ export default function App() {
   });
   const [materialPlanningSettings, setMaterialPlanningSettings] = useState({
     urgencyDaysInAdvance: 5,
+  });
+  const [woSettings, setWoSettings] = useState({
+    issueMethod: "request_based",
+    actualCogsMode: "disabled",
   });
   const [orderApprovalSettings, setOrderApprovalSettings] = useState({
     isApprovalActive: false,
@@ -1401,6 +1423,8 @@ export default function App() {
                 isSidebarCollapsed={isSidebarCollapsed}
                 poApprovalSettings={poApprovalSettings}
                 setPoApprovalSettings={setPoApprovalSettings}
+                woSettings={woSettings}
+                setWoSettings={setWoSettings}
                 orderApprovalSettings={orderApprovalSettings}
                 setOrderApprovalSettings={setOrderApprovalSettings}
                 showPoSnackbar={showPoSnackbar}
@@ -1424,6 +1448,8 @@ export default function App() {
                 isSidebarCollapsed={isSidebarCollapsed}
                 poApprovalSettings={poApprovalSettings}
                 setPoApprovalSettings={setPoApprovalSettings}
+                woSettings={woSettings}
+                setWoSettings={setWoSettings}
                 orderApprovalSettings={orderApprovalSettings}
                 setOrderApprovalSettings={setOrderApprovalSettings}
                 showPoSnackbar={showPoSnackbar}
@@ -1447,6 +1473,8 @@ export default function App() {
                 isSidebarCollapsed={isSidebarCollapsed}
                 poApprovalSettings={poApprovalSettings}
                 setPoApprovalSettings={setPoApprovalSettings}
+                woSettings={woSettings}
+                setWoSettings={setWoSettings}
                 orderApprovalSettings={orderApprovalSettings}
                 setOrderApprovalSettings={setOrderApprovalSettings}
                 showPoSnackbar={showPoSnackbar}

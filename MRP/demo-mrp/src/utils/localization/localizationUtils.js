@@ -1217,7 +1217,6 @@ const INDONESIAN_EXACT_TEXT = {
   "Unit of Measurement (UOM)": "Satuan Ukur (UOM)",
   "Stock Risk": "Risiko Stok",
   "Show only need attention data": "Tampilkan hanya data yang perlu perhatian lebih ",
-  "Show only materials that need attention": "Tampilkan hanya material yang perlu diperiksa",
 
   // Review step table headers — rendered as a single "* Label" text node for
   // required fields (see MATERIAL_FIELDS_CONFIG/PRODUCT_FIELDS_CONFIG), so the
