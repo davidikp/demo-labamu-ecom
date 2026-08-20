@@ -36,12 +36,16 @@ import { schema as starRatingBarSchema, blockConfig as starRatingBarBlocks } fro
 import StarRatingBarRenderer from './star_rating_bar/Renderer';
 import { schema as pressLogosSchema, blockConfig as pressLogosBlocks } from './press_logos/schema';
 import PressLogosRenderer from './press_logos/Renderer';
+import { schema as ratingFormSchema } from './rating_form/schema';
+import RatingFormRenderer from './rating_form/Renderer';
 import { schema as newsletterSignupSchema, blockConfig as newsletterSignupBlocks } from './newsletter_signup/schema';
 import NewsletterSignupRenderer from './newsletter_signup/Renderer';
 import { schema as countdownTimerSchema, blockConfig as countdownTimerBlocks } from './countdown_timer/schema';
 import CountdownTimerRenderer from './countdown_timer/Renderer';
 import { schema as promotionalBannerSchema, blockConfig as promotionalBannerBlocks } from './promotional_banner/schema';
 import PromotionalBannerRenderer from './promotional_banner/Renderer';
+import { schema as quoteRequestFormSchema } from './quote_request_form/schema';
+import QuoteRequestFormRenderer from './quote_request_form/Renderer';
 import { schema as imageGallerySchema, blockConfig as imageGalleryBlocks } from './image_gallery/schema';
 import ImageGalleryRenderer from './image_gallery/Renderer';
 import { schema as beforeAfterSliderSchema, blockConfig as beforeAfterSliderBlocks } from './before_after_slider/schema';
@@ -58,6 +62,14 @@ import { schema as cartSummarySchema } from './cart_summary/schema';
 import CartSummaryRenderer from './cart_summary/Renderer';
 import { schema as checkoutSummarySchema } from './checkout_summary/schema';
 import CheckoutSummaryRenderer from './checkout_summary/Renderer';
+import { schema as catalogListSchema } from './catalog_list/schema';
+import CatalogListRenderer from './catalog_list/Renderer';
+import { schema as productDetailSchema } from './product_detail/schema';
+import ProductDetailRenderer from './product_detail/Renderer';
+import { schema as orderDetailSchema } from './order_detail/schema';
+import OrderDetailRenderer from './order_detail/Renderer';
+import { schema as modifierPopupSchema } from './modifier_popup/schema';
+import ModifierPopupRenderer from './modifier_popup/Renderer';
 
 export const SECTION_DEFINITIONS = {
   header: { schema: headerSchema, Renderer: HeaderRenderer },
@@ -76,9 +88,11 @@ export const SECTION_DEFINITIONS = {
   testimonials: { schema: testimonialsSchema, blockConfig: testimonialsBlocks, Renderer: TestimonialsRenderer },
   star_rating_bar: { schema: starRatingBarSchema, blockConfig: starRatingBarBlocks, Renderer: StarRatingBarRenderer },
   press_logos: { schema: pressLogosSchema, blockConfig: pressLogosBlocks, Renderer: PressLogosRenderer },
+  rating_form: { schema: ratingFormSchema, Renderer: RatingFormRenderer },
   newsletter_signup: { schema: newsletterSignupSchema, blockConfig: newsletterSignupBlocks, Renderer: NewsletterSignupRenderer },
   countdown_timer: { schema: countdownTimerSchema, blockConfig: countdownTimerBlocks, Renderer: CountdownTimerRenderer },
   promotional_banner: { schema: promotionalBannerSchema, blockConfig: promotionalBannerBlocks, Renderer: PromotionalBannerRenderer },
+  quote_request_form: { schema: quoteRequestFormSchema, Renderer: QuoteRequestFormRenderer },
   image_gallery: { schema: imageGallerySchema, blockConfig: imageGalleryBlocks, Renderer: ImageGalleryRenderer },
   before_after_slider: { schema: beforeAfterSliderSchema, blockConfig: beforeAfterSliderBlocks, Renderer: BeforeAfterSliderRenderer },
   contact_form: { schema: contactFormSchema, blockConfig: contactFormBlocks, Renderer: ContactFormRenderer },
@@ -87,6 +101,10 @@ export const SECTION_DEFINITIONS = {
   divider_spacer: { schema: dividerSpacerSchema, Renderer: DividerSpacerRenderer },
   cart_summary: { schema: cartSummarySchema, Renderer: CartSummaryRenderer },
   checkout_summary: { schema: checkoutSummarySchema, Renderer: CheckoutSummaryRenderer },
+  catalog_list: { schema: catalogListSchema, Renderer: CatalogListRenderer },
+  product_detail: { schema: productDetailSchema, Renderer: ProductDetailRenderer },
+  order_detail: { schema: orderDetailSchema, Renderer: OrderDetailRenderer },
+  modifier_popup: { schema: modifierPopupSchema, Renderer: ModifierPopupRenderer },
 };
 
 export function schemaForType(type) {

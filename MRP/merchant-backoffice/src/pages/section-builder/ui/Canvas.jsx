@@ -1,4 +1,4 @@
-import { memo, useCallback } from 'react';
+import { memo, useCallback, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { labelForType } from '../sections/registry';
 import { SECTION_DEFINITIONS } from '../sections/index';
@@ -6,10 +6,11 @@ import { Plus, ArrowUp, ArrowDown, Copy, Trash2 } from 'lucide-react';
 import { MAX_SECTIONS_PER_PAGE } from '../state/builderReducer';
 import { parseBlockSelection, isAtBlockMax, createBlockCtx } from '../sections/blockHelpers';
 import SectionShell from './SectionShell';
+import { applyThemeToElement } from '../themes/applyTheme';
 
 const VIEWPORT_WIDTH = { desktop: 1280, mobile: 390 };
 
-const RenderedEntity = memo(function RenderedEntity({ entity, theme, mediaLibrary, onEdit, blockCtx, isMobile, onNavigate }) {
+const RenderedEntity = memo(function RenderedEntity({ entity, theme, mediaLibrary, onEdit, blockCtx, isMobile, onNavigate, currentPath }) {
   const { t } = useTranslation();
   const Renderer = SECTION_DEFINITIONS[entity.type]?.Renderer;
   if (!Renderer) {
@@ -27,12 +28,13 @@ const RenderedEntity = memo(function RenderedEntity({ entity, theme, mediaLibrar
         blockCtx={blockCtx}
         isMobile={isMobile}
         onNavigate={onNavigate}
+        currentPath={currentPath}
       />
     </SectionShell>
   );
 });
 
-const GlobalBlock = memo(function GlobalBlock({ entity, selected, onSelect, onInlineEdit, theme, mediaLibrary, readOnly, isMobile, onNavigate }) {
+const GlobalBlock = memo(function GlobalBlock({ entity, selected, onSelect, onInlineEdit, theme, mediaLibrary, readOnly, isMobile, onNavigate, currentPath }) {
   const { t } = useTranslation();
   const handleEdit = useCallback(
     (key, value) => onInlineEdit?.(entity.type, key, value),
@@ -72,6 +74,7 @@ const GlobalBlock = memo(function GlobalBlock({ entity, selected, onSelect, onIn
         // (the wrapping div's onClick above) rather than jump the merchant
         // away from what they're editing.
         onNavigate={readOnly ? onNavigate : undefined}
+        currentPath={currentPath}
       />
     </div>
   );
@@ -223,16 +226,37 @@ export default function Canvas({
   mediaLibrary,
   readOnly = false,
   onNavigate,
+  currentPath,
 }) {
   const { t } = useTranslation();
   const isMobile = viewport === 'mobile';
   const width = VIEWPORT_WIDTH[viewport];
   const atCap = sections.length >= MAX_SECTIONS_PER_PAGE;
   const canInsert = !readOnly && !!onRequestAddSection && !atCap;
+  const pageFrameRef = useRef(null);
+
+  // Phase 4 — storefront theme layer (opt-in, separate from the existing
+  // flat-preset `theme.colors`/`theme.typography` system). Only applies
+  // `--theme-*` custom properties when a storefront theme has been
+  // explicitly selected; storefrontThemeId defaults to null so existing
+  // drafts/stores see zero visual change here.
+  useEffect(() => {
+    if (!theme?.storefrontThemeId) return;
+    try {
+      applyThemeToElement(pageFrameRef.current, theme.storefrontThemeId, theme.storefrontThemeMode || 'light');
+    } catch (err) {
+      console.error('Canvas: failed to apply storefront theme', {
+        themeId: theme.storefrontThemeId,
+        mode: theme.storefrontThemeMode,
+        err,
+      });
+    }
+  }, [theme?.storefrontThemeId, theme?.storefrontThemeMode]);
 
   return (
     <div className="min-w-[480px] flex-1 overflow-auto bg-gray-50 p-6" onClick={onDeselect}>
       <div
+        ref={pageFrameRef}
         onClick={(e) => e.stopPropagation()}
         className={
           'mx-auto bg-white ' +
@@ -250,6 +274,7 @@ export default function Canvas({
           readOnly={readOnly}
           isMobile={readOnly ? undefined : isMobile}
           onNavigate={onNavigate}
+          currentPath={currentPath}
         />
 
         {sections.length === 0 ? (

@@ -11,6 +11,10 @@ const TRANSIENT_ACTION_TYPES = new Set([
   ACTIONS.DESELECT,
   ACTIONS.ADD_MEDIA_ITEM,
   ACTIONS.REMOVE_MEDIA_ITEM,
+  // Storefront theme preview controls (Phase 4) — a preview toggle, not
+  // undoable merchant content, same rationale as SELECT/DESELECT above.
+  ACTIONS.SET_STOREFRONT_THEME_ID,
+  ACTIONS.SET_STOREFRONT_THEME_MODE,
 ]);
 
 const historyReducer = withHistory(builderReducer, TRANSIENT_ACTION_TYPES);

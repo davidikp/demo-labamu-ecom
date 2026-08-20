@@ -2,7 +2,12 @@ import { SECTION_CHROME_FIELDS } from '../shared/sectionChrome';
 
 /** US-11.B1 — Hero Banner. Content (heading/subtext/button) is now blocks. */
 export const schema = {
-  background_image: { type: 'image', label: 'Background image', helpText: 'Recommended: 1440x640px', group: 'media' },
+  background_image: { type: 'image', label: 'Background image', helpText: 'Recommended: 1440x640px. Slide 1 of the carousel.', group: 'media' },
+  extra_slides: {
+    type: 'repeater', label: 'Additional slides', helpText: 'Each one adds another slide to the carousel.', group: 'media',
+    maxItems: 4,
+    itemSchema: { image: { type: 'image', label: 'Image' } },
+  },
   text_alignment: {
     type: 'select', label: 'Text alignment', default: 'left', group: 'layout',
     options: [{ value: 'left', label: 'Left' }, { value: 'center', label: 'Center' }, { value: 'right', label: 'Right' }],

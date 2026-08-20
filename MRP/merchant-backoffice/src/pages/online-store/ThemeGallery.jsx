@@ -4,14 +4,14 @@ import { useTranslation } from 'react-i18next';
 import Canvas from '../section-builder/ui/Canvas';
 import ConfirmDialog from '../section-builder/ui/ConfirmDialog';
 import { Popup } from '../../ce-ui';
-import { SITE_TEMPLATES, defaultPreviewDataFor } from '../section-builder/state/siteTemplates';
+import { SITE_TEMPLATES, defaultPreviewDataFor, siteTemplateById } from '../section-builder/state/siteTemplates';
 import {
   loadDraft, saveDraft,
   loadPublishedTheme, savePublishedTheme, loadDraftThemes, saveDraftThemes,
 } from '../section-builder/state/storage';
 import { applySiteTemplate } from '../section-builder/state/siteTemplateApply';
 import { inferActiveTemplateId, isDefaultTheme } from '../section-builder/state/inferActiveTemplate';
-import { sampleDiscoverThemes, DISCOVER_THEME_POOL } from '../section-builder/state/discoverThemes';
+import { THEME_ROSTER } from '../section-builder/themes/themeRoster';
 import { getUniqueName } from '../section-builder/state/nameUtils';
 import { PublishedThemeCard, DraftThemeRow, DiscoverCard } from './ThemeGalleryCards';
 
@@ -75,15 +75,17 @@ function FillWidthPreviewCanvas({ header, footer, sections, theme, mediaLibrary,
   );
 }
 
-// Final, defensive-only fallback for theme records (published or draft)
-// whose templateId matches neither SITE_TEMPLATES nor DISCOVER_THEME_POOL —
-// shouldn't normally happen since every Discover fixture now carries real,
-// renderable illustrative content (see discoverThemes.js), but kept so a
-// stale/unknown templateId never renders nothing.
-function PreviewPlaceholder({ name }) {
+// Fallback for theme records (published, draft, or Discover) that have no
+// real renderable Canvas content: coming-soon roster stubs, the real Xinear
+// entry (no seeded pages/sections/media yet — see discoverPreviewElement
+// below), and defensively, any stale/unknown templateId (e.g. a leftover
+// localStorage record referencing a deleted old-pool id) so nothing ever
+// renders blank or throws.
+function PreviewPlaceholder({ name, comingSoon }) {
   return (
-    <div className="relative aspect-[16/9] w-full overflow-hidden discover-card__placeholder">
+    <div className={`relative aspect-[16/9] w-full overflow-hidden discover-card__placeholder${comingSoon ? ' discover-card__placeholder--coming-soon' : ''}`}>
       {name}
+      {comingSoon && <span className="discover-card__coming-soon-badge">Coming soon</span>}
     </div>
   );
 }
@@ -156,7 +158,10 @@ export default function ThemeGallery() {
     return seeded;
   });
   const [draftThemes, setDraftThemes] = useState(() => loadDraftThemes(STORE_ID));
-  const [discoverItems] = useState(() => sampleDiscoverThemes(5));
+  // Fixed, stable order — the roster is now a real, finite catalog (Xinear +
+  // 7 "coming soon" stubs), not a random "suggested" sample, so show all of
+  // it rather than sampling a subset.
+  const discoverItems = THEME_ROSTER;
 
   const [renamingId, setRenamingId] = useState(null); // 'published' | draft theme id
   const [publishConfirmTheme, setPublishConfirmTheme] = useState(null); // draft theme pending publish
@@ -197,11 +202,16 @@ export default function ThemeGallery() {
         : defaultPreviewDataFor(publishedTemplate);
       return <FillWidthPreviewCanvas {...data} />;
     }
-    // Not a real SITE_TEMPLATES entry — fall back to the Discover pool's
-    // own illustrative fixture (e.g. published straight from a
-    // Discover-added draft), rendered through the same live Canvas path.
-    const discoverItem = DISCOVER_THEME_POOL.find((item) => item.templateId === publishedTheme?.templateId);
-    if (discoverItem) return <FillWidthPreviewCanvas {...defaultPreviewDataFor(discoverItem)} />;
+    // Not a real SITE_TEMPLATES entry — fall back to the theme roster (e.g.
+    // published straight from a Discover-added draft). Roster entries carry
+    // no `theme`/`header`/`footer`/`pages` shape (unlike the old Discover
+    // pool fixtures), so there's nothing to feed defaultPreviewDataFor —
+    // render a named placeholder instead.
+    const rosterItem = THEME_ROSTER.find((item) => item.id === publishedTheme?.templateId);
+    if (rosterItem) return <PreviewPlaceholder name={rosterItem.name} />;
+    // Neither a real template nor a known roster entry (e.g. a stale
+    // localStorage record referencing a deleted old pool id) — final
+    // defensive fallback so this never throws or renders blank.
     return <PreviewPlaceholder name={publishedTheme?.name} />;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [publishedTheme?.templateId, publishedTheme?.name, activeTemplateId, draft]);
@@ -209,13 +219,22 @@ export default function ThemeGallery() {
   function draftPreviewElement(draftThemeRecord) {
     const template = SITE_TEMPLATES.find((tpl) => tpl.id === draftThemeRecord.templateId);
     if (template) return <FillWidthPreviewCanvas {...defaultPreviewDataFor(template)} aspectRatio="aspect-[16/10]" />;
-    const discoverItem = DISCOVER_THEME_POOL.find((item) => item.templateId === draftThemeRecord.templateId);
-    if (discoverItem) return <FillWidthPreviewCanvas {...defaultPreviewDataFor(discoverItem)} aspectRatio="aspect-[16/10]" />;
+    const rosterItem = THEME_ROSTER.find((item) => item.id === draftThemeRecord.templateId);
+    if (rosterItem) return <PreviewPlaceholder name={rosterItem.name} />;
     return <PreviewPlaceholder name={draftThemeRecord.name} />;
   }
 
+  // Xinear is now a real SITE_TEMPLATES entry (real header/footer/media/
+  // page content, not just color/typography tokens) — render its actual
+  // illustrative default preview via a live Canvas, same as clothing/fnb/
+  // manufacture would if they ever appeared here. For the remaining roster
+  // items (still `comingSoon` stubs, or any future item that isn't yet
+  // backed by a real SITE_TEMPLATES entry), there is genuinely nothing to
+  // preview, so fall back to the placeholder.
   function discoverPreviewElement(item) {
-    return <FillWidthPreviewCanvas {...defaultPreviewDataFor(item)} aspectRatio="aspect-[16/10]" />;
+    const template = siteTemplateById(item.id);
+    if (template) return <FillWidthPreviewCanvas {...defaultPreviewDataFor(template)} aspectRatio="aspect-[16/10]" />;
+    return <PreviewPlaceholder name={item.name} comingSoon={item.comingSoon} />;
   }
 
   function handleOpen() {
@@ -307,13 +326,50 @@ export default function ThemeGallery() {
   // -- Discover section actions --------------------------------------------
 
   function handleDiscoverAdd(item) {
-    setAddingDiscoverId(item.templateId);
+    // Defensive guard — the Add button is disabled for coming-soon stubs, so
+    // this should be unreachable, but never apply a stub theme regardless.
+    if (item.comingSoon) return;
+
+    setAddingDiscoverId(item.id);
     setTimeout(() => {
+      // Xinear is a real SITE_TEMPLATES entry now — apply it the same way
+      // the auto-seed-on-first-visit path does, which actually reseeds
+      // theme/pages/header/footer/media (mode: 'seed' — the "start fresh
+      // with this theme" contract), rather than the skin-only
+      // storefrontThemeId write used for roster items with no real
+      // template content behind them.
+      const xinearTemplate = item.id === 'xinear' ? siteTemplateById('xinear') : null;
+      if (xinearTemplate) {
+        applySiteTemplate(STORE_ID, xinearTemplate, 'seed');
+      } else {
+        // Skin-only fallback for roster items that are still just a
+        // themes/registry.js color-token definition (no SITE_TEMPLATES
+        // entry backing them yet): write storefrontThemeId/
+        // storefrontThemeMode onto the live draft so Canvas.jsx's effect
+        // (see ui/Canvas.jsx) skins the storefront preview/renderer with
+        // this theme, without touching page/section content.
+        const liveDraft = loadDraft(STORE_ID);
+        if (liveDraft) {
+          const nextDraft = {
+            ...liveDraft,
+            theme: {
+              ...liveDraft.theme,
+              storefrontThemeId: item.id,
+              storefrontThemeMode: liveDraft.theme?.storefrontThemeMode || 'light',
+            },
+          };
+          saveDraft(STORE_ID, nextDraft);
+        }
+      }
+
+      // Bookkeeping record for the "Draft themes" list UX — unchanged from
+      // before other than keying off `item.id` (roster entries have no
+      // `templateId`/`previewImageUrl` fields).
       const newDraft = {
         id: `draft-${Date.now()}`,
-        templateId: item.templateId,
+        templateId: item.id,
         name: getUniqueName(draftThemes.map((d) => d.name), item.name),
-        previewImageUrl: item.previewImageUrl,
+        previewImageUrl: null,
         addedAt: Date.now(),
         lastSavedAt: Date.now(),
       };
@@ -392,8 +448,17 @@ export default function ThemeGallery() {
           padding: 12px 14px; border-top: 1px solid #E9E9E9; background: #FFFFFF;
         }
         .discover-card__placeholder {
+          position: relative;
           width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
           background: linear-gradient(135deg, #EEF2FF 0%, #F5F0FF 100%); color: #4338CA; font-size: 16px; font-weight: 700;
+        }
+        .discover-card__placeholder--coming-soon {
+          background: linear-gradient(135deg, #F3F4F6 0%, #EAEBEE 100%); color: #9CA3AF;
+        }
+        .discover-card__coming-soon-badge {
+          position: absolute; top: 10px; right: 10px;
+          padding: 4px 10px; border-radius: 100px; font-size: 10px; font-weight: 700;
+          background: #E5E7EB; color: #6B7280; letter-spacing: 0.02em;
         }
 
         .more-menu-popover {
@@ -481,10 +546,11 @@ export default function ThemeGallery() {
           <div className="discover-grid">
             {discoverItems.map((item) => (
               <DiscoverCard
-                key={item.templateId}
+                key={item.id}
                 item={item}
+                comingSoon={item.comingSoon}
                 previewData={discoverPreviewElement(item)}
-                isAdding={addingDiscoverId === item.templateId}
+                isAdding={addingDiscoverId === item.id}
                 onAdd={handleDiscoverAdd}
                 onPreview={handleDiscoverPreview}
               />

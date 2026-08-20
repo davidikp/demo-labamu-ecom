@@ -54,6 +54,7 @@ export default function PreviewLive() {
       theme={draft?.theme}
       mediaLibrary={draft?.mediaLibrary ?? []}
       onNavigate={handleNavigate}
+      currentPath={activePage?.slug}
       readOnly
     />
   );

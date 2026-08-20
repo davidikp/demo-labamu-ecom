@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Sparkles } from 'lucide-react';
 import { RadioButton, Dropdown, MainBtn, Popup } from '../../ce-ui';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import { loadDraft } from '../section-builder/state/storage';
@@ -14,6 +14,7 @@ import { defaultsForSchema } from '../section-builder/sections/schemaDefaults';
 import { makeBlock } from '../section-builder/sections/blockHelpers';
 import ConfirmDialog from '../section-builder/ui/ConfirmDialog';
 import RichTextEditor from './RichTextEditor';
+import GenerateTextModal from './GenerateTextModal';
 
 // TODO: replace with the real active store id once multi-store routing
 // exists — matches the hardcoded id used across online-store/*.
@@ -38,7 +39,21 @@ function blankPage() {
     visibility: 'visible',
     visibleFrom: null,
     template: 'default-page',
+    redirects: [],
   };
+}
+
+function truncate(text, max) {
+  const value = String(text ?? '');
+  return value.length > max ? `${value.slice(0, max)}…` : value;
+}
+
+// There's no real backend to fail a Save request against — same "type a
+// magic marker" convention as GenerateTextModal/PagesManagement's bulk
+// actions, so the Edit an Existing Page / Create Page "the request fails on
+// the server" negative case is actually reachable instead of unbuildable.
+function isForcedSaveFailure(name) {
+  return name.trim().toLowerCase().includes('(save fail)');
 }
 
 function toDatetimeLocal(epochMs) {
@@ -112,6 +127,19 @@ function syncSectionsWithContent(sections, pageId, form) {
   return [buildContentSyncSection(pageId, form), ...withoutSync];
 }
 
+// Duplicate a Page — distinct auto-generated titles ("Copy of X", "Copy of X
+// (2)", ...) instead of always appending the same " copy" suffix, so
+// duplicating the same page repeatedly doesn't produce indistinguishable
+// rows in the Pages list.
+function nextCopyTitle(baseName, pages) {
+  const existingNames = new Set(pages.map((p) => p.name));
+  const base = `Copy of ${baseName}`;
+  if (!existingNames.has(base)) return base;
+  let n = 2;
+  while (existingNames.has(`${base} (${n})`)) n += 1;
+  return `${base} (${n})`;
+}
+
 function formToSnapshot(form) {
   return JSON.stringify({
     name: form.name,
@@ -121,6 +149,7 @@ function formToSnapshot(form) {
     visibleFrom: form.visibleFrom,
     metaTitle: form.metaTitle,
     metaDescription: form.metaDescription,
+    urlHandle: form.urlHandle,
   });
 }
 
@@ -152,6 +181,8 @@ export default function PageEditor() {
       visibleFrom: page.visibleFrom ?? null,
       metaTitle: page.seo?.metaTitle ?? '',
       metaDescription: page.seo?.metaDescription ?? '',
+      urlHandle: page.slug ? page.slug.replace(/^\//, '') : '',
+      redirectOldHandle: true,
     };
     // Only re-derive when we switch which page id is loaded (e.g. right
     // after a first Save on a new page) — not on every draft re-render.
@@ -161,17 +192,46 @@ export default function PageEditor() {
   const [form, setForm] = useState(initialForm);
   const [savedSnapshot, setSavedSnapshot] = useState(() => formToSnapshot(initialForm));
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [generateTitleOpen, setGenerateTitleOpen] = useState(false);
+  const [urlHandleError, setUrlHandleError] = useState(null);
+  const [saveError, setSaveError] = useState(null);
+
+  // Edit Search Engine Listing — only meaningful once a handle already
+  // exists to redirect *from* (a brand-new page has no prior URL yet).
+  const handleChanged = !isCreate && pageId && form.urlHandle !== initialForm.urlHandle;
+
+  // A page opened from the Page List that no longer exists in the draft
+  // (deleted elsewhere) — show a not-found state instead of a blank form
+  // silently pretending it's a fresh "Add page".
+  const notFound = !isCreate && routePageId && !existingPage && pageId === routePageId;
 
   const isDirty = formToSnapshot(form) !== savedSnapshot;
-  const canSave = isDirty && form.name.trim().length > 0;
+  // isSaving guards the double-Save-click case (Edit an Existing Page's "a
+  // Save request is already in flight" edge case) — Save is disabled the
+  // instant it's clicked, so a second click before the (synchronous, but
+  // guarded defensively) persist finishes can't create a duplicate.
+  const canSave = isDirty && form.name.trim().length > 0 && !isSaving;
 
   const patchForm = (patch) => setForm((f) => ({ ...f, ...patch }));
 
-  // Persists the form (create or update) and returns the page's id — shared
-  // by the footer Save button and the "unsaved changes" prompt shown from
-  // "Edit in Editor", which each navigate somewhere different afterward.
+  // Persists the form (create or update) and returns the page's id, or
+  // `null` if the save was rejected (bad URL handle, or the demo's
+  // simulated server-failure marker) — the footer Save button and the
+  // "unsaved changes" prompt shown from "Edit in Editor" both call this and
+  // branch on that return value.
   const persistPage = () => {
-    if (!canSave) return pageId;
+    if (!canSave) return null;
+    setUrlHandleError(null);
+    setSaveError(null);
+
+    if (isForcedSaveFailure(form.name)) {
+      setSaveError(
+        t('sectionBuilder:onlineStore.pageEditor.saveFailedBanner', 'Something went wrong saving this page. Please try again.')
+      );
+      return null;
+    }
+
     const seo = { metaTitle: form.metaTitle, metaDescription: form.metaDescription };
 
     if (isCreate && !pageId) {
@@ -191,6 +251,7 @@ export default function PageEditor() {
         visibility: form.visibility,
         visibleFrom: form.visibility === 'visible' ? form.visibleFrom : null,
         template: form.template,
+        redirects: [],
       };
       const next = runDraftAction(STORE_ID, { type: ACTIONS.ADD_PAGE, page });
       setDraft(next);
@@ -199,6 +260,22 @@ export default function PageEditor() {
       showSnackbar(t('sectionBuilder:onlineStore.pageEditor.savedSnackbar', 'Page successfully saved'), 'green');
       return newId;
     }
+
+    // Edit Search Engine Listing — URL handle: normalize spaces to dashes
+    // and reject a handle already used by another page instead of silently
+    // colliding with it.
+    const normalizedHandle = slugify(form.urlHandle) || slugify(form.name);
+    if (isSlugTaken(normalizedHandle, draft.pages, pageId)) {
+      setUrlHandleError(t('sectionBuilder:onlineStore.pageEditor.urlHandleTaken', 'This URL handle is already in use by another page.'));
+      return null;
+    }
+
+    const oldSlug = existingPage?.slug;
+    const newSlug = `/${normalizedHandle}`;
+    const redirects =
+      handleChanged && form.redirectOldHandle && oldSlug && oldSlug !== newSlug
+        ? [...(existingPage?.redirects ?? []), oldSlug]
+        : existingPage?.redirects ?? [];
 
     const next = runDraftAction(STORE_ID, {
       type: ACTIONS.UPDATE_PAGE,
@@ -210,6 +287,8 @@ export default function PageEditor() {
         visibility: form.visibility,
         visibleFrom: form.visibility === 'visible' ? form.visibleFrom : null,
         seo,
+        slug: newSlug,
+        redirects,
         sections: syncSectionsWithContent(existingPage?.sections, pageId, form),
       },
     });
@@ -221,20 +300,36 @@ export default function PageEditor() {
 
   const handleSave = () => {
     if (!canSave) return;
-    persistPage();
-    navigate('/online-store/pages');
+    setIsSaving(true);
+    const result = persistPage();
+    setIsSaving(false);
+    if (result) navigate('/online-store/pages');
   };
 
+  const handleUploadMedia = (item) => {
+    const next = runDraftAction(STORE_ID, { type: ACTIONS.ADD_MEDIA_ITEM, item });
+    setDraft(next);
+  };
+
+  const [isDuplicating, setIsDuplicating] = useState(false);
+
   const handleDuplicate = () => {
-    if (!pageId || !existingPage) return;
-    const newId = createPageId(`${existingPage.name} copy`);
-    const baseSlug = slugify(`${existingPage.name}-copy`);
+    if (!pageId || !existingPage || isDuplicating) return;
+    setIsDuplicating(true);
+    const newName = nextCopyTitle(existingPage.name, draft.pages);
+    const newId = createPageId(newName);
+    const baseSlug = slugify(newName);
     const slug = isSlugTaken(baseSlug, draft.pages) ? `${baseSlug}-${newId.slice(-8)}` : baseSlug;
     const page = {
       ...existingPage,
       id: newId,
-      name: `${existingPage.name} copy`,
+      name: newName,
       slug: `/${slug}`,
+      // Duplicate a Page: visibility always defaults to Hidden regardless of
+      // the original's state, and any scheduled publish date is dropped
+      // rather than carried over.
+      visibility: 'hidden',
+      visibleFrom: null,
     };
     runDraftAction(STORE_ID, { type: ACTIONS.ADD_PAGE, page });
     showSnackbar(t('sectionBuilder:onlineStore.pageEditor.duplicatedSnackbar', 'Page successfully duplicated'), 'green');
@@ -269,7 +364,7 @@ export default function PageEditor() {
   const handleSaveThenEditInEditor = () => {
     const id = persistPage();
     setConfirmUnsavedEditor(false);
-    goToEditor(id);
+    if (id) goToEditor(id);
   };
 
   const pageModeTitle =
@@ -278,6 +373,27 @@ export default function PageEditor() {
       : t('sectionBuilder:onlineStore.pageEditor.editPageTitle', 'Edit Page');
 
   const handleBackNavigation = () => navigate('/online-store/pages');
+
+  if (notFound) {
+    return (
+      <div style={{ background: '#F4F4F4', minHeight: 'calc(100vh - 56px)', fontFamily: "'Lato', sans-serif" }}>
+        <div className="flex flex-col items-center justify-center gap-3 px-6 py-24 text-center">
+          <h1 className="text-xl font-bold text-gray-800">
+            {t('sectionBuilder:onlineStore.pageEditor.notFoundTitle', 'This page no longer exists')}
+          </h1>
+          <p className="text-sm text-gray-500">
+            {t('sectionBuilder:onlineStore.pageEditor.notFoundDescription', 'It may have been deleted by someone else.')}
+          </p>
+          <MainBtn
+            variant="primary"
+            size="sm"
+            label={t('sectionBuilder:onlineStore.pages.heading', 'Pages')}
+            onClick={handleBackNavigation}
+          />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ background: '#F4F4F4', minHeight: 'calc(100vh - 56px)', fontFamily: "'Lato', sans-serif" }}>
@@ -303,13 +419,26 @@ export default function PageEditor() {
       </div>
 
       <div className="w-full px-6 py-6 pb-28">
+        {saveError && (
+          <div className="mb-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{saveError}</div>
+        )}
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
           {/* Main column */}
           <div className="flex flex-col gap-5">
             <div className="bg-white rounded-xl border border-gray-200 p-5">
-              <label className="block text-sm font-semibold text-gray-800 mb-1.5">
-                {t('sectionBuilder:onlineStore.pageEditor.titleLabel', 'Title')}
-              </label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-sm font-semibold text-gray-800">
+                  {t('sectionBuilder:onlineStore.pageEditor.titleLabel', 'Title')}
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setGenerateTitleOpen(true)}
+                  className="flex items-center gap-1 text-xs font-medium text-[#8A3FFC] hover:underline"
+                >
+                  <Sparkles size={12} />
+                  {t('sectionBuilder:onlineStore.pageEditor.generateText', 'Generate text')}
+                </button>
+              </div>
               <div className="relative">
                 <input
                   type="text"
@@ -323,7 +452,12 @@ export default function PageEditor() {
               <label className="block text-sm font-semibold text-gray-800 mt-5 mb-1.5">
                 {t('sectionBuilder:onlineStore.pageEditor.contentLabel', 'Content')}
               </label>
-              <RichTextEditor value={form.content} onChange={(html) => patchForm({ content: html })} />
+              <RichTextEditor
+                value={form.content}
+                onChange={(html) => patchForm({ content: html })}
+                mediaLibrary={draft.mediaLibrary}
+                onUploadMedia={handleUploadMedia}
+              />
             </div>
 
             {/* Search engine listing */}
@@ -337,10 +471,12 @@ export default function PageEditor() {
                   {form.name ? `${slugify(form.name)}` : 'page'}
                 </div>
                 <div className="text-[16px] text-[#1a0dab] truncate">
-                  {form.metaTitle || form.name || t('sectionBuilder:onlineStore.pageEditor.untitled', 'Untitled page')}
+                  {truncate(form.metaTitle || form.name, 70) || t('sectionBuilder:onlineStore.pageEditor.untitled', 'Untitled page')}
                 </div>
                 <div className="text-[13px] text-gray-600 line-clamp-2">
-                  {form.metaDescription || t('sectionBuilder:onlineStore.pageEditor.noDescription', 'Add a description to see how this page might appear in search results.')}
+                  {form.metaDescription
+                    ? truncate(form.metaDescription, 160)
+                    : t('sectionBuilder:onlineStore.pageEditor.noDescription', 'Add a description to see how this page might appear in search results.')}
                 </div>
               </div>
               <label className="block text-xs font-medium text-gray-600 mb-1">
@@ -359,8 +495,41 @@ export default function PageEditor() {
                 rows={3}
                 value={form.metaDescription}
                 onChange={(e) => patchForm({ metaDescription: e.target.value })}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-800 outline-none focus:border-[#006BFF] resize-none"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-800 outline-none focus:border-[#006BFF] resize-none mb-3"
               />
+              {!isCreate && pageId && (
+                <>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                    {t('sectionBuilder:onlineStore.pageEditor.urlHandle', 'URL handle')}
+                  </label>
+                  <div className="flex items-center rounded-lg border border-gray-300 focus-within:border-[#006BFF] overflow-hidden">
+                    <span className="pl-3 text-sm text-gray-400">/</span>
+                    <input
+                      type="text"
+                      value={form.urlHandle}
+                      onChange={(e) => patchForm({ urlHandle: e.target.value })}
+                      onBlur={(e) => patchForm({ urlHandle: slugify(e.target.value) })}
+                      className="flex-1 h-10 px-1.5 text-sm text-gray-800 outline-none"
+                    />
+                  </div>
+                  {urlHandleError && <p className="mt-1 text-xs text-red-600">{urlHandleError}</p>}
+                  {handleChanged && (
+                    <label className="mt-2 flex items-start gap-2 text-xs text-gray-600">
+                      <input
+                        type="checkbox"
+                        checked={form.redirectOldHandle}
+                        onChange={(e) => patchForm({ redirectOldHandle: e.target.checked })}
+                        className="mt-0.5"
+                      />
+                      {t(
+                        'sectionBuilder:onlineStore.pageEditor.redirectOldHandle',
+                        'Create a redirect from the old URL ({{old}})',
+                        { old: existingPage?.slug ?? '' }
+                      )}
+                    </label>
+                  )}
+                </>
+              )}
             </div>
           </div>
 
@@ -493,6 +662,13 @@ export default function PageEditor() {
           label: t('sectionBuilder:onlineStore.pageEditor.keepEditing', 'Keep editing'),
           onClick: () => setConfirmUnsavedEditor(false),
         }}
+      />
+
+      <GenerateTextModal
+        open={generateTitleOpen}
+        mode="title"
+        onApply={(text) => patchForm({ name: text })}
+        onClose={() => setGenerateTitleOpen(false)}
       />
     </div>
   );

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
@@ -7,6 +7,13 @@ import Link from '@tiptap/extension-link';
 import { TextStyle } from '@tiptap/extension-text-style';
 import { Color } from '@tiptap/extension-color';
 import { Image } from '@tiptap/extension-image';
+import { Highlight } from '@tiptap/extension-highlight';
+import { Table } from '@tiptap/extension-table';
+import { TableRow } from '@tiptap/extension-table-row';
+import { TableHeader } from '@tiptap/extension-table-header';
+import { TableCell } from '@tiptap/extension-table-cell';
+import { CellSelection, TableMap } from '@tiptap/pm/tables';
+import { useTranslation } from 'react-i18next';
 import {
   Bold,
   Italic,
@@ -22,7 +29,19 @@ import {
   Table as TableIcon,
   Code,
   ChevronDown,
+  List,
+  ListOrdered,
+  IndentIncrease,
+  IndentDecrease,
+  Eraser,
+  Code2,
+  Sparkles,
 } from 'lucide-react';
+import { VideoEmbed } from './videoEmbedExtension';
+import SelectImageModal from './SelectImageModal';
+import InsertVideoModal, { extractIframeSrc } from './InsertVideoModal';
+import InsertLinkModal from './InsertLinkModal';
+import GenerateTextModal from './GenerateTextModal';
 
 const PARAGRAPH_STYLES = [
   { value: 'paragraph', label: 'Paragraph' },
@@ -32,6 +51,67 @@ const PARAGRAPH_STYLES = [
 ];
 
 const TEXT_COLORS = ['#282828', '#DA1E28', '#F1820C', '#0E8A00', '#006BFF', '#8A3FFC'];
+const BACKGROUND_COLORS = ['#FEF3C7', '#FCE7F3', '#DCFCE7', '#DBEAFE', '#EDE9FE', '#FEE2E2'];
+
+// Strips <script> tags before HTML entered in Code view is fed back into the
+// rich-text editor (Rich Text Editor — HTML View's "script tag pasted"
+// negative case) — a DOM-based sanitize rather than a regex, so it survives
+// malformed/unbalanced markup instead of corrupting it further.
+function sanitizeHtml(html) {
+  try {
+    const doc = new DOMParser().parseFromString(html || '', 'text/html');
+    doc.body.querySelectorAll('script').forEach((el) => el.remove());
+    return doc.body.innerHTML;
+  } catch {
+    return html;
+  }
+}
+
+// Clears the text content of every cell in the row or column the current
+// selection sits inside, leaving the table's row/column structure intact —
+// mirrors prosemirror-tables' own "select cells, then delete" behavior via a
+// synthesized CellSelection instead of removing rows/columns outright.
+function clearTableLine(editor, mode) {
+  const { state, dispatch } = editor.view;
+  const { doc, selection } = state;
+  const $pos = selection.$anchor;
+
+  let tableDepth = -1;
+  for (let d = $pos.depth; d > 0; d -= 1) {
+    if ($pos.node(d).type.spec.tableRole === 'table') {
+      tableDepth = d;
+      break;
+    }
+  }
+  if (tableDepth === -1) return;
+
+  const table = $pos.node(tableDepth);
+  const tableStart = $pos.before(tableDepth) + 1;
+
+  let cellRelPos = null;
+  for (let d = $pos.depth; d > tableDepth; d -= 1) {
+    const role = $pos.node(d).type.spec.tableRole;
+    if (role === 'cell' || role === 'header_cell') {
+      cellRelPos = $pos.before(d) - tableStart;
+      break;
+    }
+  }
+  if (cellRelPos == null) return;
+
+  try {
+    const map = TableMap.get(table);
+    const rect = map.findCell(cellRelPos);
+    const firstIdx = mode === 'row' ? rect.top * map.width : rect.left;
+    const lastIdx = mode === 'row' ? rect.top * map.width + (map.width - 1) : (map.height - 1) * map.width + rect.left;
+    const $anchorCell = doc.resolve(tableStart + map.map[firstIdx]);
+    const $headCell = doc.resolve(tableStart + map.map[lastIdx]);
+    const cellSelection = mode === 'row' ? CellSelection.rowSelection($anchorCell, $headCell) : CellSelection.colSelection($anchorCell, $headCell);
+    dispatch(state.tr.setSelection(cellSelection).deleteSelection());
+  } catch {
+    // Table shape didn't match expectations — leave the table untouched
+    // rather than risk corrupting it.
+  }
+}
 
 function ToolbarButton({ active, disabled, title, onClick, children }) {
   return (
@@ -100,27 +180,104 @@ function ParagraphStyleDropdown({ editor }) {
 
 function ColorPicker({ editor }) {
   const [open, setOpen] = useState(false);
+  const [tab, setTab] = useState('text');
   if (!editor) return null;
+
+  const applyColor = (color) => {
+    if (tab === 'text') editor.chain().focus().setColor(color).run();
+    else editor.chain().focus().toggleHighlight({ color }).run();
+    setOpen(false);
+  };
+
   return (
     <div className="relative">
       <ToolbarButton title="Text color" onClick={() => setOpen((o) => !o)}>
         <Palette size={16} />
       </ToolbarButton>
       {open && (
-        <div className="absolute left-0 top-[calc(100%+4px)] z-20 flex gap-1.5 bg-white border border-gray-200 rounded-md shadow-lg p-2">
-          {TEXT_COLORS.map((color) => (
+        <div className="absolute left-0 top-[calc(100%+4px)] z-20 w-[220px] bg-white border border-gray-200 rounded-md shadow-lg p-2">
+          <div className="flex gap-1 mb-2 border-b border-gray-100 pb-2">
             <button
-              key={color}
               type="button"
-              title={color}
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => setTab('text')}
+              className={`px-2 py-1 text-xs rounded ${tab === 'text' ? 'bg-[#E6F0FF] text-[#006BFF]' : 'text-gray-500 hover:bg-gray-100'}`}
+            >
+              Text
+            </button>
+            <button
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => setTab('background')}
+              className={`px-2 py-1 text-xs rounded ${tab === 'background' ? 'bg-[#E6F0FF] text-[#006BFF]' : 'text-gray-500 hover:bg-gray-100'}`}
+            >
+              Background
+            </button>
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {(tab === 'text' ? TEXT_COLORS : BACKGROUND_COLORS).map((color) => (
+              <button
+                key={color}
+                type="button"
+                title={color}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => applyColor(color)}
+                className="w-6 h-6 rounded-full border border-gray-200"
+                style={{ backgroundColor: color }}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TableMenu({ editor }) {
+  const [open, setOpen] = useState(false);
+  if (!editor) return null;
+
+  const insideTable = editor.isActive('table');
+
+  const items = insideTable
+    ? [
+        { label: 'Insert row above', run: () => editor.chain().focus().addRowBefore().run() },
+        { label: 'Insert row below', run: () => editor.chain().focus().addRowAfter().run() },
+        { label: 'Insert column before', run: () => editor.chain().focus().addColumnBefore().run() },
+        { label: 'Insert column after', run: () => editor.chain().focus().addColumnAfter().run() },
+        { label: 'Clear row', run: () => clearTableLine(editor, 'row') },
+        { label: 'Clear column', run: () => clearTableLine(editor, 'column') },
+        { label: 'Delete row', run: () => editor.chain().focus().deleteRow().run() },
+        { label: 'Delete column', run: () => editor.chain().focus().deleteColumn().run() },
+        { label: 'Delete table', run: () => editor.chain().focus().deleteTable().run() },
+      ]
+    : [
+        {
+          label: 'Insert table',
+          run: () => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run(),
+        },
+      ];
+
+  return (
+    <div className="relative">
+      <ToolbarButton title="Table" active={insideTable} onClick={() => setOpen((o) => !o)}>
+        <TableIcon size={16} />
+      </ToolbarButton>
+      {open && (
+        <div className="absolute right-0 top-[calc(100%+4px)] z-20 min-w-[180px] bg-white border border-gray-200 rounded-md shadow-lg py-1">
+          {items.map((item) => (
+            <button
+              key={item.label}
+              type="button"
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => {
-                editor.chain().focus().setColor(color).run();
+                item.run();
                 setOpen(false);
               }}
-              className="w-6 h-6 rounded-full border border-gray-200"
-              style={{ backgroundColor: color }}
-            />
+              className="w-full text-left px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100"
+            >
+              {item.label}
+            </button>
           ))}
         </div>
       )}
@@ -131,13 +288,31 @@ function ColorPicker({ editor }) {
 /**
  * @component RichTextEditor
  * @description Tiptap-based WYSIWYG editor for the Page editor screen's
- * Content field, styled to match the Shopify mockup's rounded toolbar row.
- * Video/table insertion don't have dedicated extensions installed (kept out
- * of the dependency budget) — their toolbar buttons are visually present but
- * disabled with a "Coming soon" title, per plan.
+ * Content field. Covers the PRD's Rich Text Editor requirements: text
+ * formatting, lists/indent, image insert (via the shared media library),
+ * video embed, tables, an HTML/code view, and simulated "Generate text with
+ * Labamu AI".
+ *
+ * `mediaLibrary`/`onUploadMedia` wire the Insert Image modal to the same
+ * draft-level media store Section Builder uses, so uploads here are shared.
  */
-export default function RichTextEditor({ value, onChange, placeholder }) {
+export default function RichTextEditor({ value, onChange, placeholder, mediaLibrary = [], onUploadMedia }) {
+  const { t } = useTranslation();
+  const [imageModalOpen, setImageModalOpen] = useState(false);
+  const [videoModalOpen, setVideoModalOpen] = useState(false);
+  const [linkModalOpen, setLinkModalOpen] = useState(false);
+  const [generateOpen, setGenerateOpen] = useState(false);
+  const [htmlMode, setHtmlMode] = useState(false);
+  const [htmlDraft, setHtmlDraft] = useState('');
+
   const editor = useEditor({
+    // Tiptap v3 no longer re-renders the component on every transaction by
+    // default (only on the initial mount) — without this, every toolbar
+    // button's active/disabled state (bold, link, "inside a table", ...)
+    // reads a stale snapshot from whenever the editor was first created and
+    // only happens to refresh when something ELSE (e.g. onChange) causes
+    // this component's parent to re-render.
+    shouldRerenderOnTransaction: true,
     extensions: [
       // StarterKit already bundles Link and Underline — disable its copies so
       // the explicitly-configured ones below (openOnClick/autolink options)
@@ -146,14 +321,20 @@ export default function RichTextEditor({ value, onChange, placeholder }) {
       Underline,
       TextStyle,
       Color,
+      Highlight.configure({ multicolor: true }),
       Link.configure({ openOnClick: false, autolink: true }),
       Image,
+      VideoEmbed,
+      Table.configure({ resizable: true }),
+      TableRow,
+      TableHeader,
+      TableCell,
       TextAlign.configure({ types: ['heading', 'paragraph'] }),
     ],
     content: value || '',
     editorProps: {
       attributes: {
-        class: 'prose prose-sm max-w-none min-h-[220px] px-4 py-3 outline-none',
+        class: 'rich-text-editor-content prose prose-sm max-w-none min-h-[220px] px-4 py-3 outline-none',
         'data-placeholder': placeholder || '',
       },
     },
@@ -171,24 +352,81 @@ export default function RichTextEditor({ value, onChange, placeholder }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editor]);
 
-  const setLink = () => {
-    if (!editor) return;
-    const previous = editor.getAttributes('link').href;
-    const url = window.prompt('Link URL', previous || 'https://');
-    if (url === null) return;
-    if (url === '') {
-      editor.chain().focus().unsetLink().run();
-      return;
-    }
-    editor.chain().focus().setLink({ href: url }).run();
+  const existingLinkUrl = editor?.isActive('link') ? editor.getAttributes('link').href : null;
+
+  const handleApplyLink = (url) => {
+    editor?.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
   };
 
-  const insertImage = () => {
-    if (!editor) return;
-    const url = window.prompt('Image URL');
-    if (!url) return;
-    editor.chain().focus().setImage({ src: url }).run();
+  const handleRemoveLink = () => {
+    editor?.chain().focus().unsetLink().run();
   };
+
+  const clearFormatting = () => {
+    editor?.chain().focus().unsetAllMarks().unsetHighlight().clearNodes().run();
+  };
+
+  const existingVideoSrc = editor?.isActive('videoEmbed') ? editor.getAttributes('videoEmbed').src : null;
+
+  const handleInsertVideo = (src) => {
+    if (!editor) return;
+    if (editor.isActive('videoEmbed')) {
+      editor.chain().focus().updateAttributes('videoEmbed', { src }).run();
+    } else {
+      editor.chain().focus().setVideoEmbed({ src }).run();
+    }
+  };
+
+  const handleRemoveVideo = () => {
+    editor?.chain().focus().deleteNode('videoEmbed').run();
+  };
+
+  const enterHtmlMode = () => {
+    setHtmlDraft(editor?.getHTML() ?? '');
+    setHtmlMode(true);
+  };
+
+  const exitHtmlMode = () => {
+    const clean = sanitizeHtml(htmlDraft);
+    editor?.commands.setContent(clean, { emitUpdate: true });
+    setHtmlMode(false);
+  };
+
+  const hasExistingContent = useMemo(() => Boolean(editor?.getText().trim()), [editor, value]);
+
+  const handleGenerateApply = (text, insertMode) => {
+    if (!editor) return;
+    if (insertMode === 'insert') {
+      editor.chain().focus('end').insertContent(text).run();
+    } else {
+      editor.commands.setContent(text, { emitUpdate: true });
+    }
+  };
+
+  if (htmlMode) {
+    return (
+      <div className="border border-gray-200 rounded-lg overflow-hidden bg-white">
+        <div className="flex items-center justify-between border-b border-gray-200 px-3 py-1.5 bg-gray-50">
+          <span className="text-xs font-medium text-gray-500">
+            {t('sectionBuilder:onlineStore.pageEditor.htmlViewLabel', 'HTML')}
+          </span>
+          <button
+            type="button"
+            onClick={exitHtmlMode}
+            className="rounded-md px-2.5 py-1 text-xs font-medium text-[#006BFF] hover:bg-[#E6F0FF]"
+          >
+            {t('sectionBuilder:onlineStore.pageEditor.showEditor', 'Show editor')}
+          </button>
+        </div>
+        <textarea
+          autoFocus
+          value={htmlDraft}
+          onChange={(e) => setHtmlDraft(e.target.value)}
+          className="min-h-[220px] w-full resize-y px-4 py-3 font-mono text-xs text-gray-800 outline-none"
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="border border-gray-200 rounded-lg overflow-hidden bg-white">
@@ -217,6 +455,9 @@ export default function RichTextEditor({ value, onChange, placeholder }) {
           <UnderlineIcon size={16} />
         </ToolbarButton>
         <ColorPicker editor={editor} />
+        <ToolbarButton title="Clear formatting" onClick={clearFormatting}>
+          <Eraser size={16} />
+        </ToolbarButton>
         <div className="w-px h-5 bg-gray-200 mx-1" />
         <ToolbarButton
           title="Align left"
@@ -247,18 +488,50 @@ export default function RichTextEditor({ value, onChange, placeholder }) {
           <AlignJustify size={16} />
         </ToolbarButton>
         <div className="w-px h-5 bg-gray-200 mx-1" />
-        <ToolbarButton title="Link" active={editor?.isActive('link')} onClick={setLink}>
+        <ToolbarButton
+          title="Bulleted list"
+          active={editor?.isActive('bulletList')}
+          onClick={() => editor?.chain().focus().toggleBulletList().run()}
+        >
+          <List size={16} />
+        </ToolbarButton>
+        <ToolbarButton
+          title="Numbered list"
+          active={editor?.isActive('orderedList')}
+          onClick={() => editor?.chain().focus().toggleOrderedList().run()}
+        >
+          <ListOrdered size={16} />
+        </ToolbarButton>
+        <ToolbarButton
+          title="Indent"
+          disabled={!editor?.can().sinkListItem('listItem')}
+          onClick={() => editor?.chain().focus().sinkListItem('listItem').run()}
+        >
+          <IndentIncrease size={16} />
+        </ToolbarButton>
+        <ToolbarButton
+          title="Outdent"
+          disabled={!editor?.can().liftListItem('listItem')}
+          onClick={() => editor?.chain().focus().liftListItem('listItem').run()}
+        >
+          <IndentDecrease size={16} />
+        </ToolbarButton>
+        <div className="w-px h-5 bg-gray-200 mx-1" />
+        <ToolbarButton
+          title={editor?.state.selection.empty ? 'Select text first to add a link' : 'Link'}
+          disabled={editor?.state.selection.empty && !editor?.isActive('link')}
+          active={editor?.isActive('link')}
+          onClick={() => setLinkModalOpen(true)}
+        >
           <LinkIcon size={16} />
         </ToolbarButton>
-        <ToolbarButton title="Image" onClick={insertImage}>
+        <ToolbarButton title="Image" onClick={() => setImageModalOpen(true)}>
           <ImageIcon size={16} />
         </ToolbarButton>
-        <ToolbarButton title="Video — coming soon" disabled>
+        <ToolbarButton title="Video" active={editor?.isActive('videoEmbed')} onClick={() => setVideoModalOpen(true)}>
           <Video size={16} />
         </ToolbarButton>
-        <ToolbarButton title="Table — coming soon" disabled>
-          <TableIcon size={16} />
-        </ToolbarButton>
+        <TableMenu editor={editor} />
         <ToolbarButton
           title="Code block"
           active={editor?.isActive('codeBlock')}
@@ -266,8 +539,79 @@ export default function RichTextEditor({ value, onChange, placeholder }) {
         >
           <Code size={16} />
         </ToolbarButton>
+        <ToolbarButton title="HTML view" onClick={enterHtmlMode}>
+          <Code2 size={16} />
+        </ToolbarButton>
+        <div className="w-px h-5 bg-gray-200 mx-1" />
+        <ToolbarButton title="Generate text with Labamu AI" onClick={() => setGenerateOpen(true)}>
+          <Sparkles size={16} className="text-[#8A3FFC]" />
+        </ToolbarButton>
       </div>
       <EditorContent editor={editor} />
+      {/*
+        Tiptap's table extensions ship zero default styling — an inserted
+        table is real content (`insertTable` definitely lands in the doc),
+        it's just borderless/paddingless <td>s, indistinguishable from
+        surrounding text. Scoped like PagesManagement.jsx's own inline
+        <style> convention rather than reaching for a global stylesheet.
+      */}
+      <style>{`
+        .rich-text-editor-content table {
+          border-collapse: collapse;
+          table-layout: fixed;
+          width: 100%;
+          margin: 0.5rem 0;
+        }
+        .rich-text-editor-content td,
+        .rich-text-editor-content th {
+          border: 1px solid #D1D5DB;
+          padding: 6px 10px;
+          vertical-align: top;
+          position: relative;
+        }
+        .rich-text-editor-content th {
+          background: #F9FAFB;
+          font-weight: 600;
+          text-align: left;
+        }
+      `}</style>
+
+      <SelectImageModal
+        open={imageModalOpen}
+        mediaLibrary={mediaLibrary}
+        onUpload={(item) => onUploadMedia?.(item)}
+        onPick={(url) => editor?.chain().focus().setImage({ src: url }).run()}
+        onClose={() => setImageModalOpen(false)}
+      />
+
+      <InsertLinkModal
+        open={linkModalOpen}
+        existingUrl={existingLinkUrl}
+        onApply={handleApplyLink}
+        onRemove={handleRemoveLink}
+        onClose={() => setLinkModalOpen(false)}
+      />
+
+      <InsertVideoModal
+        open={videoModalOpen}
+        existingSrc={existingVideoSrc}
+        onInsert={handleInsertVideo}
+        onRemove={handleRemoveVideo}
+        onClose={() => setVideoModalOpen(false)}
+      />
+
+      <GenerateTextModal
+        open={generateOpen}
+        mode="content"
+        hasExisting={hasExistingContent}
+        onApply={handleGenerateApply}
+        onClose={() => setGenerateOpen(false)}
+      />
     </div>
   );
 }
+
+// Re-exported so PageEditor.jsx's HTML-view "script tag" sanitize step and
+// the Title field's own generate flow can reuse the same logic/snippet
+// parser without duplicating it.
+export { sanitizeHtml, extractIframeSrc };

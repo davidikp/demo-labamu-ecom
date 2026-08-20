@@ -359,9 +359,21 @@ export default function SectionBuilder() {
         field: field.label,
       }),
     };
+    const data = { [key]: value };
+    // Generic "seed a sibling repeater on first pick" hook — e.g.
+    // collection_list's display_style declares defaultCollectionsByStyle so
+    // switching to 'circular' lands on a filled-in row (Figma's 6) instead
+    // of an empty repeater, but only when the merchant hasn't already
+    // populated `collections` themselves.
+    if (field.defaultCollectionsByStyle && !selectedEntity?.data?.collections?.length) {
+      const handles = field.defaultCollectionsByStyle[value];
+      if (handles) {
+        data.collections = handles.map((handle) => ({ id: crypto.randomUUID(), source: 'catalog', handle }));
+      }
+    }
     const action = isGlobal
-      ? { type: ACTIONS.UPDATE_GLOBAL_DATA, which: selectedId, data: { [key]: value }, meta }
-      : { type: ACTIONS.UPDATE_SECTION_DATA, pageId: activePage.id, sectionId: selectedId, data: { [key]: value }, meta };
+      ? { type: ACTIONS.UPDATE_GLOBAL_DATA, which: selectedId, data, meta }
+      : { type: ACTIONS.UPDATE_SECTION_DATA, pageId: activePage.id, sectionId: selectedId, data, meta };
 
     if (TEXT_LIKE_FIELD_TYPES.has(field.type)) {
       commitField(`${selectedId}:${key}`, action);
@@ -416,6 +428,13 @@ export default function SectionBuilder() {
       typography: preset.typography,
       meta: { label: t('sectionBuilder:editor.sectionBuilder.actions.themePreset', { name: preset.name }) },
     });
+
+  // Phase 4 — storefront theme layer, additive/separate from the preset
+  // system above; excluded from undo history (see TRANSIENT_ACTION_TYPES).
+  const handleSetStorefrontThemeId = (themeId) =>
+    dispatch({ type: ACTIONS.SET_STOREFRONT_THEME_ID, themeId });
+  const handleSetStorefrontThemeMode = (mode) =>
+    dispatch({ type: ACTIONS.SET_STOREFRONT_THEME_MODE, mode });
 
   const handlePreview = () => {
     const token = `dev-${Date.now()}`;
@@ -537,12 +556,15 @@ export default function SectionBuilder() {
           onBlockInlineEdit={handleBlockInlineEdit}
           theme={state.theme}
           mediaLibrary={state.mediaLibrary}
+          currentPath={activePage?.slug}
         />
         {selectedId === THEME_PANEL_SELECTION ? (
           <ThemePanel
             theme={state.theme}
             onFieldChange={handleThemeFieldChange}
             onApplyPreset={handleApplyThemePreset}
+            onSetStorefrontThemeId={handleSetStorefrontThemeId}
+            onSetStorefrontThemeMode={handleSetStorefrontThemeMode}
           />
         ) : selectedId === MEDIA_PANEL_SELECTION ? (
           <aside className="w-[280px] min-w-[240px] shrink-0 border-l border-gray-200 bg-white">

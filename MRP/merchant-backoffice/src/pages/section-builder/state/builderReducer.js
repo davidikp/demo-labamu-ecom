@@ -31,6 +31,8 @@ export const ACTIONS = {
   TOGGLE_PAGE_NAV_HIDDEN: 'TOGGLE_PAGE_NAV_HIDDEN',
   UPDATE_PAGE_VISIBILITY: 'UPDATE_PAGE_VISIBILITY',
   UPDATE_PAGE: 'UPDATE_PAGE',
+  BULK_UPDATE_PAGE_VISIBILITY: 'BULK_UPDATE_PAGE_VISIBILITY',
+  BULK_DELETE_PAGES: 'BULK_DELETE_PAGES',
   ADD_SECTION: 'ADD_SECTION',
   REMOVE_SECTION: 'REMOVE_SECTION',
   DUPLICATE_SECTION: 'DUPLICATE_SECTION',
@@ -48,6 +50,13 @@ export const ACTIONS = {
   UPDATE_GLOBAL_DATA: 'UPDATE_GLOBAL_DATA',
   UPDATE_THEME_FIELD: 'UPDATE_THEME_FIELD',
   APPLY_THEME_PRESET: 'APPLY_THEME_PRESET',
+  // Phase 4 — storefront theme layer (src/pages/section-builder/themes/**).
+  // Entirely additive/opt-in state, separate from the flat-preset system
+  // above (colors/typography/APPLY_THEME_PRESET). Defaults to null/'light'
+  // so existing drafts render with zero visual change until a merchant
+  // explicitly picks a storefront theme in ThemePanel.
+  SET_STOREFRONT_THEME_ID: 'SET_STOREFRONT_THEME_ID',
+  SET_STOREFRONT_THEME_MODE: 'SET_STOREFRONT_THEME_MODE',
   APPLY_SITE_TEMPLATE_SEED: 'APPLY_SITE_TEMPLATE_SEED',
   APPLY_SITE_TEMPLATE_RESKIN: 'APPLY_SITE_TEMPLATE_RESKIN',
   APPLY_SITE_TEMPLATE_RESTYLE: 'APPLY_SITE_TEMPLATE_RESTYLE',
@@ -62,7 +71,16 @@ export function createInitialState({ storeId, pages, theme, header, footer, acti
     storeId,
     pages,
     activePageId: pages[0]?.id ?? null,
-    theme,
+    // storefrontThemeId/storefrontThemeMode are the Phase 4 storefront theme
+    // layer's state — additive to whatever `theme` already carries (colors/
+    // typography/etc from the existing preset system). Defaulted here rather
+    // than in defaultTheme.js so that system stays untouched; ?? lets a
+    // restored draft's own values win if already present.
+    theme: {
+      ...theme,
+      storefrontThemeId: theme?.storefrontThemeId ?? null,
+      storefrontThemeMode: theme?.storefrontThemeMode ?? 'light',
+    },
     header,
     footer,
     activeTemplateId,
@@ -349,6 +367,14 @@ export function builderReducer(state, action) {
       return { ...state, theme: { ...state.theme, colors, typography } };
     }
 
+    case ACTIONS.SET_STOREFRONT_THEME_ID: {
+      return { ...state, theme: { ...state.theme, storefrontThemeId: action.themeId } };
+    }
+
+    case ACTIONS.SET_STOREFRONT_THEME_MODE: {
+      return { ...state, theme: { ...state.theme, storefrontThemeMode: action.mode } };
+    }
+
     case ACTIONS.APPLY_SITE_TEMPLATE_SEED: {
       // First-ever template pick for this site: replaces theme AND
       // generates the page roster + globals + media library from the
@@ -490,6 +516,26 @@ export function builderReducer(state, action) {
           updatedAt: Date.now(),
         })),
       };
+
+    // Bulk Set Pages Visible or Hidden — same visibility field UPDATE_PAGE_
+    // VISIBILITY writes, applied to every id in `pageIds` at once; always
+    // clears visibleFrom (a bulk action doesn't schedule, it sets state now).
+    case ACTIONS.BULK_UPDATE_PAGE_VISIBILITY: {
+      const ids = new Set(action.pageIds);
+      return {
+        ...state,
+        pages: state.pages.map((page) =>
+          ids.has(page.id) ? { ...page, visibility: action.visibility, visibleFrom: null, updatedAt: Date.now() } : page
+        ),
+      };
+    }
+
+    case ACTIONS.BULK_DELETE_PAGES: {
+      const ids = new Set(action.pageIds);
+      const pages = state.pages.filter((p) => !ids.has(p.id));
+      const activePageId = ids.has(state.activePageId) ? pages[0]?.id ?? null : state.activePageId;
+      return { ...state, pages, activePageId };
+    }
 
     case ACTIONS.ADD_MEDIA_ITEM:
       return { ...state, mediaLibrary: [action.item, ...state.mediaLibrary] };

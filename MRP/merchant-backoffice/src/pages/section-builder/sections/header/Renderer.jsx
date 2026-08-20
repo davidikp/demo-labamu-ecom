@@ -1,6 +1,7 @@
 import { memo } from 'react';
-import { Search, ShoppingBag } from 'lucide-react';
+import { Search, ShoppingBag, Globe, ChevronDown } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { resolveMedia } from '../../ui/fields/imageValue';
 
 /**
  * US-11.A1 — renders identically on every page (header/footer are global,
@@ -10,13 +11,14 @@ import { useTranslation } from 'react-i18next';
  * the original single layout exactly, so existing drafts/tests without the
  * field are unaffected.
  */
-function HeaderRenderer({ data, isMobile, onNavigate }) {
+function HeaderRenderer({ data, isMobile, onNavigate, theme, mediaLibrary, currentPath }) {
   const { t } = useTranslation();
   const links = data.nav_links ?? [
     { id: 'a', label: t('sectionBuilder:sections.header.defaultNavShop'), url: '/collections/all' },
     { id: 'b', label: t('sectionBuilder:sections.header.defaultNavAbout'), url: '/about' },
   ];
   const logoText = data.logo_text || t('sectionBuilder:sections.header.defaultStoreName');
+  const logoImage = resolveMedia(data.logo_image, mediaLibrary);
   const variant = data.layout_variant || 'inline';
 
   // Show nav links whenever we're not explicitly in the builder's Mobile
@@ -33,6 +35,14 @@ function HeaderRenderer({ data, isMobile, onNavigate }) {
   const navClass = (base) => (isMobile ? 'hidden' : base);
 
   function renderLink(link, linkClassName) {
+    // Active-state comparison: `currentPath` is optional and undefined by
+    // default (only threaded through by PreviewLive.jsx and
+    // SectionBuilder.jsx's own live canvas today — see Canvas.jsx). When
+    // it's undefined, `isActive` is `null` and we fall through to the
+    // original uniform class untouched, so any call site that hasn't been
+    // updated to pass `currentPath` renders byte-identical to before.
+    const isActive = currentPath != null ? link.url === currentPath : null;
+    const className = isActive === true ? linkClassName + ' font-bold opacity-100' : linkClassName;
     // Only clickable on the read-only preview/live render (onNavigate is
     // only passed there, see Canvas.jsx's GlobalBlock) — inside the
     // interactive builder these stay plain text so clicking selects the
@@ -45,13 +55,43 @@ function HeaderRenderer({ data, isMobile, onNavigate }) {
           e.preventDefault();
           onNavigate(link.url);
         }}
-        className={linkClassName + ' hover:underline'}
+        className={className + ' hover:underline'}
       >
         {link.label || t('sectionBuilder:sections.common.link')}
       </a>
     ) : (
-      <span key={link.id ?? link.label} className={linkClassName}>
+      <span key={link.id ?? link.label} className={className}>
         {link.label || t('sectionBuilder:sections.common.link')}
+      </span>
+    );
+  }
+
+  function renderLogo(baseClassName) {
+    // When no logo_image is set, keep the exact original single-span
+    // markup (no wrapper, no extra classes) so every existing header
+    // without this field renders byte-identical to before.
+    if (!logoImage) {
+      return <span className={baseClassName}>{logoText}</span>;
+    }
+    return (
+      <span className={'inline-flex items-center gap-2 ' + baseClassName}>
+        <img src={logoImage.url} alt="" aria-hidden className="h-6 w-6" />
+        <span>{logoText}</span>
+      </span>
+    );
+  }
+
+  function renderLanguageSwitcher() {
+    // Decorative-only — this pill is NOT wired to any real i18n/locale
+    // mechanism. It exists purely to reproduce Figma's visual (border pill +
+    // globe icon + "EN" + chevron). This app's real language switching (if
+    // any) lives entirely elsewhere; do not mistake this for a functional
+    // control or wire it up to change locale.
+    return (
+      <span className="flex items-center gap-1 rounded-full border border-current/20 px-2 py-1 text-xs">
+        <Globe size={14} aria-hidden />
+        <span>EN</span>
+        <ChevronDown size={12} aria-hidden />
       </span>
     );
   }
@@ -61,7 +101,31 @@ function HeaderRenderer({ data, isMobile, onNavigate }) {
       <div className="flex items-center gap-3">
         {data.show_search_icon !== false && <Search size={18} aria-hidden />}
         {data.show_cart_icon !== false && <ShoppingBag size={18} aria-hidden />}
+        {data.show_language_switcher && renderLanguageSwitcher()}
       </div>
+    );
+  }
+
+  const borderStyle = data.show_border
+    ? { borderBottomWidth: 1, borderBottomStyle: 'solid', borderBottomColor: theme?.colors?.border || undefined }
+    : undefined;
+  const borderClass = data.show_border && !theme?.colors?.border ? 'border-b border-gray-200' : '';
+  const withBorder = (base) => (borderClass ? base + ' ' + borderClass : base);
+
+  if (variant === 'centered-nav') {
+    // Logo/icons columns size to their own content (`auto`); the nav column
+    // takes the rest (`1fr`) — a plain `grid-cols-3` would instead force all
+    // three into equal thirds, squeezing the nav into a column far narrower
+    // than the logo/icon columns actually need and wrapping multi-word
+    // labels even though the row has visible spare width either side.
+    return (
+      <header className={withBorder('grid grid-cols-[auto_1fr_auto] items-center gap-6 px-6 py-4')} style={borderStyle}>
+        <div className="flex items-center justify-start">{renderLogo('text-lg font-semibold')}</div>
+        <nav className={navClass('flex items-center justify-center gap-5 text-sm whitespace-nowrap')}>
+          {links.map((l) => renderLink(l, ''))}
+        </nav>
+        <div className="flex items-center justify-end">{renderIcons()}</div>
+      </header>
     );
   }
 
@@ -72,9 +136,9 @@ function HeaderRenderer({ data, isMobile, onNavigate }) {
     const leftLinks = links.slice(0, half);
     const rightLinks = links.slice(half);
     return (
-      <header className="grid grid-cols-3 items-center px-6 py-4">
+      <header className={withBorder('grid grid-cols-3 items-center px-6 py-4')} style={borderStyle}>
         <nav className={navClass('flex gap-5 text-sm')}>{leftLinks.map((l) => renderLink(l, ''))}</nav>
-        <span className="text-center text-lg font-semibold">{logoText}</span>
+        {renderLogo('text-center text-lg font-semibold')}
         <div className="flex items-center justify-end gap-5">
           <nav className={navClass('flex gap-5 text-sm')}>{rightLinks.map((l) => renderLink(l, ''))}</nav>
           {renderIcons()}
@@ -87,24 +151,22 @@ function HeaderRenderer({ data, isMobile, onNavigate }) {
     // Two-row header: a slim small-caps nav bar on top, then a large bold
     // uppercase logo row beneath — an energetic, layered identity.
     return (
-      <header>
+      <header className={borderClass || undefined} style={borderStyle}>
         <div className="flex items-center justify-between border-b border-current/10 px-6 py-2">
           <nav className={navClass('flex gap-4 text-[11px] uppercase tracking-wide')}>
             {links.map((l) => renderLink(l, ''))}
           </nav>
           {renderIcons()}
         </div>
-        <div className="px-6 py-3">
-          <span className="text-2xl font-extrabold uppercase tracking-tight">{logoText}</span>
-        </div>
+        <div className="px-6 py-3">{renderLogo('text-2xl font-extrabold uppercase tracking-tight')}</div>
       </header>
     );
   }
 
   // 'inline' (default) — logo left, nav inline, icons right. Original layout.
   return (
-    <header className="flex items-center justify-between px-6 py-4">
-      <span className="text-lg font-semibold">{logoText}</span>
+    <header className={withBorder('flex items-center justify-between px-6 py-4')} style={borderStyle}>
+      {renderLogo('text-lg font-semibold')}
       <nav className={navClass('flex gap-5 text-sm')}>{links.map((l) => renderLink(l, ''))}</nav>
       {renderIcons()}
     </header>

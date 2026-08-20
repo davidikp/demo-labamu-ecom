@@ -1,7 +1,9 @@
 import { defaultsForSchema } from '../sections/schemaDefaults';
 import { schemaForType } from '../sections/index';
 import { seedBlocks, sectionSupportsBlocks } from '../sections/blockHelpers';
+import { blockDef } from '../sections/blocks/registry';
 import { defaultTheme, createDefaultGlobals } from './defaultTheme';
+import { defaultProductItems } from '../sections/featured_products/schema';
 
 /**
  * @module section-builder/state/siteTemplates
@@ -28,17 +30,28 @@ import { defaultTheme, createDefaultGlobals } from './defaultTheme';
  * `{ mediaId }` reference an image field expects.
  */
 
-function defaultSection(id, type, overrides = {}) {
+function defaultSection(id, type, overrides = {}, customBlocks) {
   return {
     id,
     type,
     data: { ...defaultsForSchema(schemaForType(type)), ...overrides },
-    ...(sectionSupportsBlocks(type) ? { blocks: seedBlocks(type) } : {}),
+    ...(customBlocks !== undefined
+      ? { blocks: customBlocks }
+      : sectionSupportsBlocks(type) ? { blocks: seedBlocks(type) } : {}),
   };
 }
 
 function image(mediaId) {
   return { mediaId };
+}
+
+/** A hand-authored block with real content, merged over that block type's
+ * own field defaults — used where a template needs specific copy in blocks
+ * that `seedBlocks`' generic presets wouldn't produce (e.g. a hero banner
+ * with no button preset, or a testimonials section with real quotes). */
+function block(type, overrides = {}) {
+  const def = blockDef(type);
+  return { id: crypto.randomUUID(), type, data: { ...defaultsForSchema(def?.fields ?? {}), ...overrides } };
 }
 
 /** Photos are free-license stock (Unsplash License / Pexels License — free
@@ -82,7 +95,17 @@ export const SITE_TEMPLATES = [
         sections: [
           defaultSection('clothing-home-hero', 'hero_banner', { background_image: image('clothing-hero') }),
           defaultSection('clothing-home-announcement', 'announcement_bar'),
-          defaultSection('clothing-home-catalog', 'collection_list', { heading: 'Shop by category' }),
+          // Explicit collections list (rather than the "show everything"
+          // fallback) so this theme's category row stays exactly what it
+          // was before mocks/catalog.json grew Xinear's 6 apparel
+          // collections alongside these — unaffected by that addition.
+          defaultSection('clothing-home-catalog', 'collection_list', {
+            heading: 'Shop by category',
+            collections: [
+              { id: 'clothing-cat-best-sellers', handle: 'best-sellers' },
+              { id: 'clothing-cat-new-arrivals', handle: 'new-arrivals' },
+            ],
+          }),
           defaultSection('clothing-home-lifestyle', 'image_with_text', { image: image('clothing-secondary'), image_position: 'right' }),
           defaultSection('clothing-home-featured', 'featured_products', { heading: 'New arrivals' }),
           defaultSection('clothing-home-testimonials', 'testimonials'),
@@ -191,6 +214,248 @@ export const SITE_TEMPLATES = [
       {
         id: 'contact', name: 'Contact', type: 'system', slug: '/contact', seo: {}, hiddenFromNav: false,
         sections: [defaultSection('manufacture-contact-form', 'contact_form', { reply_to_email: '' })],
+      },
+    ],
+  },
+  {
+    id: 'xinear',
+    name: 'Xinear',
+    // Sourced from Xinear's real Figma homepage design — a single-page
+    // (home-only) clothing storefront. Unlike clothing/fnb/manufacture,
+    // there is no about/contact secondary page in the source design, so
+    // this template intentionally has only a `home` page — not an
+    // oversight, just an honest reflection of the reference scope.
+    theme: {
+      typography: { heading_font: 'Lato', body_font: 'Lato', heading_size: 'medium', body_size: 'medium', letter_spacing: 'normal', heading_transform: 'none' },
+      colors: {
+        // accent intentionally equals primary — Xinear's real design is
+        // deliberately monochrome/near-black, no separate accent hue.
+        background: '#ffffff', surface: '#f4f4f4', primary: '#20201e', primary_text: '#ffffff',
+        accent: '#20201e', accent_text: '#ffffff', text_primary: '#1b1916', text_secondary: '#767573', border: '#e8e8e8',
+      },
+    },
+    header: {
+      layout_variant: 'centered-nav',
+      logo_text: 'Xinear',
+      logo_image: image('xinear-logo'),
+      show_border: true,
+      show_language_switcher: true,
+      show_search_icon: false,
+      show_cart_icon: true,
+      // Every repeater item needs a stable, unique `id` — RepeaterField's
+      // React keys AND its dnd-kit `useSortable({id: item.id})` drag
+      // handles both depend on it. Hand-authored template data (unlike
+      // items added via the builder's "Add item" button, which always get
+      // `crypto.randomUUID()`) doesn't get one for free, so it must be set
+      // explicitly here or dragging silently no-ops (every item resolves to
+      // the same `undefined` sortable id).
+      nav_links: [
+        { id: 'xinear-nav-home', label: 'Home', url: '/' },
+        { id: 'xinear-nav-shop', label: 'Shop', url: '/shop' },
+        // "Appoinment" is the actual spelling in the Figma source — kept
+        // verbatim rather than corrected, since this is real source copy.
+        { id: 'xinear-nav-appointment', label: 'Make an Appoinment', url: '/appointment' },
+        { id: 'xinear-nav-reviews', label: 'Reviews', url: '/reviews' },
+        { id: 'xinear-nav-contact', label: 'Contact Us', url: '/contact' },
+        { id: 'xinear-nav-location', label: 'Location', url: '/location' },
+        { id: 'xinear-nav-quote', label: 'Request Quote', url: '/quote' },
+      ],
+    },
+    footer: {
+      layout_variant: 'columns',
+      logo_text: 'Xinear',
+      logo_image: image('xinear-logo'),
+      show_border: true,
+      // Figma's visible footer icon row shows X/Instagram/Facebook/YouTube
+      // (4 icons) — LinkedIn's icon component exists in the Figma file (see
+      // socialIcons/linkedin.svg) but isn't part of the visible footer
+      // instance in the reference screenshot, so it's intentionally left
+      // out of Xinear's own social_links here (still available for any
+      // future template's footer).
+      social_links: [
+        { id: 'xinear-social-x', platform: 'x', url: '#' },
+        { id: 'xinear-social-instagram', platform: 'instagram', url: '#' },
+        { id: 'xinear-social-facebook', platform: 'facebook', url: '#' },
+        { id: 'xinear-social-youtube', platform: 'youtube', url: '#' },
+      ],
+      address_heading: 'Tangerang',
+      address_body: 'Alam Sutera, Jl. Jalur Sutera Boulevard No.45, Kunciran, Kec. Pinang, Kota Tangerang, Banten 15320',
+      phone: '0858-3456-0890',
+      email: 'xinear@gmail.com',
+      link_columns: [
+        {
+          id: 'xinear-footer-category',
+          heading: 'Category',
+          links: [
+            { id: 'xinear-footer-category-tops', label: 'Tops', url: '/shop' },
+            { id: 'xinear-footer-category-bottom', label: 'Bottom', url: '/shop' },
+            { id: 'xinear-footer-category-dress', label: 'Dress', url: '/shop' },
+            { id: 'xinear-footer-category-shoes', label: 'Shoes', url: '/shop' },
+            { id: 'xinear-footer-category-bags', label: 'Bags', url: '/shop' },
+            { id: 'xinear-footer-category-parfumes', label: 'Parfumes', url: '/shop' },
+          ],
+        },
+      ],
+      copyright_text: '©2024 PT Xinear. All rights reserved.',
+      show_social_icons: true,
+    },
+    media: media('xinear', [
+      // logo-mark.svg's real intrinsic size, per its own viewBox/width/
+      // height attributes (28x28) — the abstract "X" glyph next to the
+      // "Xinear" wordmark in both header and footer.
+      { key: 'logo', filename: 'logo-mark.svg', width: 28, height: 28 },
+      { key: 'hero', filename: 'hero-banner.png', width: 1440, height: 620 },
+      { key: 'appointment', filename: 'appointment-banner.png', width: 1440, height: 331 },
+      { key: 'quote', filename: 'quote-banner.png', width: 1440, height: 524 },
+      // contact-us.png: a real Figma asset, but contact_form has no image
+      // field to attach it to — registered here for completeness/future use
+      // only (see contact_form section below).
+      { key: 'contact', filename: 'contact-us.png', width: 520, height: 520 },
+      // store-map.png: a real Figma asset, but map_embed's Renderer always
+      // draws a fixed gray placeholder box (no image field exists) — this
+      // asset currently has nowhere to render. Registered for completeness/
+      // future use only (see map_embed section below).
+      { key: 'map', filename: 'store-map.png', width: 810, height: 320 },
+    ]),
+    pages: [
+      {
+        id: 'home', name: 'Home', type: 'system', slug: '/', seo: {}, hiddenFromNav: false,
+        sections: [
+          // Figma shows a multi-dot (3-slide) carousel indicator, but only
+          // one real slide image exists in the source — the extra slide
+          // slots reuse that same asset rather than inventing new imagery,
+          // just to reproduce the indicator/carousel behavior faithfully.
+          defaultSection(
+            'xinear-home-hero',
+            'hero_banner',
+            {
+              background_image: image('xinear-hero'),
+              extra_slides: [
+                { id: 'xinear-hero-slide-2', image: image('xinear-hero') },
+                { id: 'xinear-hero-slide-3', image: image('xinear-hero') },
+              ],
+              text_alignment: 'left',
+              content_position: 'center',
+            },
+            [
+              block('heading', { text: 'Pakain Terbaik Musim Panas' }),
+              block('subheading', {
+                text: 'Di sini kami akan memberikan berbagai macam produk menarik yang wajib kamu punya untuk musim panas 2024 nanti',
+              }),
+            ],
+          ),
+          defaultSection('xinear-home-categories', 'collection_list', {
+            show_heading: false, display_style: 'circular',
+            collections: [
+              { id: 'xinear-cat-tops', handle: 'tops' },
+              { id: 'xinear-cat-bottoms', handle: 'bottoms' },
+              { id: 'xinear-cat-dresses', handle: 'dresses' },
+              { id: 'xinear-cat-shoes', handle: 'shoes' },
+              { id: 'xinear-cat-bags', handle: 'bags' },
+              { id: 'xinear-cat-perfumes', handle: 'perfumes' },
+            ],
+          }),
+          // Figma shows 5 products per row.
+          defaultSection('xinear-home-tops', 'featured_products', {
+            heading: 'Tops', columns_desktop: '5',
+            products: defaultProductItems(['p5', 'p6', 'p7', 'p8', 'p9']),
+          }),
+          defaultSection('xinear-home-bottoms', 'featured_products', {
+            heading: 'Bottoms', columns_desktop: '5',
+            products: defaultProductItems(['p10', 'p11', 'p12', 'p13', 'p14']),
+          }),
+          defaultSection(
+            'xinear-home-appointment',
+            'hero_banner',
+            {
+              background_image: image('xinear-appointment'),
+              overlay_opacity: 40,
+              text_alignment: 'center',
+              content_position: 'center',
+            },
+            [
+              block('heading', { text: 'Book an Appointment!' }),
+              block('subheading', {
+                text: 'Schedule your visit to our store today! Discover the latest trends and exclusive collections tailored just for you.',
+              }),
+              block('button', { label: 'Book Now', url: '/appointment' }),
+            ],
+          ),
+          defaultSection(
+            'xinear-home-testimonials',
+            'testimonials',
+            { heading: 'What They Say', columns_desktop: '3' },
+            [
+              block('quote', {
+                quote: 'Great materials and design especially considering the affordable price! I feel like a queen wearing the dresses you guys made! ',
+                reviewer_name: 'John Doe',
+                star_rating: '5',
+              }),
+              block('quote', {
+                quote: 'Great materials and design especially considering the affordable price! I feel like a queen wearing the dresses you guys made! ',
+                reviewer_name: 'Angelina CalDRenter',
+                star_rating: '5',
+              }),
+              block('quote', {
+                quote: 'Great materials and design especially considering the affordable price! I feel like a queen wearing the dresses you guys made! ',
+                reviewer_name: 'Nichole Smith',
+                star_rating: '5',
+              }),
+            ],
+          ),
+          // rating_form's own schema defaults already match Figma's copy —
+          // no overrides needed.
+          defaultSection('xinear-home-rating', 'rating_form'),
+          // Figma shows this as a plain solid-gray banner with no photo —
+          // no background_image, color_scheme: 'surface' renders the
+          // theme's flat neutral surface color instead.
+          defaultSection(
+            'xinear-home-waitlist',
+            'hero_banner',
+            { color_scheme: 'surface', text_alignment: 'center', content_position: 'center' },
+            [
+              block('heading', { text: 'Join Waitlist' }),
+              block('subheading', {
+                text: "Can't Find a Slot? Join the waitlist and we'll notify you if an earlier appointment becomes available. Your time matters to us.",
+              }),
+              block('button', { label: 'Join Now', url: '/waitlist' }),
+            ],
+          ),
+          // Sibling templates (clothing/fnb/manufacture) all seed
+          // contact_form with no block overrides, relying on its
+          // seedBlocks presets (3 generic form_field blocks) — matched here
+          // for consistency rather than hand-authoring a heading/lead-text
+          // block pair + custom-labeled Name/Email/Phone/Message fields
+          // that no sibling template does either. contact-us.png is
+          // registered in media above but unused (no image field exists).
+          // Real Figma copy: "Contact Us" heading, lead text, and
+          // Name/Email/Phone Number/Message fields (contact-us.png's portrait
+          // photo has nowhere to go — contact_form has no image field, see
+          // the media() registration below).
+          defaultSection(
+            'xinear-home-contact',
+            'contact_form',
+            { reply_to_email: '' },
+            [
+              block('heading', { text: 'Contact Us' }),
+              block('text', { content: 'Contact us For further business inquiries or collaborations' }),
+              block('form_field', { label: 'Name', field_type: 'text', required: true }),
+              block('form_field', { label: 'Email', field_type: 'email', required: true }),
+              block('form_field', { label: 'Phone Number', field_type: 'tel', required: false }),
+              block('form_field', { label: 'Message', field_type: 'textarea', required: true }),
+            ],
+          ),
+          defaultSection(
+            'xinear-home-map',
+            'map_embed',
+            { address: 'Alam Sutera, Jl. Jalur Sutera Boulevard No.45, Kunciran, Kec. Pinang, Kota Tangerang, Banten 15320' },
+            [block('heading', { text: 'Visit Our Store!' }), block('text', { content: 'Find and shop your best clothing here' })],
+          ),
+          // quote_request_form's own schema defaults already match Figma's
+          // copy exactly ("Request a Quote" / "Need a custom tailored
+          // clothing..." / "Request a Quote" button) — no overrides needed.
+          defaultSection('xinear-home-quote', 'quote_request_form'),
+        ],
       },
     ],
   },

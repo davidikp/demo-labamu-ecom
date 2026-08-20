@@ -168,30 +168,42 @@ export function DraftThemeRow({
   );
 }
 
-export function DiscoverCard({ item, previewData, isAdding, onAdd, onPreview }) {
+export function DiscoverCard({ item, previewData, isAdding, comingSoon, onAdd, onPreview }) {
   const { t } = useTranslation();
   return (
     <div className="discover-card">
-      <div className="discover-card__preview template-overlay-container">
+      <div className={`discover-card__preview${comingSoon ? '' : ' template-overlay-container'}`}>
         {previewData ?? <div className="discover-card__placeholder">{item.name}</div>}
-        <div className="template-overlay">
-          <button
-            type="button"
-            onClick={(e) => { e.stopPropagation(); onPreview(item); }}
-            style={{ background: '#FFFFFF', border: 'none', borderRadius: '8px', padding: '10px 20px', fontSize: '13px', fontWeight: 700, color: '#282828', cursor: 'pointer' }}
-          >
-            {t('sectionBuilder:onlineStore.themes.preview', 'Preview')}
-          </button>
-        </div>
+        {/* No hover-preview overlay for coming-soon stubs — there is
+            genuinely nothing to preview yet. Real entries (Xinear) keep the
+            existing overlay/Preview button even though its preview is
+            currently just a placeholder. */}
+        {!comingSoon && (
+          <div className="template-overlay">
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); onPreview(item); }}
+              style={{ background: '#FFFFFF', border: 'none', borderRadius: '8px', padding: '10px 20px', fontSize: '13px', fontWeight: 700, color: '#282828', cursor: 'pointer' }}
+            >
+              {t('sectionBuilder:onlineStore.themes.preview', 'Preview')}
+            </button>
+          </div>
+        )}
       </div>
       <div className="discover-card__footer">
         <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: '#282828' }}>{item.name}</p>
         <MainBtn
           variant="secondary"
           size="sm"
-          label={isAdding ? t('sectionBuilder:onlineStore.themes.adding', 'Adding…') : t('sectionBuilder:onlineStore.themes.add', 'Add')}
+          label={
+            comingSoon
+              ? t('sectionBuilder:onlineStore.themes.comingSoon', 'Coming soon')
+              : isAdding
+                ? t('sectionBuilder:onlineStore.themes.adding', 'Adding…')
+                : t('sectionBuilder:onlineStore.themes.add', 'Add')
+          }
           onClick={() => onAdd(item)}
-          disabled={isAdding}
+          disabled={isAdding || comingSoon}
         />
       </div>
     </div>

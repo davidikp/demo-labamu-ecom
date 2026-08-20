@@ -2,8 +2,10 @@ import { SECTION_CHROME_FIELDS } from '../shared/sectionChrome';
 
 /** Map Embed — map of the store's physical location. Heading is now a block. */
 export const schema = {
-  address: { type: 'textarea', label: 'Address', maxLength: 1000, default: '', group: 'content' },
-  show_address_text: { type: 'boolean', label: 'Show address text below map', default: true, group: 'content' },
+  // Drives the actual map pin now (Renderer.jsx geocodes it via Google's
+  // no-API-key ?q=<address>&output=embed iframe) — not just display text.
+  address: { type: 'textarea', label: 'Address', maxLength: 1000, default: '', helpText: 'A full, real address — this is geocoded to place the map pin.', group: 'content' },
+  show_address_text: { type: 'boolean', label: 'Show address details', default: true, group: 'content' },
   store_hours: { type: 'textarea', label: 'Store hours', maxLength: 400, default: '', group: 'content' },
   phone_number: { type: 'text', label: 'Phone number', maxLength: 100, default: '', group: 'content' },
   map_height: { type: 'range', label: 'Map height', min: 200, max: 600, step: 50, default: 400, unit: 'px', group: 'layout' },

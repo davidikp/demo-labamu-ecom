@@ -15,11 +15,25 @@ import { Plus, X } from 'lucide-react';
 import { MainBtn, IconBtn } from '../../../../ce-ui';
 import SchemaField from './SchemaField';
 import { defaultsForSchema as defaultsForItemSchema } from '../../sections/schemaDefaults';
+import { isFieldVisible } from './fieldHelpers';
 
 function summaryFor(item, itemSchema) {
   const firstTextKey = Object.keys(itemSchema).find((k) => itemSchema[k].type === 'text');
-  const summary = firstTextKey ? item[firstTextKey] : null;
-  return summary && String(summary).trim().length > 0 ? summary : null;
+  if (firstTextKey) {
+    const summary = item[firstTextKey];
+    if (summary && String(summary).trim().length > 0) return summary;
+  }
+  // No text field (e.g. an item that's just a collection/handle picker) —
+  // fall back to the selected option's label so items still read as
+  // something meaningful rather than a generic "Item 1", "Item 2". A field
+  // can opt out via excludeFromSummary (e.g. a source/mode toggle whose own
+  // label, like "From catalog", isn't a useful item summary).
+  const firstSelectKey = Object.keys(itemSchema).find((k) => itemSchema[k].type === 'select' && !itemSchema[k].excludeFromSummary);
+  if (firstSelectKey) {
+    const option = itemSchema[firstSelectKey].options?.find((o) => o.value === item[firstSelectKey]);
+    if (option) return option.label;
+  }
+  return null;
 }
 
 function RepeaterItem({ item, index, itemSchema, expanded, onToggle, onChange, onRemove, palette, mediaLibrary, onAddMedia, onOpenLibrary }) {
@@ -42,7 +56,7 @@ function RepeaterItem({ item, index, itemSchema, expanded, onToggle, onChange, o
         >
           ⠿
         </span>
-        <button type="button" onClick={onToggle} className="min-w-0 flex-1 truncate text-left text-sm text-gray-700">
+        <button type="button" onClick={onToggle} className="min-w-0 flex-1 truncate text-left text-sm font-medium text-gray-900">
           {summary ?? t('sectionBuilder:fields.repeaterField.itemLabel', { n: index + 1 })}
         </button>
         <IconBtn
@@ -56,18 +70,20 @@ function RepeaterItem({ item, index, itemSchema, expanded, onToggle, onChange, o
 
       {expanded && (
         <div className="space-y-3 border-t border-gray-100 p-2">
-          {Object.entries(itemSchema).map(([key, field]) => (
-            <SchemaField
-              key={key}
-              field={field}
-              value={item[key]}
-              onChange={(v) => onChange({ ...item, [key]: v })}
-              palette={palette}
-              mediaLibrary={mediaLibrary}
-              onAddMedia={onAddMedia}
-              onOpenLibrary={onOpenLibrary}
-            />
-          ))}
+          {Object.entries(itemSchema)
+            .filter(([, field]) => isFieldVisible(field, item))
+            .map(([key, field]) => (
+              <SchemaField
+                key={key}
+                field={field}
+                value={item[key]}
+                onChange={(v) => onChange({ ...item, [key]: v })}
+                palette={palette}
+                mediaLibrary={mediaLibrary}
+                onAddMedia={onAddMedia}
+                onOpenLibrary={onOpenLibrary}
+              />
+            ))}
         </div>
       )}
     </li>
@@ -78,7 +94,12 @@ function RepeaterItem({ item, index, itemSchema, expanded, onToggle, onChange, o
 export default function RepeaterField({ field, value, onChange, palette, mediaLibrary, onAddMedia, onOpenLibrary, activePage }) {
   const { t } = useTranslation();
   const items = value ?? [];
-  const [expandedIds, setExpandedIds] = useState(() => new Set(items.map((i) => i.id)));
+  // Collapsed by default — a repeater with several items (e.g. header
+  // nav_links) previously opened every item's full field set at once,
+  // which reads as a wall of inputs rather than a scannable list. Newly
+  // added items still auto-expand (see addItem below) so there's no extra
+  // click needed right after adding one.
+  const [expandedIds, setExpandedIds] = useState(() => new Set());
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),

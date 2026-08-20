@@ -1,9 +1,13 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { MoreHorizontal, Trash2 } from 'lucide-react';
 import { Table, StatusBadge, MainBtn } from '../../ce-ui';
 import { loadDraft } from '../section-builder/state/storage';
 import { createFreshState } from '../section-builder/state/useSectionBuilder';
+import { runDraftAction } from '../section-builder/state/runDraftAction';
+import { ACTIONS } from '../section-builder/state/builderReducer';
+import ConfirmDialog from '../section-builder/ui/ConfirmDialog';
 import { formatRelativeTime } from './timeUtils';
 
 // TODO: replace with the real active store id once multi-store routing
@@ -59,7 +63,7 @@ function visibilityBadge(page, t) {
 export default function PagesManagement() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const [draft] = useState(() => loadDraft(STORE_ID) ?? createFreshState(STORE_ID));
+  const [draft, setDraft] = useState(() => loadDraft(STORE_ID) ?? createFreshState(STORE_ID));
 
   const [visibilityFilter, setVisibilityFilter] = useState('all');
   const [search, setSearch] = useState('');
@@ -67,6 +71,17 @@ export default function PagesManagement() {
   const [sortDirection, setSortDirection] = useState(null);
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(25);
+
+  // Bulk Manage Pages — selection is tracked by id independently of the
+  // current filter/sort/page, so it survives switching between filtered
+  // views (Bulk Delete Pages' "selected across multiple filtered views"
+  // case) while the header checkbox itself only ever (de)selects the rows
+  // rendered on the current page (ce-ui Table's own behavior, matching
+  // "only pages on the current page of results are selected").
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [bulkMenuOpen, setBulkMenuOpen] = useState(false);
+  const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
+  const [bulkError, setBulkError] = useState(null);
 
   const pages = useMemo(() => draft.pages ?? [], [draft.pages]);
 
@@ -92,6 +107,53 @@ export default function PagesManagement() {
     const start = (page - 1) * perPage;
     return filteredPages.slice(start, start + perPage);
   }, [filteredPages, page, perPage]);
+
+  // There's no real backend here to fail against — the same "type a magic
+  // word to force the failure path" convention GenerateTextModal uses lets
+  // the partial-success state actually be exercised (a page named e.g.
+  // "Contact (fail test)") instead of leaving it entirely unbuilt.
+  const partitionByFailureFlag = (ids) => {
+    const ok = [];
+    const failed = [];
+    ids.forEach((id) => {
+      const p = pages.find((pg) => pg.id === id);
+      (p?.name?.toLowerCase().includes('fail') ? failed : ok).push(id);
+    });
+    return { ok, failed };
+  };
+
+  const handleBulkVisibility = (visibility) => {
+    const { ok, failed } = partitionByFailureFlag(selectedIds);
+    if (ok.length > 0) {
+      const next = runDraftAction(STORE_ID, { type: ACTIONS.BULK_UPDATE_PAGE_VISIBILITY, pageIds: ok, visibility });
+      setDraft(next);
+    }
+    setSelectedIds([]);
+    setBulkError(
+      failed.length > 0
+        ? t('sectionBuilder:onlineStore.pages.bulkPartialFailure', 'Couldn’t update: {{names}}', {
+            names: pages.filter((p) => failed.includes(p.id)).map((p) => p.name).join(', '),
+          })
+        : null
+    );
+  };
+
+  const handleBulkDeleteConfirm = () => {
+    const { ok, failed } = partitionByFailureFlag(selectedIds);
+    if (ok.length > 0) {
+      const next = runDraftAction(STORE_ID, { type: ACTIONS.BULK_DELETE_PAGES, pageIds: ok });
+      setDraft(next);
+    }
+    setSelectedIds([]);
+    setConfirmBulkDelete(false);
+    setBulkError(
+      failed.length > 0
+        ? t('sectionBuilder:onlineStore.pages.bulkPartialFailureDelete', 'Couldn’t delete: {{names}}', {
+            names: pages.filter((p) => failed.includes(p.id)).map((p) => p.name).join(', '),
+          })
+        : null
+    );
+  };
 
   const columns = [
     {
@@ -137,7 +199,22 @@ export default function PagesManagement() {
           />
         </div>
 
-        <div className="pages-table-wrapper" style={{ background: '#FFFFFF', borderRadius: '12px', border: '1px solid #E9E9E9' }}>
+        {bulkError && (
+          <div
+            style={{
+              marginBottom: '12px',
+              padding: '10px 14px',
+              borderRadius: '8px',
+              background: '#FEF2F2',
+              color: '#B91C1C',
+              fontSize: '13px',
+            }}
+          >
+            {bulkError}
+          </div>
+        )}
+
+        <div className="pages-table-wrapper" style={{ background: '#FFFFFF', borderRadius: '12px', border: '1px solid #E9E9E9', position: 'relative' }}>
           <Table
             columns={columns}
             data={pagedPages}
@@ -153,6 +230,92 @@ export default function PagesManagement() {
               setSortDirection(direction);
             }}
             hidePaginationOnSinglePage
+            selectable
+            selectedIds={selectedIds}
+            onSelectionChange={setSelectedIds}
+            toolbar={
+              selectedIds.length > 0 ? (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                  <span style={{ fontSize: '13px', fontWeight: 600, color: '#282828' }}>
+                    {t('sectionBuilder:onlineStore.pages.bulkSelectedCount', '{{count}} selected', { count: selectedIds.length })}
+                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <MainBtn
+                      variant="secondary"
+                      size="sm"
+                      label={t('sectionBuilder:onlineStore.pages.setVisible', 'Set as visible')}
+                      onClick={() => handleBulkVisibility('visible')}
+                    />
+                    <MainBtn
+                      variant="secondary"
+                      size="sm"
+                      label={t('sectionBuilder:onlineStore.pages.setHidden', 'Set as hidden')}
+                      onClick={() => handleBulkVisibility('hidden')}
+                    />
+                    <div style={{ position: 'relative' }}>
+                      <button
+                        type="button"
+                        onClick={() => setBulkMenuOpen((o) => !o)}
+                        aria-label={t('sectionBuilder:onlineStore.pages.bulkMoreActions', 'More actions')}
+                        style={{
+                          width: 32,
+                          height: 32,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          borderRadius: 8,
+                          border: '1px solid #E5E7EB',
+                          background: '#fff',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        <MoreHorizontal size={16} />
+                      </button>
+                      {bulkMenuOpen && (
+                        <div
+                          style={{
+                            position: 'absolute',
+                            right: 0,
+                            top: 'calc(100% + 4px)',
+                            zIndex: 30,
+                            background: '#fff',
+                            border: '1px solid #E5E7EB',
+                            borderRadius: 8,
+                            boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+                            minWidth: 160,
+                            padding: '4px 0',
+                          }}
+                        >
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setBulkMenuOpen(false);
+                              setConfirmBulkDelete(true);
+                            }}
+                            style={{
+                              width: '100%',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 8,
+                              padding: '8px 12px',
+                              fontSize: 13,
+                              color: '#DA1E28',
+                              background: 'none',
+                              border: 'none',
+                              cursor: 'pointer',
+                              textAlign: 'left',
+                            }}
+                          >
+                            <Trash2 size={14} />
+                            {t('sectionBuilder:onlineStore.pages.deletePages', 'Delete pages')}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ) : undefined
+            }
             filters={{
               search: {
                 value: search,
@@ -203,6 +366,16 @@ export default function PagesManagement() {
           background-color: #F9FAFB;
         }
       `}</style>
+
+      <ConfirmDialog
+        open={confirmBulkDelete}
+        danger
+        title={t('sectionBuilder:onlineStore.pages.bulkDeleteConfirmTitle', 'Delete {{count}} pages?', { count: selectedIds.length })}
+        description={t('sectionBuilder:onlineStore.pages.bulkDeleteConfirmDescription', 'This can’t be undone.')}
+        confirmLabel={t('sectionBuilder:onlineStore.pages.deletePages', 'Delete pages')}
+        onConfirm={handleBulkDeleteConfirm}
+        onCancel={() => setConfirmBulkDelete(false)}
+      />
     </div>
   );
 }

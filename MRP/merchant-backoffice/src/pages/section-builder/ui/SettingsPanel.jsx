@@ -4,7 +4,7 @@ import { labelForType } from '../sections/registry';
 import { schemaForType } from '../sections/index';
 import SchemaField from './fields/SchemaField';
 import ContrastBadge from './fields/ContrastBadge';
-import { groupFieldsInOrder, isFieldVisible } from './fields/fieldHelpers';
+import { groupFieldsInOrder, isFieldVisible, labelForGroup } from './fields/fieldHelpers';
 import { resolveColor } from './fields/colorValue';
 
 /**
@@ -66,7 +66,13 @@ export default function SettingsPanel({
 
       {groups.map((groupEntry, groupIndex) => (
         <div key={groupEntry.group}>
-          {groupIndex > 0 && <hr className="my-4 border-gray-100" />}
+          {groupIndex > 0 && (
+            <div className="mb-3 mt-5 border-t border-gray-100 pt-4">
+              <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+                {labelForGroup(groupEntry.group)}
+              </span>
+            </div>
+          )}
           <div className="space-y-4">
             {groupEntry.fields
               .filter(([, field]) => isFieldVisible(field, data))

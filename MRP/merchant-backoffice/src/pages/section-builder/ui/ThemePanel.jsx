@@ -2,9 +2,78 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { getThemePanelGroups } from '../state/themeSchemaAdapter';
 import { THEME_PRESETS } from '../sections/themePresets';
+import { themes } from '../themes/registry';
 import ThemeSchemaField from './fields/ThemeSchemaField';
 import ContrastBadge from './fields/ContrastBadge';
 import ConfirmDialog from './ConfirmDialog';
+
+/**
+ * Phase 4 — storefront theme layer control (src/pages/section-builder/themes/**).
+ * Deliberately a separate, clearly-labeled subsection: this is a distinct,
+ * newer, in-progress theming system (applyThemeToElement's `--theme-*` CSS
+ * layer) from the existing preset cards above (which drive `theme.colors`/
+ * `theme.typography`). The two are independent and both kept intact.
+ */
+function StorefrontThemeSection({ theme, onSetStorefrontThemeId, onSetStorefrontThemeMode }) {
+  const { t } = useTranslation();
+  const storefrontThemeId = theme?.storefrontThemeId ?? null;
+  const storefrontThemeMode = theme?.storefrontThemeMode ?? 'light';
+
+  return (
+    <div>
+      <hr className="my-4 border-gray-100" />
+      <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-400">
+        {t('sectionBuilder:editor.themePanel.storefrontThemeHeading', 'Storefront theme (preview)')}
+      </p>
+      <p className="mb-2 text-[11px] text-gray-400">
+        {t(
+          'sectionBuilder:editor.themePanel.storefrontThemeDescription',
+          'A separate, newer theming system — independent from the presets above.'
+        )}
+      </p>
+      <select
+        value={storefrontThemeId ?? ''}
+        onChange={(e) => onSetStorefrontThemeId(e.target.value || null)}
+        className="mb-2 w-full rounded-md border border-gray-200 px-2 py-1 text-xs text-gray-700"
+      >
+        <option value="">{t('sectionBuilder:editor.themePanel.storefrontThemeNone', 'None')}</option>
+        {Object.values(themes).map((themeDef) => (
+          <option key={themeDef.id} value={themeDef.id}>
+            {themeDef.name}
+          </option>
+        ))}
+      </select>
+      <div className="flex gap-1">
+        <button
+          type="button"
+          disabled={!storefrontThemeId}
+          onClick={() => onSetStorefrontThemeMode('light')}
+          className={
+            'flex-1 rounded-md border py-1 text-xs disabled:cursor-not-allowed disabled:opacity-40 ' +
+            (storefrontThemeMode === 'light'
+              ? 'border-blue-400 bg-blue-50 text-blue-700'
+              : 'border-gray-200 text-gray-700 hover:bg-gray-50')
+          }
+        >
+          {t('sectionBuilder:editor.themePanel.storefrontThemeLight', 'Light')}
+        </button>
+        <button
+          type="button"
+          disabled={!storefrontThemeId}
+          onClick={() => onSetStorefrontThemeMode('dark')}
+          className={
+            'flex-1 rounded-md border py-1 text-xs disabled:cursor-not-allowed disabled:opacity-40 ' +
+            (storefrontThemeMode === 'dark'
+              ? 'border-blue-400 bg-blue-50 text-blue-700'
+              : 'border-gray-200 text-gray-700 hover:bg-gray-50')
+          }
+        >
+          {t('sectionBuilder:editor.themePanel.storefrontThemeDark', 'Dark')}
+        </button>
+      </div>
+    </div>
+  );
+}
 
 function PresetCard({ preset, onApply }) {
   const { t } = useTranslation();
@@ -60,7 +129,7 @@ function ButtonSample({ buttons }) {
  * through the same generic dispatcher, so adding a schema field here needs
  * no new panel code.
  */
-export default function ThemePanel({ theme, onFieldChange, onApplyPreset }) {
+export default function ThemePanel({ theme, onFieldChange, onApplyPreset, onSetStorefrontThemeId, onSetStorefrontThemeMode }) {
   const { t } = useTranslation();
   const [pendingPreset, setPendingPreset] = useState(null);
   const groups = getThemePanelGroups();
@@ -107,6 +176,12 @@ export default function ThemePanel({ theme, onFieldChange, onApplyPreset }) {
           </div>
         </div>
       ))}
+
+      <StorefrontThemeSection
+        theme={theme}
+        onSetStorefrontThemeId={onSetStorefrontThemeId}
+        onSetStorefrontThemeMode={onSetStorefrontThemeMode}
+      />
 
       <ConfirmDialog
         open={Boolean(pendingPreset)}

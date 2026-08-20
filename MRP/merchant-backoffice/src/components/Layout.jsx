@@ -25,10 +25,10 @@ const MENU_ITEMS = [
     ],
   },
   {
-    id: 'online-store', icon: Store, labelKey: 'dashboard:sidebar.onlineStore', label: 'Online Store',
+    id: 'website-studio', icon: Store, labelKey: 'dashboard:sidebar.websiteStudio', label: 'Website Studio',
     children: [
-      { id: 'theme', path: '/online-store/theme', labelKey: 'dashboard:sidebar.theme', label: 'Theme' },
-      { id: 'pages', path: '/online-store/pages', labelKey: 'dashboard:sidebar.pages', label: 'Pages' },
+      { id: 'site-builder', path: '/online-store/theme', labelKey: 'dashboard:sidebar.siteBuilder', label: 'Site Builder' },
+      { id: 'page-list', path: '/online-store/pages', labelKey: 'dashboard:sidebar.pageList', label: 'Page List' },
       { id: 'preferences', path: '/online-store/preferences', labelKey: 'dashboard:sidebar.preferences', label: 'Preferences' },
     ],
   },
