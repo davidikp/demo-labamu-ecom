@@ -1148,7 +1148,7 @@ const INDONESIAN_EXACT_TEXT = {
   "Yes, Skip": "Ya, Lewati",
   "Unable to analyze file": "Tidak dapat menganalisis file",
   "We couldn’t process your file. Try again, or use our template to prepare your data in the recommended format.": "Kami tidak dapat memproses file Anda. Coba lagi, atau gunakan template kami untuk menyiapkan data Anda dalam format yang disarankan.",
-  "Try Again": "Coba Lagi",
+  "Back to Upload": "Kembali ke Unggah",
   "No data found": "Data tidak ditemukan",
   "We couldn’t find any data to process in your file. Add your data and try again, or use our template to get started.": "Kami tidak dapat menemukan data untuk diproses dalam file Anda. Tambahkan data Anda dan coba lagi, atau gunakan template kami untuk memulai.",
   "Not Now": "Nanti Saja",

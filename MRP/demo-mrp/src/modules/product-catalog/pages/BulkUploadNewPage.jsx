@@ -195,25 +195,16 @@ export const BulkUploadNewPage = ({ onNavigate, showSnackbar, initialData, isSid
         handleAnalyzed(headers, rows, uploadedFileName);
       },
       () => {
-        // The file was read fine but had no rows — retrying the same file
-        // would just fail again, so it's cleared to make the user pick a
-        // different one (unlike the "error" variant below).
+        // The selected file is left in place (not cleared) — the user
+        // returns to the Upload step with it still preselected instead of
+        // an empty picker.
         analyzeCancelRef.current = null;
         setIsAnalyzing(false);
-        setSelectedFile(null);
         setTemplateSuggestionVariant("empty");
         showSnackbar?.("No data found in this file", "error");
         setShowTemplateSuggestion(true);
       }
     );
-  };
-
-  // Re-runs analysis on the same file after the "We couldn't analyze your
-  // file" modal's "Try Again" — only reachable from that error variant,
-  // where selectedFile is deliberately left in place (see
-  // handleSimulateAnalyzeFailure).
-  const handleTryAgainAnalyze = () => {
-    if (selectedFile) handleAnalyzeClick();
   };
 
   // Demo-only: lets the "Analyzing your file..." screen's Simulate controls
@@ -224,11 +215,8 @@ export const BulkUploadNewPage = ({ onNavigate, showSnackbar, initialData, isSid
     analyzeCancelRef.current = null;
     setIsAnalyzing(false);
     if (type === "timeout") {
-      // Analysis itself failed — keep the file selected so "Try Again" can
-      // re-run analyzeFile() on it without the user reselecting it.
       setTemplateSuggestionVariant("error");
     } else {
-      setSelectedFile(null);
       setTemplateSuggestionVariant("empty");
     }
     showSnackbar?.(type === "timeout" ? "Failed to analyze file" : "No data found in this file", "error");
@@ -723,7 +711,6 @@ export const BulkUploadNewPage = ({ onNavigate, showSnackbar, initialData, isSid
         isOpen={showTemplateSuggestion}
         onClose={() => setShowTemplateSuggestion(false)}
         onDownloadTemplate={handleDownloadTemplate}
-        onTryAgain={handleTryAgainAnalyze}
         variant={templateSuggestionVariant}
       />
     </div>
