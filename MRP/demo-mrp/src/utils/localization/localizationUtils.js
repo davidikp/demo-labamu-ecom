@@ -1151,7 +1151,6 @@ const INDONESIAN_EXACT_TEXT = {
   "Back to Upload": "Kembali ke Unggah",
   "No data found": "Data tidak ditemukan",
   "We couldn’t find any data to process in your file. Add your data and try again, or use our template to get started.": "Kami tidak dapat menemukan data untuk diproses dalam file Anda. Tambahkan data Anda dan coba lagi, atau gunakan template kami untuk memulai.",
-  "Not Now": "Nanti Saja",
   "No products to import": "Tidak ada produk untuk diimpor",
   "There are no products ready to import. Add or update your product data before continuing.": "Belum ada produk yang siap diimpor. Tambahkan atau perbarui data produk sebelum melanjutkan.",
   "Back to Review": "Kembali ke Peninjauan",
