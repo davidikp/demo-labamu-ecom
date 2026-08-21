@@ -5,6 +5,7 @@ import { IconButton } from "../../../components/common/IconButton.jsx";
 import { DropdownSelect } from "../../../components/common/DropdownSelect.jsx";
 import { StatusBadge } from "../../../components/common/StatusBadge.jsx";
 import { FormField, InputField } from "../../../components/index.js";
+import { ToggleSwitch } from "../../../components/common/ToggleSwitch.jsx";
 import { MOCK_MATERIALS_DATA } from "../../materials/mock/materialsMocks.js";
 import { getBomLinkedToMaterial } from "../../bill-of-materials/mock/bomMocks.js";
 import { MaterialComboBox, PRIORITY_OPTIONS } from "./WorkOrderCreateDrawer.jsx";
@@ -47,6 +48,9 @@ const buildFormState = ({ orderType, priority, notes, start, end, outputs }) => 
     materialId: main.materialId || "",
     materialSearchText: main.name || "",
     quantity: main.qty != null ? String(main.qty) : "",
+    // Pre-enable the toggle if this WO already has additional outputs saved,
+    // so existing multi-output data isn't hidden the moment the drawer opens.
+    enableMultipleOutput: rest.length > 0,
     additionalOutputs: rest.map((o) => ({
       id: nextEditOutputRowId(),
       materialId: o.materialId || "",
@@ -239,7 +243,7 @@ export const WorkOrderEditDrawer = ({ isOpen, onClose, workOrder, onSave }) => {
         <div style={{ flex: 1, overflowY: "auto", padding: "24px", display: "flex", flexDirection: "column", gap: "24px" }}>
           <div style={{ display: "flex", gap: "16px" }}>
             <Card style={{ padding: "16px", boxShadow: "none", border: "1px solid var(--neutral-line-separator-1)", flex: 1 }}>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "16px", rowGap: "16px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "16px" }}>
                 <LabelValue label="Work Order Number" value={workOrder?.wo || "-"} />
                 <LabelValue label="Order Number" value={workOrder?.ord || "-"} />
                 <LabelValue
@@ -354,6 +358,41 @@ export const WorkOrderEditDrawer = ({ isOpen, onClose, workOrder, onSave }) => {
           <>
           <div style={{ borderTop: "1px solid var(--neutral-line-separator-1)" }} />
 
+          <div style={{
+            display: "flex",
+            alignItems: "flex-start",
+            justifyContent: "space-between",
+            padding: "16px",
+            background: "var(--feature-brand-container-lighter)",
+            borderRadius: "16px",
+            gap: "12px",
+          }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+              <span style={{ fontSize: "14px", fontWeight: "600", color: "var(--neutral-on-surface-primary)" }}>
+                Enable Multiple Output
+              </span>
+              <span style={{ fontSize: "12px", color: "var(--neutral-on-surface-secondary)", lineHeight: "18px" }}>
+                Activate this feature to add more than one output to this work order.
+              </span>
+            </div>
+            <div style={{ marginTop: "2px" }}>
+              <ToggleSwitch
+                checked={formData.enableMultipleOutput}
+                onChange={(val) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    enableMultipleOutput: val,
+                    additionalOutputs: val ? prev.additionalOutputs : [],
+                  }))
+                }
+              />
+            </div>
+          </div>
+          </>
+          )}
+
+          {!isCustomerOrder && formData.enableMultipleOutput && (
+          <>
           <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
             <div ref={outputErrorRef} style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
               <span style={{ fontSize: "var(--text-subtitle-1)", fontWeight: "var(--font-weight-bold)" }}>

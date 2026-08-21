@@ -3,36 +3,59 @@ import { GeneralModal } from "../../../components/modal/GeneralModal.jsx";
 import { Button } from "../../../components/common/Button.jsx";
 import { DownloadIcon } from "../../../components/icons/Icons.jsx";
 
-// Shown right after an analyze failure (timed out / no data found) redirects
-// the user back to the upload field — nudges them toward the Labamu
-// template instead of leaving them to guess why their file didn't work.
-export const UseTemplateSuggestionModal = ({ isOpen, onClose, onDownloadTemplate }) => (
-  <GeneralModal
-    isOpen={isOpen}
-    onClose={onClose}
-    title="Try uploading with our template"
-    description="Use our template to organize your material data in a format that’s easier to process."
-    width="560px"
-    hideFooterDivider
-    footerPaddingTop={24}
-    footer={
-      <>
-        <Button variant="outlined" size="large" onClick={onClose} style={{ flex: 1 }}>
-          Not Now
-        </Button>
-        <Button
-          variant="filled"
-          size="large"
-          leftIcon={DownloadIcon}
-          onClick={() => {
-            onDownloadTemplate();
-            onClose();
-          }}
-          style={{ flex: 1 }}
-        >
-          Download Template
-        </Button>
-      </>
-    }
-  />
-);
+// Shown right after an analyze failure redirects the user back to the upload
+// field. Two variants depending on what actually went wrong:
+// - "error": analyzeFile() itself failed (unreadable file structure, timeout,
+//   or the demo's "Simulate Timeout" control) — the secondary action is
+//   "Try Again", which re-runs analysis on the same file (see
+//   MaterialUploadNewPage.handleTryAgainAnalyze).
+// - "empty": the file was read fine but contained no rows — the secondary
+//   action is just dismissing the modal, since retrying the same file would
+//   produce the same empty result; the user needs to fix/replace the file.
+export const UseTemplateSuggestionModal = ({ isOpen, onClose, onDownloadTemplate, onTryAgain, variant = "empty" }) => {
+  const isError = variant === "error";
+  return (
+    <GeneralModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={isError ? "We couldn’t analyze your file" : "No material data found"}
+      description={
+        isError
+          ? "There was a problem reading or processing your file. Try again, or use our template to prepare your data in a supported structure."
+          : "We could read your file, but it doesn’t contain any material data. Add your data or use our template to get started."
+      }
+      width="560px"
+      hideFooterDivider
+      footerPaddingTop={24}
+      footer={
+        <>
+          <Button
+            variant="outlined"
+            size="large"
+            onClick={() => {
+              if (isError) {
+                onTryAgain?.();
+              }
+              onClose();
+            }}
+            style={{ flex: 1 }}
+          >
+            {isError ? "Try Again" : "Not Now"}
+          </Button>
+          <Button
+            variant="filled"
+            size="large"
+            leftIcon={DownloadIcon}
+            onClick={() => {
+              onDownloadTemplate();
+              onClose();
+            }}
+            style={{ flex: 1 }}
+          >
+            Download Template
+          </Button>
+        </>
+      }
+    />
+  );
+};

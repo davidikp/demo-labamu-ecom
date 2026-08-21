@@ -4,6 +4,7 @@ import { Info } from "../../../../components/icons/Icons.jsx";
 import { Tooltip } from "../../../../components/atoms/Tooltip.jsx";
 import { StatusBadge } from "../../../../components/common/StatusBadge.jsx";
 import { DropdownSelect } from "../../../../components/common/DropdownSelect.jsx";
+import { ClampedDescriptionText } from "../../../../components/common/ClampedDescriptionText.jsx";
 import { MATERIAL_FIELDS_CONFIG, NOT_MAPPED } from "../../mock/materialFieldsConfig.js";
 
 // Presentational/controlled: `mapping` and `recommendation` are owned by the
@@ -80,9 +81,14 @@ export const MappingStep = ({ headers, rows = [], mapping, recommendation, onMap
       width: 200,
       render: (_, row) => {
         const mappedValue = mapping[row.field.key] ?? NOT_MAPPED;
+        const sample = getSampleValue(mappedValue);
         return (
           <div style={{ padding: "12px 0" }}>
-            <span style={{ color: "var(--neutral-on-surface-primary)" }}>{getSampleValue(mappedValue)}</span>
+            {row.field.key === "description" ? (
+              <ClampedDescriptionText text={sample} style={{ color: "var(--neutral-on-surface-primary)" }} />
+            ) : (
+              <span style={{ color: "var(--neutral-on-surface-primary)" }}>{sample}</span>
+            )}
           </div>
         );
       },
@@ -108,7 +114,7 @@ export const MappingStep = ({ headers, rows = [], mapping, recommendation, onMap
     <div style={{ display: "flex", flexDirection: "column", gap: "16px", padding: "24px 0", flex: 1, minHeight: 0 }}>
       <style>{`
         .mc-mapping-table > div:last-child { display: none; }
-        .mc-mapping-table th, .mc-mapping-table td { height: auto !important; }
+        .mc-mapping-table th, .mc-mapping-table td { height: auto !important; vertical-align: top !important; }
         .mc-mapping-table th {
           padding-top: 12px !important;
           padding-bottom: 12px !important;
@@ -133,7 +139,7 @@ export const MappingStep = ({ headers, rows = [], mapping, recommendation, onMap
           <Info size={20} color="var(--feature-brand-primary)" />
         </div>
         <span style={{ fontSize: "var(--text-title-3)", color: "var(--neutral-on-surface-primary)" }}>
-          Check that each material field matches the correct column from your file. Once everything looks right, continue to normalize and review your data.
+          Your file columns have been mapped automatically. Review the mappings before continuing.
         </span>
       </div>
 

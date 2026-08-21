@@ -131,6 +131,9 @@ export const BulkUploadNewPage = ({ onNavigate, showSnackbar, initialData, isSid
   const [showInputDataConfirm, setShowInputDataConfirm] = useState(false);
   const [showSkipConfirm, setShowSkipConfirm] = useState(false);
   const [showTemplateSuggestion, setShowTemplateSuggestion] = useState(false);
+  // "error" (analysis itself failed) vs "empty" (file read fine but had no
+  // rows) — drives which copy/buttons UseTemplateSuggestionModal shows.
+  const [templateSuggestionVariant, setTemplateSuggestionVariant] = useState("empty");
   const [showAnalyzingBlocker, setShowAnalyzingBlocker] = useState(false);
   const [normalizationStats, setNormalizationStats] = useState(() => {
     if (!resumeRecord || resumeRecord.status !== "Review") return null;
@@ -192,13 +195,25 @@ export const BulkUploadNewPage = ({ onNavigate, showSnackbar, initialData, isSid
         handleAnalyzed(headers, rows, uploadedFileName);
       },
       () => {
+        // The file was read fine but had no rows — retrying the same file
+        // would just fail again, so it's cleared to make the user pick a
+        // different one (unlike the "error" variant below).
         analyzeCancelRef.current = null;
         setIsAnalyzing(false);
         setSelectedFile(null);
+        setTemplateSuggestionVariant("empty");
         showSnackbar?.("No data found in this file", "error");
         setShowTemplateSuggestion(true);
       }
     );
+  };
+
+  // Re-runs analysis on the same file after the "We couldn't analyze your
+  // file" modal's "Try Again" — only reachable from that error variant,
+  // where selectedFile is deliberately left in place (see
+  // handleSimulateAnalyzeFailure).
+  const handleTryAgainAnalyze = () => {
+    if (selectedFile) handleAnalyzeClick();
   };
 
   // Demo-only: lets the "Analyzing your file..." screen's Simulate controls
@@ -208,7 +223,14 @@ export const BulkUploadNewPage = ({ onNavigate, showSnackbar, initialData, isSid
     analyzeCancelRef.current?.();
     analyzeCancelRef.current = null;
     setIsAnalyzing(false);
-    setSelectedFile(null);
+    if (type === "timeout") {
+      // Analysis itself failed — keep the file selected so "Try Again" can
+      // re-run analyzeFile() on it without the user reselecting it.
+      setTemplateSuggestionVariant("error");
+    } else {
+      setSelectedFile(null);
+      setTemplateSuggestionVariant("empty");
+    }
     showSnackbar?.(type === "timeout" ? "Failed to analyze file" : "No data found in this file", "error");
     setShowTemplateSuggestion(true);
   };
@@ -701,6 +723,8 @@ export const BulkUploadNewPage = ({ onNavigate, showSnackbar, initialData, isSid
         isOpen={showTemplateSuggestion}
         onClose={() => setShowTemplateSuggestion(false)}
         onDownloadTemplate={handleDownloadTemplate}
+        onTryAgain={handleTryAgainAnalyze}
+        variant={templateSuggestionVariant}
       />
     </div>
   );

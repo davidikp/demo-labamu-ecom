@@ -129,6 +129,9 @@ export const MaterialUploadNewPage = ({ onNavigate, showSnackbar, initialData, i
   const [showInputDataConfirm, setShowInputDataConfirm] = useState(false);
   const [showSkipConfirm, setShowSkipConfirm] = useState(false);
   const [showTemplateSuggestion, setShowTemplateSuggestion] = useState(false);
+  // "error" (analysis itself failed) vs "empty" (file read fine but had no
+  // rows) — drives which copy/buttons UseTemplateSuggestionModal shows.
+  const [templateSuggestionVariant, setTemplateSuggestionVariant] = useState("empty");
   const [normalizationStats, setNormalizationStats] = useState(() => {
     if (!resumeRecord || resumeRecord.status !== "Review") return null;
     // Fall back to "fully normalized" for records that already have saved
@@ -173,13 +176,25 @@ export const MaterialUploadNewPage = ({ onNavigate, showSnackbar, initialData, i
         handleAnalyzed(headers, rows, uploadedFileName);
       },
       () => {
+        // The file was read fine but had no rows — retrying the same file
+        // would just fail again, so it's cleared to make the user pick a
+        // different one (unlike the "error" variant below).
         analyzeCancelRef.current = null;
         setIsAnalyzing(false);
         setSelectedFile(null);
+        setTemplateSuggestionVariant("empty");
         showSnackbar?.("No data found in this file", "error");
         setShowTemplateSuggestion(true);
       }
     );
+  };
+
+  // Re-runs analysis on the same file after the "We couldn't analyze your
+  // file" modal's "Try Again" — only reachable from that error variant,
+  // where selectedFile is deliberately left in place (see
+  // handleSimulateAnalyzeFailure).
+  const handleTryAgainAnalyze = () => {
+    if (selectedFile) handleAnalyzeClick();
   };
 
   // Demo-only: lets the "Analyzing your file..." screen's Simulate controls
@@ -189,7 +204,14 @@ export const MaterialUploadNewPage = ({ onNavigate, showSnackbar, initialData, i
     analyzeCancelRef.current?.();
     analyzeCancelRef.current = null;
     setIsAnalyzing(false);
-    setSelectedFile(null);
+    if (type === "timeout") {
+      // Analysis itself failed — keep the file selected so "Try Again" can
+      // re-run analyzeFile() on it without the user reselecting it.
+      setTemplateSuggestionVariant("error");
+    } else {
+      setSelectedFile(null);
+      setTemplateSuggestionVariant("empty");
+    }
     showSnackbar?.(type === "timeout" ? "Failed to analyze file" : "No data found in this file", "error");
     setShowTemplateSuggestion(true);
   };
@@ -571,7 +593,7 @@ export const MaterialUploadNewPage = ({ onNavigate, showSnackbar, initialData, i
         {step === "mapping-processing" && (
           <BackgroundProcessingScreen
             title="Your file is being normalized"
-            message="We’re also validating your data to prepare it for review. You can leave this page and we’ll notify you by email when it’s ready."
+            message="AI is normalizing and validating your data to prepare it for review. You can leave this page and we’ll email you when it’s ready."
             buttonLabel="Back to Bulk Upload"
             onBackToList={() => onNavigate("materials_bulk-upload-list")}
             secondaryActionLabel="Skip Process"
@@ -677,6 +699,8 @@ export const MaterialUploadNewPage = ({ onNavigate, showSnackbar, initialData, i
         isOpen={showTemplateSuggestion}
         onClose={() => setShowTemplateSuggestion(false)}
         onDownloadTemplate={handleDownloadTemplate}
+        onTryAgain={handleTryAgainAnalyze}
+        variant={templateSuggestionVariant}
       />
     </div>
   );

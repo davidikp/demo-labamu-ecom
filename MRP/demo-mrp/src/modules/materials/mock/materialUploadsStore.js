@@ -222,7 +222,7 @@ const SEED_BATCHES = [
     failedCount: 0,
     failedRows: [],
     sourceDocumentName: "raw_materials_batch_two.csv",
-    sourceHeaders: ["Material Name", "Category", "Classification", "Type", "UOM", "SKU"],
+    sourceHeaders: ["Material Name", "Category", "Classification", "Type", "UOM", "SKU", "Description"],
     fieldMapping: {
       sku: "SKU",
       name: "Material Name",
@@ -230,10 +230,23 @@ const SEED_BATCHES = [
       abcClassification: "Classification",
       materialType: "Type",
       uom: "UOM",
+      description: "Description",
     },
+    // Demo seed: a long Description value here so the Mapping step's Example
+    // Value column has something to test the "Show all"/"Show less" clamp
+    // against without needing to upload a fresh file.
     rawRows: [
-      { SKU: "RAW-B2-01", "Material Name": "Teak Veneer Sheet Large", Category: "Raw Material", Classification: "A", Type: "Raw", UOM: "Sheet" },
-      { SKU: "RAW-B2-02", "Material Name": "Teak Veneer Sheet Small", Category: "Raw Material", Classification: "B", Type: "Raw", UOM: "Sheet" },
+      {
+        SKU: "RAW-B2-01",
+        "Material Name": "Teak Veneer Sheet Large",
+        Category: "Raw Material",
+        Classification: "A",
+        Type: "Raw",
+        UOM: "Sheet",
+        Description:
+          "Premium-grade teak veneer sheet sourced from sustainably managed plantations, sliced to a consistent 0.6mm thickness for use in furniture facing and cabinetry work. The grain pattern is naturally striped with warm honey-brown tones, and each sheet is quarter-cut to minimize warping during lamination. Store flat in a climate-controlled area away from direct sunlight and moisture — humidity fluctuations can cause the veneer to curl or crack at the edges. Suitable for both flat-panel and curved-surface applications when paired with a compatible contact adhesive. Not recommended for exterior use without additional sealant treatment.",
+      },
+      { SKU: "RAW-B2-02", "Material Name": "Teak Veneer Sheet Small", Category: "Raw Material", Classification: "B", Type: "Raw", UOM: "Sheet", Description: "Smaller-format teak veneer sheet, same grade and grain as the large size." },
     ],
     rows: [],
     logs: [

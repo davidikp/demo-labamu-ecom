@@ -215,17 +215,29 @@ const SEED_BATCHES = [
     failedCount: 0,
     failedRows: [],
     sourceDocumentName: "trays_batch_two.csv",
-    sourceHeaders: ["Product Name", "Category", "Lead Time", "Price", "SKU"],
+    sourceHeaders: ["Product Name", "Category", "Lead Time", "Price", "SKU", "Description"],
     fieldMapping: {
       sku: "SKU",
       name: "Product Name",
       categoryName: "Category",
       leadTime: "Lead Time",
       sellingPrice: "Price",
+      description: "Description",
     },
+    // Demo seed: a long Description value here so the Mapping step's Example
+    // Value column has something to test the "Show all"/"Show less" clamp
+    // against without needing to upload a fresh file.
     rawRows: [
-      { SKU: "TRY-B2-01", "Product Name": "Rattan Tray Medium", Category: "Trays", "Lead Time": "7 Days", Price: "175000" },
-      { SKU: "TRY-B2-02", "Product Name": "Rattan Tray Large", Category: "Trays", "Lead Time": "8 Days", Price: "220000" },
+      {
+        SKU: "TRY-B2-01",
+        "Product Name": "Rattan Tray Medium",
+        Category: "Trays",
+        "Lead Time": "7 Days",
+        Price: "175000",
+        Description:
+          "Handwoven rattan serving tray with a reinforced teak base, finished in a natural matte lacquer. Each piece is woven by hand using sustainably sourced rattan strands, giving it a slightly irregular, organic texture that varies piece to piece. The reinforced base adds rigidity so the tray holds its shape under load without warping over time. Suitable for indoor use only — avoid prolonged exposure to direct sunlight or moisture, as this may cause the natural fibers to dry out and become brittle. Recommended for serving food, displaying decor, or as a catch-all tray on entryway tables.",
+      },
+      { SKU: "TRY-B2-02", "Product Name": "Rattan Tray Large", Category: "Trays", "Lead Time": "8 Days", Price: "220000", Description: "Large rattan tray, same weave and finish as the medium size." },
     ],
     rows: [],
     logs: [

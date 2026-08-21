@@ -549,11 +549,15 @@ export const WorkOrderDetailPage = ({ onNavigate, isSidebarCollapsed, initialDat
         ? [{ isMain: true, materialId: initialData.materialId, name: initialData?.product, sku: initialData?.sku, qty: initialData?.qty }]
         : []
   );
-  // Total Output = sum of every output's quantity (main + additional), not
-  // just the main output's qty — drives routing "Yet to Start" math below.
+  // Total Output = sum of every output's quantity (main + additional) — drives
+  // Actual COGS per-unit math and output-allocation limits below.
   const TOTAL_QTY = outputs.length
     ? outputs.reduce((sum, o) => sum + (Number(o.qty) || 0), 0)
     : mainQty;
+  // Routing Stages (and vendor/outsourcing step assignment, which is tied to
+  // routing) are driven by the main output quantity alone — additional
+  // outputs don't factor into routing progress math.
+  const ROUTING_QTY = mainQty;
   const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
 
   const [activeTab, setActiveTab] = useState("details");
@@ -1677,7 +1681,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
       const vendorCompleted = vendors
         .filter((v) => v.name !== "Internal" && v.assignedSteps && v.assignedSteps.includes(stage.step))
         .reduce((acc, v) => acc + (parseInt(v.receivedOutput, 10) || 0), 0);
-      return (stage.comp || 0) + vendorCompleted >= TOTAL_QTY;
+      return (stage.comp || 0) + vendorCompleted >= ROUTING_QTY;
     });
 
   // A work order can only complete once no material request is still ongoing —
@@ -1959,7 +1963,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
   })();
 
   const stagesWithTotals = [];
-  let previousEffectiveComp = TOTAL_QTY;
+  let previousEffectiveComp = ROUTING_QTY;
 
   routingStages.forEach((row) => {
     const vendorComp = vendors
@@ -1996,7 +2000,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
     const rowIndex = stagesWithTotals.findIndex((r) => r.step === minStep);
     if (rowIndex === -1) return 0;
 
-    const prevCompleted = minStep === 1 ? TOTAL_QTY : (stagesWithTotals[rowIndex - 1]?.effectiveTotalComp || 0);
+    const prevCompleted = minStep === 1 ? ROUTING_QTY : (stagesWithTotals[rowIndex - 1]?.effectiveTotalComp || 0);
     const currStage = stagesWithTotals[rowIndex];
     const internalProg = currStage?.prog || 0;
     const internalCompleted = currStage?.comp || 0;
@@ -2020,14 +2024,14 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
       const row = stagesWithTotals[rowIndex];
       const stepTotalPool =
         row.step === 1
-          ? TOTAL_QTY
+          ? ROUTING_QTY
           : stagesWithTotals[rowIndex - 1]?.totalComp || 0;
       firstOutsourceStart = Math.max(
         0,
         stepTotalPool - (row.prog || 0) - (row.totalComp || 0)
       );
 
-      if ((row.totalComp || 0) >= TOTAL_QTY) {
+      if ((row.totalComp || 0) >= ROUTING_QTY) {
         isFirstOutsourceCompleted = true;
       }
     }
@@ -2138,9 +2142,9 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
       const proposedTotal =
         currentOtherTotal + (parseInt(singleVendorForm.output, 10) || 0);
 
-      if (proposedTotal > TOTAL_QTY) {
+      if (proposedTotal > ROUTING_QTY) {
         setAssignedOutputError(
-          `Cannot exceed total work order quantity (${TOTAL_QTY} unit). You have ${TOTAL_QTY - currentOtherTotal} unit available.`
+          `Cannot exceed total work order quantity (${ROUTING_QTY} unit). You have ${ROUTING_QTY - currentOtherTotal} unit available.`
         );
         hasError = true;
       }
@@ -3633,7 +3637,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
     selectedStageIndex === -1
       ? 0
       : selectedStageIndex === 0
-        ? TOTAL_QTY
+        ? ROUTING_QTY
         : stagesWithTotals[selectedStageIndex - 1]?.totalComp || 0;
   const selectedStageVendorCompleted = selectedStageData?.vendorComp || 0;
   const selectedStageYetToStart = Math.max(
@@ -4739,6 +4743,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
           <ChipTabBar
             tabs={[
               { id: "details", label: "Details" },
+              ...(fulfillmentType === "StockBuild" ? [{ id: "additional_output", label: "Additional Output" }] : []),
               { id: "cogs", label: "Actual COGS" },
               ...(confirmedStockBuild ? [{ id: "confirm_build", label: "Confirm Build Detail" }] : []),
               { id: "logs", label: "Logs" },
@@ -5063,7 +5068,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                   <div>Completed</div>
                 </div>
                 {stagesWithTotals.map((row, i) => {
-                  const stepTotalPool = row.step === 1 ? TOTAL_QTY : 0;
+                  const stepTotalPool = row.step === 1 ? ROUTING_QTY : 0;
                   const start = Math.max(
                     0,
                     stepTotalPool - (row.prog || 0) - (row.effectiveTotalComp || 0)
@@ -5178,7 +5183,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                 {stagesWithTotals.map((row, i) => {
                   const stepTotalPool =
                     row.step === 1
-                      ? TOTAL_QTY
+                      ? ROUTING_QTY
                       : stagesWithTotals[i - 1].effectiveTotalComp;
                   const start = Math.max(
                     0,
@@ -5186,7 +5191,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                   );
 
                   const isHybrid = outsourceSteps.includes(row.step);
-                  const progressTarget = isHybrid ? internalOut : TOTAL_QTY;
+                  const progressTarget = isHybrid ? internalOut : ROUTING_QTY;
 
                   const internalRemaining = Math.max(
                     0,
@@ -5196,14 +5201,14 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
 
                   const displayStart = woStatus === "completed" ? 0 : start;
                   const displayProg = woStatus === "completed" ? 0 : (row.prog || 0);
-                  const displayComp = woStatus === "completed" ? TOTAL_QTY : (row.effectiveTotalComp || 0);
+                  const displayComp = woStatus === "completed" ? ROUTING_QTY : (row.effectiveTotalComp || 0);
 
                   const progress =
                     woStatus === "completed"
                       ? 100
                       : Math.min(
                           100,
-                          Math.round(((row.effectiveTotalComp || 0) / TOTAL_QTY) * 100)
+                          Math.round(((row.effectiveTotalComp || 0) / ROUTING_QTY) * 100)
                         ) || 0;
 
                   const isUnlocked =
@@ -5413,7 +5418,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                           >
                             {isCancelled
                               ? "Cancelled"
-                              : woStatus === "completed" || (row.totalComp || 0) >= TOTAL_QTY
+                              : woStatus === "completed" || (row.totalComp || 0) >= ROUTING_QTY
                               ? "Completed"
                               : "Waiting Prev Process"}
                           </span>
@@ -5740,7 +5745,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                     const rowIndex = stagesWithTotals.findIndex((r) => r.step === minStep);
                     let availableToProcess = 0;
                     if (rowIndex !== -1) {
-                      const prevCompleted = minStep === 1 ? TOTAL_QTY : (stagesWithTotals[rowIndex - 1]?.effectiveTotalComp || 0);
+                      const prevCompleted = minStep === 1 ? ROUTING_QTY : (stagesWithTotals[rowIndex - 1]?.effectiveTotalComp || 0);
                       const currStage = stagesWithTotals[rowIndex];
                       const internalProg = currStage?.prog || 0;
                       const internalCompleted = currStage?.comp || 0;
@@ -6159,6 +6164,104 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
         </>
         </div>
         )}
+
+        {activeTab === "additional_output" && fulfillmentType === "StockBuild" && (() => {
+          const additionalOutputRows = outputs.filter((o) => !o.isMain);
+          return (
+            <Card style={{ gap: "16px" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                <span style={{ fontSize: "var(--text-title-2)", fontWeight: "var(--font-weight-bold)" }}>
+                  Additional Output
+                </span>
+                <span style={{ fontSize: "var(--text-title-3)", color: "var(--neutral-on-surface-secondary)" }}>
+                  Secondary outputs co-produced by this work order, alongside the main output.
+                </span>
+              </div>
+
+              <div style={{ overflowX: "auto" }}>
+                <style>{`.wo-additional-output-table table td { height: auto; vertical-align: middle; padding-top: 12px; padding-bottom: 12px; }`}</style>
+                <div className="wo-additional-output-table">
+                  <Table
+                    columns={[
+                      {
+                        key: "image",
+                        header: "",
+                        width: 64,
+                        render: (_v, row) => {
+                          const material = MOCK_MATERIALS_DATA.find((m) => m.id === row.materialId);
+                          return material?.image ? (
+                            <img
+                              src={material.image}
+                              alt={row.name}
+                              style={{
+                                width: "40px",
+                                height: "40px",
+                                borderRadius: "8px",
+                                objectFit: "cover",
+                                border: "1px solid var(--neutral-line-separator-1)",
+                              }}
+                            />
+                          ) : (
+                            <div
+                              style={{
+                                width: "40px",
+                                height: "40px",
+                                borderRadius: "8px",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                background: "var(--neutral-surface-grey-lighter)",
+                                border: "1px solid var(--neutral-line-separator-1)",
+                              }}
+                            >
+                              <Box size={18} color="var(--neutral-on-surface-tertiary)" />
+                            </div>
+                          );
+                        },
+                      },
+                      {
+                        key: "name",
+                        header: "Item Name",
+                        width: 220,
+                        render: (_v, row) => <span style={{ fontWeight: "var(--font-weight-bold)" }}>{row.name || "-"}</span>,
+                      },
+                      {
+                        key: "sku",
+                        header: "SKU",
+                        width: 160,
+                        render: (_v, row) => <span style={{ color: "var(--neutral-on-surface-secondary)" }}>{row.sku || "-"}</span>,
+                      },
+                      {
+                        key: "plannedQty",
+                        header: "Planned Qty",
+                        width: 140,
+                        render: (_v, row) => <span>{row.qty ?? "-"} {row.unit || ""}</span>,
+                      },
+                      {
+                        key: "producedQty",
+                        header: "Produced Qty",
+                        width: 140,
+                        render: (_v, row) => {
+                          // Not tracked until the Stock Build is confirmed — after
+                          // that, the confirmed row's qty is the produced amount.
+                          const confirmedRow = confirmedStockBuild?.rows?.find(
+                            (r) => r.materialId === row.materialId
+                          );
+                          return <span>{confirmedRow ? confirmedRow.qty : 0} {row.unit || ""}</span>;
+                        },
+                      },
+                    ]}
+                    data={additionalOutputRows}
+                    totalRows={additionalOutputRows.length}
+                    showPagination={false}
+                    className="!h-auto"
+                    selectedRowId={null}
+                  />
+                </div>
+              </div>
+            </Card>
+          );
+        })()}
 
         {activeTab === "cogs" && (() => {
           const linkedBom = actualCogsBomId ? getBom(actualCogsBomId) : null;
@@ -8631,7 +8734,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                           .filter((v) => v.id !== singleVendorForm.id)
                           .reduce((sum, v) => sum + (parseInt(v.output, 10) || 0), 0);
                           
-                    const availableQty = Math.max(0, TOTAL_QTY - maxAssignedInConsideredSteps);
+                    const availableQty = Math.max(0, ROUTING_QTY - maxAssignedInConsideredSteps);
                     const isExceedingTotal = (parseInt(singleVendorForm.output, 10) || 0) > availableQty;
 
                     return (

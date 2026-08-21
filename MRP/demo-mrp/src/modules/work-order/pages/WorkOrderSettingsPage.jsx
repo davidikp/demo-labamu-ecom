@@ -369,7 +369,7 @@ export const WorkOrderSettingsPage = ({
                   color: "var(--neutral-on-surface-primary)",
                 }}
               >
-                Actual COGS After Routing Completion
+                Require Actual COGS Review
               </span>
               <span
                 style={{
@@ -377,8 +377,8 @@ export const WorkOrderSettingsPage = ({
                   color: "var(--neutral-on-surface-secondary)",
                 }}
               >
-                Allow Actual COGS to be configured after all routing stages in
-                a Work Order are completed.
+                Require an authorized user to review and confirm Actual COGS
+                before the Work Order can be completed.
               </span>
             </div>
             <ToggleSwitch
