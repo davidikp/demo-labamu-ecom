@@ -345,7 +345,14 @@ export default function PageEditor() {
 
   const handlePreview = () => {
     if (!pageId) return;
-    window.open(`/online-store/pages/${pageId}/preview`, '_blank', 'noopener,noreferrer');
+    // No `noopener`/`noreferrer` here on purpose: this app's route guard
+    // (App.jsx's ProtectedRoute) checks `sessionStorage`, which the browser
+    // only clones into a same-origin tab opened via window.open() when it
+    // keeps the opener relationship. With noopener set, the new tab got a
+    // blank sessionStorage and bounced straight to /login instead of
+    // showing the preview. This link is our own internal route, not
+    // third-party content, so there's no tab-nabbing risk being traded away.
+    window.open(`/online-store/pages/${pageId}/preview`, '_blank');
   };
 
   const [confirmUnsavedEditor, setConfirmUnsavedEditor] = useState(false);
@@ -396,7 +403,23 @@ export default function PageEditor() {
   }
 
   return (
-    <div style={{ background: '#F4F4F4', minHeight: 'calc(100vh - 56px)', fontFamily: "'Lato', sans-serif" }}>
+    <div
+      style={{
+        background: '#F4F4F4',
+        height: 'calc(100vh - 56px)',
+        display: 'flex',
+        flexDirection: 'column',
+        fontFamily: "'Lato', sans-serif",
+      }}
+    >
+      {/* Own scroll region, separate from the sticky footer below — Layout's
+          shared Outlet wrapper (`flex:1, overflowY:auto`) is sized to
+          exactly this box's height, so nesting a second `overflow-y:auto`
+          region here (rather than relying on that outer one) is what lets
+          the footer stay a plain, always-visible flex sibling instead of a
+          `position: fixed`/`sticky` bar that has to fight the sidebar's
+          stacking context or leave dead space reserved beneath the content. */}
+      <div style={{ flex: 1, overflowY: 'auto' }}>
       <div style={{ padding: '24px 24px 0' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           <div
@@ -418,7 +441,7 @@ export default function PageEditor() {
         </div>
       </div>
 
-      <div className="w-full px-6 py-6 pb-28">
+      <div className="w-full px-6 py-6">
         {saveError && (
           <div className="mb-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{saveError}</div>
         )}
@@ -579,13 +602,18 @@ export default function PageEditor() {
           </div>
         </div>
       </div>
+      </div>
 
       {/* Footer action bar — Delete (edit mode only) sits on the left,
-          opposite Duplicate/Preview/Save(-changes) on the right. */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-6 py-3 flex items-center justify-between gap-2 z-20">
+          opposite Duplicate/Preview/Save(-changes) on the right. A plain
+          flex sibling of the scroll region above (not `position: fixed`/
+          `sticky`), so it's always visible without needing to fight the
+          sidebar's stacking context (see the scroll-region comment above)
+          or reserve dead space under the content for it to float over. */}
+      <div className="flex-shrink-0 bg-white border-t border-gray-200 px-6 py-3 flex items-center justify-between gap-2">
         {!isCreate && pageId ? (
           <MainBtn
-            variant="danger"
+            variant="danger-tertiary"
             size="lg"
             label={t('sectionBuilder:onlineStore.pageEditor.delete', 'Delete')}
             onClick={() => setConfirmDelete(true)}
