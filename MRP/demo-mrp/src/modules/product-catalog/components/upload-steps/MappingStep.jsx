@@ -57,12 +57,14 @@ export const MappingStep = ({ headers, rows = [], mapping, recommendation, onMap
         const mappedValue = mapping[row.field.key] ?? NOT_MAPPED;
         const isMissing = missingRequired.includes(row.field.key);
         return (
-          <div style={{ padding: "8px 0" }}>
+          // "not-mapped-select" (see the .pc-mapping-table style block below)
+          // greys the trigger's label text back to the placeholder color —
+          // NOT_MAPPED is passed through as a real `value` so the open menu
+          // still highlights "— Not mapped —" as selected, but the closed
+          // field should still read as empty.
+          <div style={{ padding: "8px 0" }} className={mappedValue === NOT_MAPPED ? "not-mapped-select" : undefined}>
             <DropdownSelect
-              // "— Not mapped —" renders as the plain placeholder (grey)
-              // instead of a "selected" option, even though it's technically
-              // a valid selectable value in the menu.
-              value={mappedValue === NOT_MAPPED ? undefined : mappedValue}
+              value={mappedValue}
               options={headerOptions}
               onChange={(val) => onMappingChange(row.field.key, val === "" ? NOT_MAPPED : val)}
               hasError={isMissing}
@@ -120,6 +122,11 @@ export const MappingStep = ({ headers, rows = [], mapping, recommendation, onMap
              border-collapse — a box-shadow paints reliably instead. */
           border-bottom: none !important;
           box-shadow: inset 0 -1px 0 var(--neutral-line-separator-2);
+        }
+        /* NOT_MAPPED is a real selected value (so the open menu highlights
+           it), but the closed field should still look empty/unset. */
+        .not-mapped-select [role="button"] span.text-ellipsis {
+          color: var(--neutral-on-surface-tertiary) !important;
         }
       `}</style>
       <div
