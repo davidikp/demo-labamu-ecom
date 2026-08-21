@@ -18,11 +18,11 @@ export const UseTemplateSuggestionModal = ({ isOpen, onClose, onDownloadTemplate
     <GeneralModal
       isOpen={isOpen}
       onClose={onClose}
-      title={isError ? "We couldn’t analyze your file" : "No product data found"}
+      title={isError ? "Unable to analyze file" : "No data found"}
       description={
         isError
-          ? "There was a problem reading or processing your file. Try again, or use our template to prepare your data in a supported structure."
-          : "We could read your file, but it doesn’t contain any product data. Add your data or use our template to get started."
+          ? "We couldn’t process your file. Try again, or use our template to prepare your data in the recommended format."
+          : "We couldn’t find any data to process in your file. Add your data and try again, or use our template to get started."
       }
       width="560px"
       hideFooterDivider
