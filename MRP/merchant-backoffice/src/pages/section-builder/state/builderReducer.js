@@ -517,15 +517,18 @@ export function builderReducer(state, action) {
         })),
       };
 
-    // Bulk Set Pages Visible or Hidden — same visibility field UPDATE_PAGE_
-    // VISIBILITY writes, applied to every id in `pageIds` at once; always
-    // clears visibleFrom (a bulk action doesn't schedule, it sets state now).
+    // Bulk Set Pages Visible/Hidden/Scheduled — same visibility field
+    // UPDATE_PAGE_VISIBILITY writes, applied to every id in `pageIds` at
+    // once. `visibleFrom` defaults to null (immediate Set as visible/Set as
+    // hidden); "Set schedule visibility" passes a future timestamp instead.
     case ACTIONS.BULK_UPDATE_PAGE_VISIBILITY: {
       const ids = new Set(action.pageIds);
       return {
         ...state,
         pages: state.pages.map((page) =>
-          ids.has(page.id) ? { ...page, visibility: action.visibility, visibleFrom: null, updatedAt: Date.now() } : page
+          ids.has(page.id)
+            ? { ...page, visibility: action.visibility, visibleFrom: action.visibleFrom ?? null, updatedAt: Date.now() }
+            : page
         ),
       };
     }

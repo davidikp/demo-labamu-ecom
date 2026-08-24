@@ -2,13 +2,16 @@ import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { MoreHorizontal, Trash2 } from 'lucide-react';
-import { Table, StatusBadge, MainBtn } from '../../ce-ui';
+import { Table, StatusBadge, MainBtn, Popup, DateTimeField } from '../../ce-ui';
 import { loadDraft } from '../section-builder/state/storage';
 import { createFreshState } from '../section-builder/state/useSectionBuilder';
 import { runDraftAction } from '../section-builder/state/runDraftAction';
 import { ACTIONS } from '../section-builder/state/builderReducer';
 import ConfirmDialog from '../section-builder/ui/ConfirmDialog';
+import { visibilityBucket } from '../section-builder/sections/pageHelpers';
 import { formatRelativeTime } from './timeUtils';
+import SimulateTrigger from './SimulateTrigger';
+import { useSnackbar } from '../../contexts/SnackbarContext';
 
 // TODO: replace with the real active store id once multi-store routing
 // exists — matches the hardcoded id used by Layout.jsx's builder entry and
@@ -27,18 +30,6 @@ function stripHtmlAndTruncate(html, max) {
 
 function contentPreview(page) {
   return page.content ? stripHtmlAndTruncate(page.content, 60) : '—';
-}
-
-/**
- * Resolves a page's visibility "bucket" — the same three states shown as
- * badges in the table and tallied by the stat cards above it.
- */
-function visibilityBucket(page) {
-  if (page.visibility === 'visible' && page.visibleFrom && page.visibleFrom > Date.now()) {
-    return 'scheduled';
-  }
-  if (page.visibility === 'hidden') return 'hidden';
-  return 'visible';
 }
 
 function visibilityBadge(page, t) {
@@ -63,6 +54,7 @@ function visibilityBadge(page, t) {
 export default function PagesManagement() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const { showSnackbar } = useSnackbar();
   const [draft, setDraft] = useState(() => loadDraft(STORE_ID) ?? createFreshState(STORE_ID));
 
   const [visibilityFilter, setVisibilityFilter] = useState('all');
@@ -81,7 +73,26 @@ export default function PagesManagement() {
   const [selectedIds, setSelectedIds] = useState([]);
   const [bulkMenuOpen, setBulkMenuOpen] = useState(false);
   const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
-  const [bulkError, setBulkError] = useState(null);
+  const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
+  const [scheduleValue, setScheduleValue] = useState(null);
+  const [scheduleError, setScheduleError] = useState(null);
+
+  // Simulate trigger — there's no real backend to fail a list load against,
+  // so this is the escape hatch for exercising that negative state on
+  // demand. Sticky: stays armed (showing the error placeholder in place of
+  // the table) until switched off again.
+  const [simulateLoadError, setSimulateLoadError] = useState(false);
+  const [simulateNotFound, setSimulateNotFound] = useState(false);
+  // 'none' | 'partial' | 'total' — same sticky simulate philosophy, but
+  // mutually exclusive per bulk action (a select instead of a checkbox),
+  // since an action can't be both partially and totally failing at once.
+  const [simulateBulkDelete, setSimulateBulkDelete] = useState('none');
+  const [simulateBulkVisibility, setSimulateBulkVisibility] = useState('none');
+
+  // Retries the (simulated) load — re-reads the draft from local storage.
+  // Doesn't touch `simulateLoadError` itself, so while that toggle is still
+  // armed this deliberately keeps landing back on the same error state.
+  const handleReloadPages = () => setDraft(loadDraft(STORE_ID) ?? createFreshState(STORE_ID));
 
   const pages = useMemo(() => draft.pages ?? [], [draft.pages]);
 
@@ -122,37 +133,99 @@ export default function PagesManagement() {
     return { ok, failed };
   };
 
-  const handleBulkVisibility = (visibility) => {
-    const { ok, failed } = partitionByFailureFlag(selectedIds);
+  // Layers the "Simulate bulk delete/visibility" selector on top of the
+  // real name-based convention above: 'total' fails every selected row no
+  // matter what; 'partial' guarantees a split even if none of the selected
+  // rows happen to be named with the "fail" marker (falls back to failing
+  // just the first row so the partial-failure state is always reachable
+  // with two or more rows selected, rather than only when you remember to
+  // rename one first).
+  const partitionForBulkAction = (ids, simulateMode) => {
+    if (simulateMode === 'total') return { ok: [], failed: ids };
+    if (simulateMode === 'partial') {
+      const byName = partitionByFailureFlag(ids);
+      if (byName.ok.length > 0 && byName.failed.length > 0) return byName;
+      if (ids.length < 2) return { ok: [], failed: ids };
+      return { ok: ids.slice(1), failed: [ids[0]] };
+    }
+    return partitionByFailureFlag(ids);
+  };
+
+  const handleBulkVisibility = (visibility, visibleFrom = null) => {
+    const { ok, failed } = partitionForBulkAction(selectedIds, simulateBulkVisibility);
     if (ok.length > 0) {
-      const next = runDraftAction(STORE_ID, { type: ACTIONS.BULK_UPDATE_PAGE_VISIBILITY, pageIds: ok, visibility });
+      const next = runDraftAction(STORE_ID, { type: ACTIONS.BULK_UPDATE_PAGE_VISIBILITY, pageIds: ok, visibility, visibleFrom });
       setDraft(next);
     }
     setSelectedIds([]);
-    setBulkError(
-      failed.length > 0
-        ? t('sectionBuilder:onlineStore.pages.bulkPartialFailure', 'Couldn’t update: {{names}}', {
-            names: pages.filter((p) => failed.includes(p.id)).map((p) => p.name).join(', '),
-          })
-        : null
-    );
+
+    if (failed.length === 0) {
+      showSnackbar(
+        t('sectionBuilder:onlineStore.pages.bulkVisibilitySuccess', 'Visibility for {{count}} pages successfully updated', {
+          count: ok.length,
+        }),
+        'green'
+      );
+    } else if (ok.length === 0) {
+      showSnackbar(t('sectionBuilder:onlineStore.pages.bulkVisibilityFailed', 'Failed to update page visibility'), 'red');
+    } else {
+      showSnackbar(
+        t(
+          'sectionBuilder:onlineStore.pages.bulkVisibilityPartialSuccess',
+          'Visibility updated for {{successCount}} of {{totalCount}} pages. Please try again for the rest',
+          { successCount: ok.length, totalCount: selectedIds.length }
+        ),
+        'grey'
+      );
+    }
+  };
+
+  const handleOpenScheduleModal = () => {
+    setScheduleValue(null);
+    setScheduleError(null);
+    setScheduleModalOpen(true);
+  };
+
+  const handleConfirmSchedule = () => {
+    if (!scheduleValue) {
+      setScheduleError(t('sectionBuilder:onlineStore.pages.scheduleRequired', 'Select a publish date and time.'));
+      return;
+    }
+    const timestamp = scheduleValue.getTime();
+    if (Number.isNaN(timestamp) || timestamp <= Date.now()) {
+      setScheduleError(t('sectionBuilder:onlineStore.pages.scheduleMustBeFuture', 'Choose a date and time in the future.'));
+      return;
+    }
+    handleBulkVisibility('visible', timestamp);
+    setScheduleModalOpen(false);
   };
 
   const handleBulkDeleteConfirm = () => {
-    const { ok, failed } = partitionByFailureFlag(selectedIds);
+    const { ok, failed } = partitionForBulkAction(selectedIds, simulateBulkDelete);
     if (ok.length > 0) {
       const next = runDraftAction(STORE_ID, { type: ACTIONS.BULK_DELETE_PAGES, pageIds: ok });
       setDraft(next);
     }
     setSelectedIds([]);
     setConfirmBulkDelete(false);
-    setBulkError(
-      failed.length > 0
-        ? t('sectionBuilder:onlineStore.pages.bulkPartialFailureDelete', 'Couldn’t delete: {{names}}', {
-            names: pages.filter((p) => failed.includes(p.id)).map((p) => p.name).join(', '),
-          })
-        : null
-    );
+
+    if (failed.length === 0) {
+      showSnackbar(
+        t('sectionBuilder:onlineStore.pages.bulkDeleteSuccess', '{{count}} pages successfully deleted', { count: ok.length }),
+        'green'
+      );
+    } else if (ok.length === 0) {
+      showSnackbar(t('sectionBuilder:onlineStore.pages.bulkDeleteFailed', 'Failed to delete pages'), 'red');
+    } else {
+      showSnackbar(
+        t(
+          'sectionBuilder:onlineStore.pages.bulkDeletePartialSuccess',
+          '{{successCount}} of {{totalCount}} pages deleted. Some pages couldn’t be deleted. Please try again',
+          { successCount: ok.length, totalCount: selectedIds.length }
+        ),
+        'grey'
+      );
+    }
   };
 
   const columns = [
@@ -184,6 +257,92 @@ export default function PagesManagement() {
     },
   ];
 
+  // Both forced via the simulate panel below — there's no real list request
+  // to fail (or route) against here (the draft is read synchronously from
+  // local storage). Each takes over the whole screen (no "Pages"/"Add page"
+  // header above it), same as PageEditor's own load-error/not-found states.
+  // Checked in this order so the two toggles don't fight when both are on.
+  const simulateOptions = [
+    {
+      type: 'checkbox',
+      label: t('sectionBuilder:onlineStore.pages.simulateLoadError', 'Simulate load error'),
+      checked: simulateLoadError,
+      onChange: setSimulateLoadError,
+    },
+    {
+      type: 'checkbox',
+      label: t('sectionBuilder:onlineStore.pages.simulateNotFound', 'Simulate page not found'),
+      checked: simulateNotFound,
+      onChange: setSimulateNotFound,
+    },
+    {
+      type: 'select',
+      label: t('sectionBuilder:onlineStore.pages.simulateBulkDelete', 'Bulk delete'),
+      value: simulateBulkDelete,
+      onChange: setSimulateBulkDelete,
+      choices: [
+        { value: 'none', label: t('sectionBuilder:onlineStore.pages.simulateNone', 'None') },
+        { value: 'partial', label: t('sectionBuilder:onlineStore.pages.simulatePartialFailure', 'Partial failure') },
+        { value: 'total', label: t('sectionBuilder:onlineStore.pages.simulateTotalFailure', 'Total failure') },
+      ],
+    },
+    {
+      type: 'select',
+      label: t('sectionBuilder:onlineStore.pages.simulateBulkVisibility', 'Change visibility'),
+      value: simulateBulkVisibility,
+      onChange: setSimulateBulkVisibility,
+      choices: [
+        { value: 'none', label: t('sectionBuilder:onlineStore.pages.simulateNone', 'None') },
+        { value: 'partial', label: t('sectionBuilder:onlineStore.pages.simulatePartialFailure', 'Partial failure') },
+        { value: 'total', label: t('sectionBuilder:onlineStore.pages.simulateTotalFailure', 'Total failure') },
+      ],
+    },
+  ];
+
+  if (simulateNotFound) {
+    return (
+      <div style={{ background: '#F4F4F4', minHeight: 'calc(100vh - 56px)', fontFamily: "'Lato', sans-serif" }}>
+        <div className="flex h-full min-h-[calc(100vh-56px)] flex-col items-center justify-center px-6 text-center">
+          <h1 className="mb-1 text-xl font-bold text-gray-800">
+            {t('sectionBuilder:onlineStore.pageEditor.notFoundTitle', 'Page not found')}
+          </h1>
+          <p className="mb-4 text-sm text-gray-500">
+            {t('sectionBuilder:onlineStore.pageEditor.notFoundDescription', 'This page may have been deleted or is no longer available.')}
+          </p>
+          <MainBtn
+            variant="secondary"
+            size="sm"
+            label={t('sectionBuilder:onlineStore.pageEditor.notFoundGoToList', 'Go to Page List')}
+            onClick={() => setSimulateNotFound(false)}
+          />
+        </div>
+        <SimulateTrigger options={simulateOptions} />
+      </div>
+    );
+  }
+
+  if (simulateLoadError) {
+    return (
+      <div style={{ background: '#F4F4F4', minHeight: 'calc(100vh - 56px)', fontFamily: "'Lato', sans-serif" }}>
+        <div className="flex h-full min-h-[calc(100vh-56px)] flex-col items-center justify-center px-6 text-center">
+          <h1 className="mb-1 text-xl font-bold text-gray-800">
+            {t('sectionBuilder:onlineStore.pageEditor.loadErrorTitle', 'Couldn’t load this page')}
+          </h1>
+          <p className="mb-4 text-sm text-gray-500">
+            {t('sectionBuilder:onlineStore.pageEditor.loadErrorDescription', 'Something went wrong while loading the page. Please try again.')}
+          </p>
+          <MainBtn
+            variant="secondary"
+            size="sm"
+            label={t('sectionBuilder:onlineStore.pageEditor.loadErrorReload', 'Reload Page')}
+            onClick={handleReloadPages}
+          />
+        </div>
+        <SimulateTrigger options={simulateOptions} />
+      </div>
+    );
+  }
+
   return (
     <div style={{ background: '#F4F4F4', minHeight: 'calc(100vh - 56px)', fontFamily: "'Lato', sans-serif" }}>
       <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', width: '100%' }}>
@@ -198,21 +357,6 @@ export default function PagesManagement() {
             onClick={() => navigate('/online-store/pages/new')}
           />
         </div>
-
-        {bulkError && (
-          <div
-            style={{
-              marginBottom: '12px',
-              padding: '10px 14px',
-              borderRadius: '8px',
-              background: '#FEF2F2',
-              color: '#B91C1C',
-              fontSize: '13px',
-            }}
-          >
-            {bulkError}
-          </div>
-        )}
 
         <div className="pages-table-wrapper" style={{ background: '#FFFFFF', borderRadius: '12px', border: '1px solid #E9E9E9', position: 'relative' }}>
           <Table
@@ -251,6 +395,12 @@ export default function PagesManagement() {
                       size="sm"
                       label={t('sectionBuilder:onlineStore.pages.setHidden', 'Set as hidden')}
                       onClick={() => handleBulkVisibility('hidden')}
+                    />
+                    <MainBtn
+                      variant="secondary"
+                      size="sm"
+                      label={t('sectionBuilder:onlineStore.pages.setSchedule', 'Set schedule visibility')}
+                      onClick={handleOpenScheduleModal}
                     />
                     <div style={{ position: 'relative' }}>
                       <button
@@ -350,6 +500,8 @@ export default function PagesManagement() {
           />
         </div>
       </div>
+
+      <SimulateTrigger options={simulateOptions} />
       {/*
         Table (ce-ui) already sets `hover:bg-lb-brand-light` + `cursor-pointer`
         on each <tr> when `onRowClick` is passed, but every <td> also paints
@@ -376,6 +528,42 @@ export default function PagesManagement() {
         onConfirm={handleBulkDeleteConfirm}
         onCancel={() => setConfirmBulkDelete(false)}
       />
+
+      <Popup
+        open={scheduleModalOpen}
+        onClose={() => setScheduleModalOpen(false)}
+        platform="tablet"
+        align="left"
+        title={t('sectionBuilder:onlineStore.pages.scheduleModalTitle', 'Set schedule visibility')}
+        description={t('sectionBuilder:onlineStore.pages.scheduleModalDescription', '{{count}} pages will become visible at this date and time.', { count: selectedIds.length })}
+        primaryAction={{
+          label: t('sectionBuilder:onlineStore.pages.scheduleConfirm', 'Schedule'),
+          onClick: handleConfirmSchedule,
+        }}
+        secondaryAction={{
+          label: t('sectionBuilder:editor.common.cancel', 'Cancel'),
+          onClick: () => setScheduleModalOpen(false),
+        }}
+      >
+        {/*
+          DateTimeField's own popover now portals to document.body (fixed
+          positioning, clamped to the viewport) instead of being absolutely
+          positioned inside this component's DOM subtree — otherwise it'd
+          get clipped by Popup's own `overflow-hidden` panel.
+        */}
+        <DateTimeField
+          label={t('sectionBuilder:onlineStore.pages.scheduleDateLabel', 'Publish date and time')}
+          required
+          size="md"
+          value={scheduleValue}
+          onChange={(date) => {
+            setScheduleValue(date);
+            setScheduleError(null);
+          }}
+          minDate={new Date()}
+          errorText={scheduleError}
+        />
+      </Popup>
     </div>
   );
 }

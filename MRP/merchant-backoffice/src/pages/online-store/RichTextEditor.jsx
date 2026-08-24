@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
@@ -37,6 +37,7 @@ import {
   Code2,
   Sparkles,
 } from 'lucide-react';
+import { Tooltip } from '../../ce-ui';
 import { VideoEmbed } from './videoEmbedExtension';
 import SelectImageModal from './SelectImageModal';
 import InsertVideoModal, { extractIframeSrc } from './InsertVideoModal';
@@ -113,11 +114,25 @@ function clearTableLine(editor, mode) {
   }
 }
 
+// Closes an open dropdown/popover when a pointer-down happens outside its
+// `ref` element — shared by every toolbar popover below (color picker,
+// paragraph style, table menu) so clicking elsewhere in the page dismisses
+// whichever one is open, instead of only closing via its own toggle button.
+function useCloseOnOutsideClick(ref, open, onClose) {
+  useEffect(() => {
+    if (!open) return undefined;
+    const handlePointerDown = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) onClose();
+    };
+    document.addEventListener('mousedown', handlePointerDown);
+    return () => document.removeEventListener('mousedown', handlePointerDown);
+  }, [open, ref, onClose]);
+}
+
 function ToolbarButton({ active, disabled, title, onClick, children }) {
-  return (
+  const button = (
     <button
       type="button"
-      title={title}
       disabled={disabled}
       onMouseDown={(e) => e.preventDefault()}
       onClick={onClick}
@@ -132,10 +147,18 @@ function ToolbarButton({ active, disabled, title, onClick, children }) {
       {children}
     </button>
   );
+  if (!title) return button;
+  return (
+    <Tooltip content={title} placement="top">
+      {button}
+    </Tooltip>
+  );
 }
 
 function ParagraphStyleDropdown({ editor }) {
   const [open, setOpen] = useState(false);
+  const containerRef = useRef(null);
+  useCloseOnOutsideClick(containerRef, open, () => setOpen(false));
   if (!editor) return null;
 
   const current =
@@ -149,7 +172,7 @@ function ParagraphStyleDropdown({ editor }) {
   };
 
   return (
-    <div className="relative">
+    <div className="relative" ref={containerRef}>
       <button
         type="button"
         onMouseDown={(e) => e.preventDefault()}
@@ -178,9 +201,22 @@ function ParagraphStyleDropdown({ editor }) {
   );
 }
 
+// #abc / #aabbcc, with or without the leading #.
+const HEX_COLOR_RE = /^#?[0-9a-f]{3}([0-9a-f]{3})?$/i;
+
+function normalizeHex(value) {
+  const trimmed = value.trim();
+  if (!HEX_COLOR_RE.test(trimmed)) return null;
+  return trimmed.startsWith('#') ? trimmed : `#${trimmed}`;
+}
+
 function ColorPicker({ editor }) {
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState('text');
+  const [hexInput, setHexInput] = useState('');
+  const [hexError, setHexError] = useState(false);
+  const containerRef = useRef(null);
+  useCloseOnOutsideClick(containerRef, open, () => setOpen(false));
   if (!editor) return null;
 
   const applyColor = (color) => {
@@ -189,8 +225,19 @@ function ColorPicker({ editor }) {
     setOpen(false);
   };
 
+  const applyHex = () => {
+    const normalized = normalizeHex(hexInput);
+    if (!normalized) {
+      setHexError(true);
+      return;
+    }
+    setHexError(false);
+    setHexInput('');
+    applyColor(normalized);
+  };
+
   return (
-    <div className="relative">
+    <div className="relative" ref={containerRef}>
       <ToolbarButton title="Text color" onClick={() => setOpen((o) => !o)}>
         <Palette size={16} />
       </ToolbarButton>
@@ -200,7 +247,10 @@ function ColorPicker({ editor }) {
             <button
               type="button"
               onMouseDown={(e) => e.preventDefault()}
-              onClick={() => setTab('text')}
+              onClick={() => {
+                setTab('text');
+                setHexError(false);
+              }}
               className={`px-2 py-1 text-xs rounded ${tab === 'text' ? 'bg-[#E6F0FF] text-[#006BFF]' : 'text-gray-500 hover:bg-gray-100'}`}
             >
               Text
@@ -208,13 +258,16 @@ function ColorPicker({ editor }) {
             <button
               type="button"
               onMouseDown={(e) => e.preventDefault()}
-              onClick={() => setTab('background')}
+              onClick={() => {
+                setTab('background');
+                setHexError(false);
+              }}
               className={`px-2 py-1 text-xs rounded ${tab === 'background' ? 'bg-[#E6F0FF] text-[#006BFF]' : 'text-gray-500 hover:bg-gray-100'}`}
             >
               Background
             </button>
           </div>
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap gap-1.5 mb-2">
             {(tab === 'text' ? TEXT_COLORS : BACKGROUND_COLORS).map((color) => (
               <button
                 key={color}
@@ -227,6 +280,31 @@ function ColorPicker({ editor }) {
               />
             ))}
           </div>
+          <div className="flex items-center gap-1.5 border-t border-gray-100 pt-2">
+            <input
+              type="text"
+              value={hexInput}
+              onChange={(e) => {
+                setHexInput(e.target.value);
+                setHexError(false);
+              }}
+              onKeyDown={(e) => e.key === 'Enter' && applyHex()}
+              placeholder="#006BFF"
+              className={`w-full h-7 rounded border px-2 text-xs text-gray-800 outline-none ${
+                hexError ? 'border-red-400' : 'border-gray-300 focus:border-[#006BFF]'
+              }`}
+            />
+            <button
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={applyHex}
+              disabled={!hexInput.trim()}
+              className="h-7 shrink-0 rounded bg-[#006BFF] px-2.5 text-xs font-medium text-white disabled:opacity-40"
+            >
+              Apply
+            </button>
+          </div>
+          {hexError && <p className="mt-1 text-[11px] text-red-600">Enter a valid hex color, e.g. #006BFF.</p>}
         </div>
       )}
     </div>
@@ -235,6 +313,8 @@ function ColorPicker({ editor }) {
 
 function TableMenu({ editor }) {
   const [open, setOpen] = useState(false);
+  const containerRef = useRef(null);
+  useCloseOnOutsideClick(containerRef, open, () => setOpen(false));
   if (!editor) return null;
 
   const insideTable = editor.isActive('table');
@@ -259,7 +339,7 @@ function TableMenu({ editor }) {
       ];
 
   return (
-    <div className="relative">
+    <div className="relative" ref={containerRef}>
       <ToolbarButton title="Table" active={insideTable} onClick={() => setOpen((o) => !o)}>
         <TableIcon size={16} />
       </ToolbarButton>
@@ -573,6 +653,12 @@ export default function RichTextEditor({ value, onChange, placeholder, mediaLibr
           background: #F9FAFB;
           font-weight: 600;
           text-align: left;
+        }
+        /* @tailwindcss/typography's default link color is near-black (it
+           reuses the body text color), not brand blue — override so an
+           inserted link is actually recognizable as a hyperlink. */
+        .rich-text-editor-content a {
+          color: #006BFF;
         }
       `}</style>
 

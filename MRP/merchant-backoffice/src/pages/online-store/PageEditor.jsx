@@ -2,19 +2,20 @@ import { useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ArrowLeft, Sparkles } from 'lucide-react';
-import { RadioButton, Dropdown, MainBtn, Popup } from '../../ce-ui';
+import { RadioButton, Dropdown, MainBtn, Popup, DateTimeField } from '../../ce-ui';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import { loadDraft } from '../section-builder/state/storage';
 import { createFreshState } from '../section-builder/state/useSectionBuilder';
 import { runDraftAction } from '../section-builder/state/runDraftAction';
 import { ACTIONS } from '../section-builder/state/builderReducer';
-import { slugify, isSlugTaken, createPageId } from '../section-builder/sections/pageHelpers';
+import { slugify, isSlugTaken, createPageId, visibilityBucket } from '../section-builder/sections/pageHelpers';
 import { schemaForType } from '../section-builder/sections/index';
 import { defaultsForSchema } from '../section-builder/sections/schemaDefaults';
 import { makeBlock } from '../section-builder/sections/blockHelpers';
 import ConfirmDialog from '../section-builder/ui/ConfirmDialog';
 import RichTextEditor from './RichTextEditor';
 import GenerateTextModal from './GenerateTextModal';
+import SimulateTrigger from './SimulateTrigger';
 
 // TODO: replace with the real active store id once multi-store routing
 // exists — matches the hardcoded id used across online-store/*.
@@ -54,19 +55,6 @@ function truncate(text, max) {
 // the server" negative case is actually reachable instead of unbuildable.
 function isForcedSaveFailure(name) {
   return name.trim().toLowerCase().includes('(save fail)');
-}
-
-function toDatetimeLocal(epochMs) {
-  if (!epochMs) return '';
-  const d = new Date(epochMs);
-  const pad = (n) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
-
-function fromDatetimeLocal(value) {
-  if (!value) return null;
-  const t = new Date(value).getTime();
-  return Number.isNaN(t) ? null : t;
 }
 
 // Stable id for the single auto-generated `rich_text` section that mirrors
@@ -145,7 +133,7 @@ function formToSnapshot(form) {
     name: form.name,
     content: form.content,
     template: form.template,
-    visibility: form.visibility,
+    visibilityMode: form.visibilityMode,
     visibleFrom: form.visibleFrom,
     metaTitle: form.metaTitle,
     metaDescription: form.metaDescription,
@@ -177,7 +165,14 @@ export default function PageEditor() {
       name: page.name ?? '',
       content: page.content ?? '',
       template: page.template ?? 'default-page',
-      visibility: page.visibility ?? 'visible',
+      // Hidden / Visible (immediate) / Schedule (mandatory future date) —
+      // three distinct radio states derived from the same visibility +
+      // visibleFrom fields Page List's own visibilityBucket() reads, so the
+      // editor and the list can never disagree on what "scheduled" means.
+      visibilityMode: (() => {
+        const bucket = visibilityBucket(page);
+        return bucket === 'scheduled' ? 'schedule' : bucket;
+      })(),
       visibleFrom: page.visibleFrom ?? null,
       metaTitle: page.seo?.metaTitle ?? '',
       metaDescription: page.seo?.metaDescription ?? '',
@@ -195,7 +190,17 @@ export default function PageEditor() {
   const [isSaving, setIsSaving] = useState(false);
   const [generateTitleOpen, setGenerateTitleOpen] = useState(false);
   const [urlHandleError, setUrlHandleError] = useState(null);
-  const [saveError, setSaveError] = useState(null);
+  const [titleError, setTitleError] = useState(null);
+  const [scheduleError, setScheduleError] = useState(null);
+
+  // Simulate triggers — no real backend to fail load/save against, so these
+  // are the deliberate escape hatch for exercising those negative states on
+  // demand. Sticky (stay armed until switched off again) rather than
+  // one-shot, and work alongside the existing `(save fail)` magic-word
+  // convention, not in place of it.
+  const [simulateSaveError, setSimulateSaveError] = useState(false);
+  const [simulateLoadError, setSimulateLoadError] = useState(false);
+  const [simulateNotFound, setSimulateNotFound] = useState(false);
 
   // Edit Search Engine Listing — only meaningful once a handle already
   // exists to redirect *from* (a brand-new page has no prior URL yet).
@@ -203,35 +208,49 @@ export default function PageEditor() {
 
   // A page opened from the Page List that no longer exists in the draft
   // (deleted elsewhere) — show a not-found state instead of a blank form
-  // silently pretending it's a fresh "Add page".
-  const notFound = !isCreate && routePageId && !existingPage && pageId === routePageId;
+  // silently pretending it's a fresh "Add page". `simulateNotFound` forces
+  // this same state on demand, regardless of the actual route id.
+  const notFound = simulateNotFound || (!isCreate && routePageId && !existingPage && pageId === routePageId);
 
   const isDirty = formToSnapshot(form) !== savedSnapshot;
-  // isSaving guards the double-Save-click case (Edit an Existing Page's "a
-  // Save request is already in flight" edge case) — Save is disabled the
-  // instant it's clicked, so a second click before the (synchronous, but
-  // guarded defensively) persist finishes can't create a duplicate.
-  const canSave = isDirty && form.name.trim().length > 0 && !isSaving;
 
   const patchForm = (patch) => setForm((f) => ({ ...f, ...patch }));
 
   // Persists the form (create or update) and returns the page's id, or
-  // `null` if the save was rejected (bad URL handle, or the demo's
-  // simulated server-failure marker) — the footer Save button and the
-  // "unsaved changes" prompt shown from "Edit in Editor" both call this and
-  // branch on that return value.
+  // `null` if the save was rejected (empty title, bad URL handle, an
+  // incomplete/past schedule date, or the demo's simulated server-failure
+  // marker) — the footer Save button and the "unsaved changes" prompt shown
+  // from "Edit in Editor" both call this and branch on that return value.
+  //
+  // Save is never preemptively disabled for validation (only while a save
+  // is already in flight) — every one of these is instead surfaced as an
+  // inline field error on click, per Create/Edit Page's own "the error is
+  // scoped to Title only, other entered data is retained" requirement.
   const persistPage = () => {
-    if (!canSave) return null;
+    if (isSaving) return null;
+    setTitleError(null);
     setUrlHandleError(null);
-    setSaveError(null);
+    setScheduleError(null);
 
-    if (isForcedSaveFailure(form.name)) {
-      setSaveError(
-        t('sectionBuilder:onlineStore.pageEditor.saveFailedBanner', 'Something went wrong saving this page. Please try again.')
+    if (!form.name.trim()) {
+      setTitleError(t('sectionBuilder:onlineStore.pageEditor.titleRequired', 'Field cannot be empty'));
+      return null;
+    }
+
+    if (simulateSaveError || isForcedSaveFailure(form.name)) {
+      showSnackbar(t('sectionBuilder:onlineStore.pageEditor.saveFailedBanner', 'Failed to save page'), 'red');
+      return null;
+    }
+
+    if (form.visibilityMode === 'schedule' && (!form.visibleFrom || form.visibleFrom <= Date.now())) {
+      setScheduleError(
+        t('sectionBuilder:onlineStore.pageEditor.scheduleRequired', 'Select a publish date and time in the future.')
       );
       return null;
     }
 
+    const visibility = form.visibilityMode === 'hidden' ? 'hidden' : 'visible';
+    const visibleFrom = form.visibilityMode === 'schedule' ? form.visibleFrom : null;
     const seo = { metaTitle: form.metaTitle, metaDescription: form.metaDescription };
 
     if (isCreate && !pageId) {
@@ -248,8 +267,8 @@ export default function PageEditor() {
         content: form.content,
         seo,
         hiddenFromNav: false,
-        visibility: form.visibility,
-        visibleFrom: form.visibility === 'visible' ? form.visibleFrom : null,
+        visibility,
+        visibleFrom,
         template: form.template,
         redirects: [],
       };
@@ -284,8 +303,8 @@ export default function PageEditor() {
         name: form.name.trim(),
         content: form.content,
         template: form.template,
-        visibility: form.visibility,
-        visibleFrom: form.visibility === 'visible' ? form.visibleFrom : null,
+        visibility,
+        visibleFrom,
         seo,
         slug: newSlug,
         redirects,
@@ -299,7 +318,7 @@ export default function PageEditor() {
   };
 
   const handleSave = () => {
-    if (!canSave) return;
+    if (isSaving) return;
     setIsSaving(true);
     const result = persistPage();
     setIsSaving(false);
@@ -379,25 +398,97 @@ export default function PageEditor() {
       ? t('sectionBuilder:onlineStore.pageEditor.addNewPageTitle', 'Add New Page')
       : t('sectionBuilder:onlineStore.pageEditor.editPageTitle', 'Edit Page');
 
-  const handleBackNavigation = () => navigate('/online-store/pages');
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
+
+  // Leaving via the back arrow/breadcrumb (as opposed to Save) would
+  // otherwise silently drop unsaved edits — confirm first, same as
+  // "Edit in Editor" already does for its own way of leaving the form.
+  const handleBackNavigation = () => {
+    if (isDirty) {
+      setConfirmDiscard(true);
+      return;
+    }
+    navigate('/online-store/pages');
+  };
+
+  const handleConfirmDiscard = () => {
+    setConfirmDiscard(false);
+    navigate('/online-store/pages');
+  };
+
+  // Simulate trigger options, shared across every branch below (not-found /
+  // load-error / normal form) so a simulation stays reachable to switch back
+  // off again from wherever it landed.
+  const simulateOptions = [
+    {
+      type: 'checkbox',
+      label: t('sectionBuilder:onlineStore.pageEditor.simulateSaveError', 'Simulate save error'),
+      checked: simulateSaveError,
+      onChange: setSimulateSaveError,
+    },
+    {
+      type: 'checkbox',
+      label: t('sectionBuilder:onlineStore.pageEditor.simulateLoadError', 'Simulate load error'),
+      checked: simulateLoadError,
+      onChange: setSimulateLoadError,
+    },
+    {
+      type: 'checkbox',
+      label: t('sectionBuilder:onlineStore.pageEditor.simulateNotFound', 'Simulate page not found'),
+      checked: simulateNotFound,
+      onChange: setSimulateNotFound,
+    },
+  ];
+
+  // Retries the (simulated) load — re-reads the draft from local storage.
+  // Doesn't touch `simulateLoadError` itself, so while that toggle is still
+  // armed this deliberately keeps landing back on the same error state.
+  const handleReloadPage = () => setDraft(loadDraft(STORE_ID) ?? createFreshState(STORE_ID));
+
+  // Forced via the simulate panel above — there's no real load request to
+  // fail here (the draft is read synchronously from local storage), so this
+  // stands in for "the page failed to load" the same way `notFound` stands
+  // in for "the page doesn't exist".
+  if (simulateLoadError && !notFound) {
+    return (
+      <div style={{ background: '#F4F4F4', minHeight: 'calc(100vh - 56px)', fontFamily: "'Lato', sans-serif" }}>
+        <div className="flex h-full min-h-[calc(100vh-56px)] flex-col items-center justify-center px-6 text-center">
+          <h1 className="mb-1 text-xl font-bold text-gray-800">
+            {t('sectionBuilder:onlineStore.pageEditor.loadErrorTitle', 'Couldn’t load this page')}
+          </h1>
+          <p className="mb-4 text-sm text-gray-500">
+            {t('sectionBuilder:onlineStore.pageEditor.loadErrorDescription', 'Something went wrong while loading the page. Please try again.')}
+          </p>
+          <MainBtn
+            variant="secondary"
+            size="sm"
+            label={t('sectionBuilder:onlineStore.pageEditor.loadErrorReload', 'Reload Page')}
+            onClick={handleReloadPage}
+          />
+        </div>
+        <SimulateTrigger options={simulateOptions} />
+      </div>
+    );
+  }
 
   if (notFound) {
     return (
       <div style={{ background: '#F4F4F4', minHeight: 'calc(100vh - 56px)', fontFamily: "'Lato', sans-serif" }}>
-        <div className="flex flex-col items-center justify-center gap-3 px-6 py-24 text-center">
-          <h1 className="text-xl font-bold text-gray-800">
-            {t('sectionBuilder:onlineStore.pageEditor.notFoundTitle', 'This page no longer exists')}
+        <div className="flex h-full min-h-[calc(100vh-56px)] flex-col items-center justify-center px-6 text-center">
+          <h1 className="mb-1 text-xl font-bold text-gray-800">
+            {t('sectionBuilder:onlineStore.pageEditor.notFoundTitle', 'Page not found')}
           </h1>
-          <p className="text-sm text-gray-500">
-            {t('sectionBuilder:onlineStore.pageEditor.notFoundDescription', 'It may have been deleted by someone else.')}
+          <p className="mb-4 text-sm text-gray-500">
+            {t('sectionBuilder:onlineStore.pageEditor.notFoundDescription', 'This page may have been deleted or is no longer available.')}
           </p>
           <MainBtn
-            variant="primary"
+            variant="secondary"
             size="sm"
-            label={t('sectionBuilder:onlineStore.pages.heading', 'Pages')}
+            label={t('sectionBuilder:onlineStore.pageEditor.notFoundGoToList', 'Go to Page List')}
             onClick={handleBackNavigation}
           />
         </div>
+        <SimulateTrigger options={simulateOptions} />
       </div>
     );
   }
@@ -442,9 +533,6 @@ export default function PageEditor() {
       </div>
 
       <div className="w-full px-6 py-6">
-        {saveError && (
-          <div className="mb-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{saveError}</div>
-        )}
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
           {/* Main column */}
           <div className="flex flex-col gap-5">
@@ -466,11 +554,17 @@ export default function PageEditor() {
                 <input
                   type="text"
                   value={form.name}
-                  onChange={(e) => patchForm({ name: e.target.value })}
+                  onChange={(e) => {
+                    patchForm({ name: e.target.value });
+                    if (titleError) setTitleError(null);
+                  }}
                   placeholder={t('sectionBuilder:onlineStore.pageEditor.titlePlaceholder', 'e.g. About us')}
-                  className="w-full h-11 rounded-lg border border-gray-300 pl-4 pr-4 text-[15px] text-gray-800 outline-none focus:border-[#006BFF] focus:shadow-[0_0_0_3px_rgba(0,107,255,0.12)]"
+                  className={`w-full h-11 rounded-lg border pl-4 pr-4 text-[15px] text-gray-800 outline-none focus:shadow-[0_0_0_3px_rgba(0,107,255,0.12)] ${
+                    titleError ? 'border-red-400 focus:border-red-400' : 'border-gray-300 focus:border-[#006BFF]'
+                  }`}
                 />
               </div>
+              {titleError && <p className="mt-1 text-xs text-red-600">{titleError}</p>}
 
               <label className="block text-sm font-semibold text-gray-800 mt-5 mb-1.5">
                 {t('sectionBuilder:onlineStore.pageEditor.contentLabel', 'Content')}
@@ -565,24 +659,35 @@ export default function PageEditor() {
               <div className="flex flex-col gap-3">
                 <RadioButton
                   label={t('sectionBuilder:onlineStore.pages.hidden', 'Hidden')}
-                  checked={form.visibility === 'hidden'}
-                  onChange={() => patchForm({ visibility: 'hidden', visibleFrom: null })}
+                  checked={form.visibilityMode === 'hidden'}
+                  onChange={() => patchForm({ visibilityMode: 'hidden', visibleFrom: null })}
                 />
                 <RadioButton
-                  label={t('sectionBuilder:onlineStore.pages.visible', 'Visible')}
-                  checked={form.visibility === 'visible'}
-                  onChange={() => patchForm({ visibility: 'visible' })}
+                  label={t('sectionBuilder:onlineStore.pageEditor.visibleImmediately', 'Visible')}
+                  checked={form.visibilityMode === 'visible'}
+                  onChange={() => patchForm({ visibilityMode: 'visible', visibleFrom: null })}
                 />
-                {form.visibility === 'visible' && (
+                <RadioButton
+                  label={t('sectionBuilder:onlineStore.pageEditor.scheduleLabel', 'Schedule')}
+                  checked={form.visibilityMode === 'schedule'}
+                  onChange={() => {
+                    setScheduleError(null);
+                    patchForm({ visibilityMode: 'schedule' });
+                  }}
+                />
+                {form.visibilityMode === 'schedule' && (
                   <div className="pl-9">
-                    <label className="block text-xs font-medium text-gray-600 mb-1">
-                      {t('sectionBuilder:onlineStore.pageEditor.visibleAsOf', 'Visible as of (optional)')}
-                    </label>
-                    <input
-                      type="datetime-local"
-                      value={toDatetimeLocal(form.visibleFrom)}
-                      onChange={(e) => patchForm({ visibleFrom: fromDatetimeLocal(e.target.value) })}
-                      className="w-full h-10 rounded-lg border border-gray-300 px-3 text-sm text-gray-800 outline-none focus:border-[#006BFF]"
+                    <DateTimeField
+                      label={t('sectionBuilder:onlineStore.pageEditor.visibleAsOf', 'Publish date and time')}
+                      required
+                      size="md"
+                      value={form.visibleFrom ? new Date(form.visibleFrom) : null}
+                      onChange={(date) => {
+                        setScheduleError(null);
+                        patchForm({ visibleFrom: date ? date.getTime() : null });
+                      }}
+                      minDate={new Date()}
+                      errorText={scheduleError}
                     />
                   </div>
                 )}
@@ -603,6 +708,8 @@ export default function PageEditor() {
         </div>
       </div>
       </div>
+
+      <SimulateTrigger options={simulateOptions} aboveFooter />
 
       {/* Footer action bar — Delete (edit mode only) sits on the left,
           opposite Duplicate/Preview/Save(-changes) on the right. A plain
@@ -655,7 +762,7 @@ export default function PageEditor() {
                 : t('sectionBuilder:onlineStore.pageEditor.save', 'Save')
             }
             onClick={handleSave}
-            disabled={!canSave}
+            disabled={isSaving}
           />
         </div>
       </div>
@@ -697,6 +804,26 @@ export default function PageEditor() {
         mode="title"
         onApply={(text) => patchForm({ name: text })}
         onClose={() => setGenerateTitleOpen(false)}
+      />
+
+      <Popup
+        open={confirmDiscard}
+        onClose={() => setConfirmDiscard(false)}
+        title={t('sectionBuilder:onlineStore.pageEditor.discardChangesTitle', 'Discard changes?')}
+        description={t(
+          'sectionBuilder:onlineStore.pageEditor.discardChangesDescription',
+          'You have unsaved changes that will be lost if you leave this page.'
+        )}
+        platform="desktop"
+        primaryAction={{
+          label: t('sectionBuilder:onlineStore.pageEditor.discardChangesConfirm', 'Discard changes'),
+          onClick: handleConfirmDiscard,
+          destructive: true,
+        }}
+        secondaryAction={{
+          label: t('sectionBuilder:onlineStore.pageEditor.keepEditing', 'Keep editing'),
+          onClick: () => setConfirmDiscard(false),
+        }}
       />
     </div>
   );

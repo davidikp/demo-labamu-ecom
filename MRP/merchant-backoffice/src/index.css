@@ -3,6 +3,7 @@
 @import "./ce-ui/styles/labamu-token.css";
 @import "./ce-ui/styles/library-components.css";
 @import "tailwindcss";
+@plugin "@tailwindcss/typography";
 
 /* ═══════════════════════════════════════════════════════════
    LABAMU DESIGN SYSTEM — [TOKENS]

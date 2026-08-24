@@ -1,4 +1,25 @@
 {
+  "onlineStore": {
+    "pageEditor": {
+      "saveFailedBanner": "Gagal menyimpan halaman",
+      "loadErrorTitle": "Halaman ini tidak dapat dimuat",
+      "loadErrorDescription": "Terjadi kesalahan saat memuat halaman. Silakan coba lagi.",
+      "loadErrorReload": "Muat Ulang Halaman",
+      "notFoundTitle": "Halaman Tidak Ditemukan",
+      "notFoundDescription": "Halaman ini mungkin telah dihapus atau tidak lagi tersedia.",
+      "notFoundGoToList": "Buka Daftar Halaman",
+      "generateError": "Gagal menghasilkan konten",
+      "generateUnavailable": "Pembuatan konten AI saat ini tidak tersedia."
+    },
+    "pages": {
+      "bulkDeletePartialSuccess": "{{successCount}} dari {{totalCount}} halaman berhasil dihapus. Beberapa halaman tidak dapat dihapus. Silakan coba lagi",
+      "bulkDeleteSuccess": "{{count}} halaman berhasil dihapus",
+      "bulkDeleteFailed": "Gagal menghapus halaman",
+      "bulkVisibilityPartialSuccess": "Visibilitas telah diperbarui untuk {{successCount}} dari {{totalCount}} halaman. Silakan coba lagi untuk sisanya",
+      "bulkVisibilitySuccess": "Visibilitas untuk {{count}} halaman berhasil diperbarui",
+      "bulkVisibilityFailed": "Gagal memperbarui visibilitas halaman"
+    }
+  },
   "editor": {
     "common": {
       "cancel": "Batal",

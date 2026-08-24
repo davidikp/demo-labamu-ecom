@@ -1,4 +1,25 @@
 {
+  "onlineStore": {
+    "pageEditor": {
+      "saveFailedBanner": "Failed to save page",
+      "loadErrorTitle": "Couldn’t load this page",
+      "loadErrorDescription": "Something went wrong while loading the page. Please try again.",
+      "loadErrorReload": "Reload Page",
+      "notFoundTitle": "Page not found",
+      "notFoundDescription": "This page may have been deleted or is no longer available.",
+      "notFoundGoToList": "Go to Page List",
+      "generateError": "Failed to generate content",
+      "generateUnavailable": "AI generation is currently unavailable"
+    },
+    "pages": {
+      "bulkDeletePartialSuccess": "{{successCount}} of {{totalCount}} pages deleted. Some pages couldn’t be deleted. Please try again",
+      "bulkDeleteSuccess": "{{count}} pages successfully deleted",
+      "bulkDeleteFailed": "Failed to delete pages",
+      "bulkVisibilityPartialSuccess": "Visibility updated for {{successCount}} of {{totalCount}} pages. Please try again for the rest",
+      "bulkVisibilitySuccess": "Visibility for {{count}} pages successfully updated",
+      "bulkVisibilityFailed": "Failed to update page visibility"
+    }
+  },
   "editor": {
     "common": {
       "cancel": "Cancel",

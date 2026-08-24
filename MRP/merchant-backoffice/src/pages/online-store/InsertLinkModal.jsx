@@ -1,23 +1,26 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { TriangleAlert } from 'lucide-react';
-import { Popup } from '../../ce-ui';
+import { Popup, TextField } from '../../ce-ui';
 
-// Deliberately permissive — accepts bare domains ("example.com") as well as
-// full URLs, same leniency `window.prompt` had, just validated instead of
-// trusted outright.
+// Accepts bare domains ("example.com") as well as full URLs, same leniency
+// `window.prompt` had — but `new URL()` alone isn't enough of a guardrail:
+// the WHATWG URL parser happily accepts a single bare word like "asdkjhasd"
+// as a "valid" single-label hostname. Requiring a dot (or localhost/an IP)
+// in the host catches the actually-invalid input the PRD's negative case
+// means, without rejecting real single-word intranet hosts too aggressively.
 function isValidUrl(value) {
+  const withScheme = /^[a-z][a-z0-9+.-]*:/i.test(value) ? value : `https://${value}`;
+  let url;
   try {
-    new URL(value);
-    return true;
+    url = new URL(withScheme);
   } catch {
-    try {
-      new URL(`https://${value}`);
-      return true;
-    } catch {
-      return false;
-    }
+    return false;
   }
+  if (!['http:', 'https:'].includes(url.protocol)) return false;
+  const host = url.hostname;
+  const looksLikeDomain = host.includes('.');
+  const looksLikeIp = /^\d{1,3}(\.\d{1,3}){3}$/.test(host);
+  return host === 'localhost' || looksLikeDomain || looksLikeIp;
 }
 
 /**
@@ -81,12 +84,9 @@ export default function InsertLinkModal({ open, existingUrl, onApply, onRemove, 
           : undefined
       }
     >
-      <label className="mb-1.5 block text-xs font-medium text-lb-on-surface-2">
-        {t('sectionBuilder:onlineStore.pageEditor.linkUrlLabel', 'Link URL')}
-      </label>
-      <input
+      <TextField
         autoFocus
-        type="text"
+        label={t('sectionBuilder:onlineStore.pageEditor.linkUrlLabel', 'Link URL')}
         value={url}
         onChange={(e) => {
           setUrl(e.target.value);
@@ -94,14 +94,9 @@ export default function InsertLinkModal({ open, existingUrl, onApply, onRemove, 
         }}
         onKeyDown={(e) => e.key === 'Enter' && handleApply()}
         placeholder="https://example.com"
-        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-800 outline-none focus:border-[#006BFF]"
+        errorText={error}
+        size="md"
       />
-      {error && (
-        <div className="mt-2 flex items-center gap-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">
-          <TriangleAlert size={14} />
-          {error}
-        </div>
-      )}
     </Popup>
   );
 }

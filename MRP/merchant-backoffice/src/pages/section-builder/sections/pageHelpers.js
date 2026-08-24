@@ -29,3 +29,18 @@ export function createPageId(name) {
   const slug = slugify(name) || 'page';
   return `page-${slug}-${crypto.randomUUID().slice(0, 8)}`;
 }
+
+/**
+ * Resolves a page's visibility into the three states surfaced across Page
+ * List (badges/filter/stat cards), the Page editor's visibility radios, and
+ * Bulk Manage Pages — 'visible' + a future `visibleFrom` is a distinct
+ * "scheduled" bucket, not a variant of "visible". Single source of truth so
+ * PagesManagement.jsx and PageEditor.jsx can't drift on the definition.
+ */
+export function visibilityBucket(page) {
+  if (page.visibility === 'visible' && page.visibleFrom && page.visibleFrom > Date.now()) {
+    return 'scheduled';
+  }
+  if (page.visibility === 'hidden') return 'hidden';
+  return 'visible';
+}

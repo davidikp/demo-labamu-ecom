@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { TriangleAlert } from 'lucide-react';
 import { Popup } from '../../ce-ui';
+import { useSnackbar } from '../../contexts/SnackbarContext';
 
 /**
  * Deterministic stand-in for a real Labamu AI call — there is no AI backend
@@ -37,9 +37,18 @@ function simulateGeneration(mode, prompt) {
  */
 export default function GenerateTextModal({ open, mode, hasExisting, onClose, onApply }) {
   const { t } = useTranslation();
+  const { showSnackbar } = useSnackbar();
   const [prompt, setPrompt] = useState('');
   const [state, setState] = useState('idle'); // idle | loading | ok | error | unavailable
   const [result, setResult] = useState(null);
+
+  // Simulate triggers — deliberately NOT reset by reset()/handleClose(), so
+  // arming one stays in effect (sticky) across closing/reopening this modal,
+  // same as PageEditor/PagesManagement's own simulate toggles. Distinct from
+  // the "type fail/unavailable in the prompt" convention above — both keep
+  // working side by side.
+  const [simulateGenFail, setSimulateGenFail] = useState(false);
+  const [simulateUnavailable, setSimulateUnavailable] = useState(false);
 
   const reset = () => {
     setPrompt('');
@@ -56,11 +65,26 @@ export default function GenerateTextModal({ open, mode, hasExisting, onClose, on
     if (!prompt.trim()) return;
     setState('loading');
     setTimeout(() => {
-      const outcome = simulateGeneration(mode, prompt);
-      if (outcome.status !== 'ok') {
-        setState(outcome.status);
+      const outcome = simulateGenFail
+        ? { status: 'error' }
+        : simulateUnavailable
+        ? { status: 'unavailable' }
+        : simulateGeneration(mode, prompt);
+
+      if (outcome.status === 'error') {
+        setState('idle');
+        showSnackbar(t('sectionBuilder:onlineStore.pageEditor.generateError', 'Failed to generate content'), 'red');
         return;
       }
+      if (outcome.status === 'unavailable') {
+        setState('idle');
+        showSnackbar(
+          t('sectionBuilder:onlineStore.pageEditor.generateUnavailable', 'AI generation is currently unavailable'),
+          'red'
+        );
+        return;
+      }
+
       setResult(outcome.text);
       setState('ok');
     }, 500);
@@ -128,18 +152,29 @@ export default function GenerateTextModal({ open, mode, hasExisting, onClose, on
         className="w-full resize-none rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-800 outline-none focus:border-[#006BFF]"
       />
 
-      {state === 'error' && (
-        <div className="mt-3 flex items-center gap-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">
-          <TriangleAlert size={14} />
-          {t('sectionBuilder:onlineStore.pageEditor.generateError', 'Something went wrong generating text. Please try again.')}
-        </div>
-      )}
-      {state === 'unavailable' && (
-        <div className="mt-3 flex items-center gap-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700">
-          <TriangleAlert size={14} />
-          {t('sectionBuilder:onlineStore.pageEditor.generateUnavailable', 'Labamu AI is unavailable right now. Please try again later.')}
-        </div>
-      )}
+      {/* Simulate triggers — there's no real AI backend behind this modal, so
+          these buttons are the deliberate escape hatch for exercising the
+          generation-failed / AI-unavailable states on demand, alongside the
+          existing "type fail/unavailable" convention. Always visible (not
+          gated to dev builds), matching this app's other simulate features. */}
+      <div className="mt-3 flex flex-wrap items-center gap-3 text-xs">
+        <label className="flex items-center gap-1.5 text-gray-500">
+          <input
+            type="checkbox"
+            checked={simulateGenFail}
+            onChange={(e) => setSimulateGenFail(e.target.checked)}
+          />
+          {t('sectionBuilder:onlineStore.pageEditor.simulateGenerateFailed', 'Simulate generation failed')}
+        </label>
+        <label className="flex items-center gap-1.5 text-gray-500">
+          <input
+            type="checkbox"
+            checked={simulateUnavailable}
+            onChange={(e) => setSimulateUnavailable(e.target.checked)}
+          />
+          {t('sectionBuilder:onlineStore.pageEditor.simulateAiUnavailable', 'Simulate AI unavailable')}
+        </label>
+      </div>
 
       {showingResult && (
         <div className="mt-3 rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm text-gray-700">
