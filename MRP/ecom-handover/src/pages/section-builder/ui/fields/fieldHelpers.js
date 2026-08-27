@@ -18,7 +18,16 @@ export function isFieldVisible(field, data) {
   return Array.isArray(expected) ? expected.includes(actual) : actual === expected;
 }
 
-const GROUP_ORDER = ['content', 'media', 'layout', 'color'];
+const GROUP_ORDER = ['content', 'media', 'layout', 'color', 'mobile'];
+
+/** Human-readable heading shown above each field group in SettingsPanel
+ * (after the first) — group keys themselves (content/media/layout/color/
+ * mobile) are internal, not meant for display. */
+const GROUP_LABELS = { content: 'Content', media: 'Media', layout: 'Layout', color: 'Color', mobile: 'Mobile' };
+
+export function labelForGroup(group) {
+  return GROUP_LABELS[group] ?? group;
+}
 
 /**
  * US-4.2 — groups fields into the fixed content → media → layout → color

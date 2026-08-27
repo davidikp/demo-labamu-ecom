@@ -7,6 +7,7 @@ async function mockDelay(ms = 300) {
 
 const DELIVERY_STEPS = ['Order in Process', 'Waiting for Pickup', 'On Delivery', 'Order Delivered'];
 const PICKUP_STEPS = ['Order in Process', 'Waiting to be Collected', 'Order Collected'];
+const STORE_ADDRESS = 'Alam Sutera, Jl. Jalur Sutera Boulevard No.45, Kunciran, Kec. Pinang, Kota Tangerang, Banten 15320';
 
 const CUSTOMERS = [
   'Alex Juana', 'Sienna James', 'Sudarto Wijaya', 'Gabriela Jane', 'Anggieta Rapaday',
@@ -79,6 +80,7 @@ const _SEED_ORDERS = SCENARIOS.map((scenario, i) => {
     customer_phone: '+62823819283',
     customer_email: 'jamesjordan@gmail.com',
     customer_address: 'Jl. Sudirman Kav. 52-53, RT.5/RW.3, Senayan, Kec. Kebayoran Baru, Kota Jakarta Selatan, DKI Jakarta 12190',
+    customer_pinpoint: orderType === 'Delivery' ? { lat: -6.2251, lng: 106.7997 } : undefined,
     addressed_to: 'James Jordan',
     item_count: items.length * 5,
     items,
@@ -100,6 +102,9 @@ const _SEED_ORDERS = SCENARIOS.map((scenario, i) => {
     courier_provider: orderType === 'Delivery' ? 'Lalamove' : undefined,
     tracking_code: isBooked ? String(2000000000 + seed) : '-',
     tracking_link: isBooked ? '#' : '-',
+    proof_of_delivery_url: isBooked ? '#' : undefined,
+    pickup_address: orderType === 'Pickup' ? STORE_ADDRESS : undefined,
+    pickup_pinpoint: orderType === 'Pickup' ? { lat: -6.2246, lng: 106.6553 } : undefined,
     lalamove_booking: isBooked ? {
       pickUpTimeLabel: 'Now',
       paymentMethodLabel: 'Wallet',

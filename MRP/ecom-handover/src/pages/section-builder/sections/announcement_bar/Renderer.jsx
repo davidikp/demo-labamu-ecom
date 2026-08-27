@@ -1,19 +1,20 @@
 import { memo } from 'react';
-import { useTranslation } from 'react-i18next';
-import { resolveColor } from '../../ui/fields/colorValue';
+import BlockStream from '../../ui/BlockStream';
 
-function AnnouncementBarRenderer({ data, theme }) {
-  const { t } = useTranslation();
-  const bg = resolveColor(data.background_color, theme.colors);
-  const text = resolveColor(data.text_color, theme.colors);
-
+function AnnouncementBarRenderer({ data, blocks = [], theme, mediaLibrary, blockCtx }) {
   return (
     <div
-      style={{ backgroundColor: bg, color: text, textAlign: data.text_alignment ?? 'center' }}
-      className="px-4 py-2 text-sm"
+      style={{ textAlign: data.text_alignment ?? 'center' }}
+      className="relative px-4 text-sm"
     >
-      {data.message || t('sectionBuilder:sections.announcementBar.defaultMessage')}
-      {data.show_link && data.link_label && <span className="ml-2 underline">{data.link_label}</span>}
+      <BlockStream
+        sectionType="announcement_bar"
+        blocks={blocks}
+        theme={theme}
+        mediaLibrary={mediaLibrary}
+        blockCtx={blockCtx}
+        className="flex flex-col items-center gap-1"
+      />
     </div>
   );
 }

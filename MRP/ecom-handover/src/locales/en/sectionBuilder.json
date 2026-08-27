@@ -1,4 +1,25 @@
 {
+  "onlineStore": {
+    "pageEditor": {
+      "saveFailedBanner": "Failed to save page",
+      "loadErrorTitle": "Couldn’t load this page",
+      "loadErrorDescription": "Something went wrong while loading the page. Please try again.",
+      "loadErrorReload": "Reload Page",
+      "notFoundTitle": "Page not found",
+      "notFoundDescription": "This page may have been deleted or is no longer available.",
+      "notFoundGoToList": "Go to Page List",
+      "generateError": "Failed to generate content",
+      "generateUnavailable": "AI generation is currently unavailable"
+    },
+    "pages": {
+      "bulkDeletePartialSuccess": "{{successCount}} of {{totalCount}} pages deleted. Some pages couldn’t be deleted. Please try again",
+      "bulkDeleteSuccess": "{{count}} pages successfully deleted",
+      "bulkDeleteFailed": "Failed to delete pages",
+      "bulkVisibilityPartialSuccess": "Visibility updated for {{successCount}} of {{totalCount}} pages. Please try again for the rest",
+      "bulkVisibilitySuccess": "Visibility for {{count}} pages successfully updated",
+      "bulkVisibilityFailed": "Failed to update page visibility"
+    }
+  },
   "editor": {
     "common": {
       "cancel": "Cancel",
@@ -18,16 +39,25 @@
         "addPage": "Add page — {{name}}",
         "renamePage": "Rename page",
         "deletePage": "Delete page",
+        "reorderPages": "Reorder pages",
         "updatePageSeo": "Update page SEO",
         "togglePageNav": "Toggle page navigation visibility",
         "themePreset": "Theme preset → {{name}}",
         "show": "Show {{label}}",
         "hide": "Hide {{label}}",
-        "fieldChange": "{{type}} → {{field}}"
+        "fieldChange": "{{type}} → {{field}}",
+        "addBlock": "Add {{type}}",
+        "removeBlock": "Remove block",
+        "duplicateBlock": "Duplicate block",
+        "reorderBlocks": "Reorder blocks"
       },
       "discardConfirm": {
         "title": "Discard all unpublished changes? Your store will revert to the last published version. This can't be undone.",
         "confirmLabel": "Discard"
+      },
+      "exitConfirm": {
+        "title": "Discard changes and leave? You have unpublished changes. Leaving now will discard them and revert your store to the last published version.",
+        "confirmLabel": "Discard and leave"
       },
       "publishSuccess": {
         "message": "Your store is live!",
@@ -47,9 +77,12 @@
       "moveDown": "Move down",
       "duplicate": "Duplicate",
       "deleteConfirm": {
-        "title": "Delete this section? This can't be undone."
+        "title": "Delete this section? This can't be undone.",
+        "heading": "Delete this section?",
+        "message": "This can't be undone."
       },
-      "empty": "No sections yet"
+      "empty": "No sections yet",
+      "insertSection": "Add section here"
     },
     "concurrentEditingBanner": {
       "message": "{{editorName}} is currently editing this store. Publishing may overwrite their changes."
@@ -95,7 +128,9 @@
       "pageCount": "{{n}} pages",
       "systemPages": "System pages",
       "customPages": "Custom pages",
-      "noCustomPages": "No custom pages yet. Create one below."
+      "noCustomPages": "No custom pages yet. Create one below.",
+      "deleteConfirmHeading": "Delete page?",
+      "managementSubtitle": "Add, rename, reorder, or hide the pages on your website. Click a page to edit its content."
     },
     "publishDrawer": {
       "heading": "Before you publish",
@@ -107,7 +142,9 @@
     },
     "settingsPanel": {
       "emptyHeading": "Select a section to edit",
-      "emptySubtext": "Click any section on the canvas or in the sidebar to open its settings"
+      "emptySubtext": "Click any section on the canvas or in the sidebar to open its settings",
+      "removeSection": "Remove section",
+      "backToSection": "Back to section"
     },
     "sidebar": {
       "header": "Header",
@@ -122,7 +159,8 @@
       "themeSettingsAriaLabel": "Theme settings",
       "globalHeading": "Global",
       "emptySections": "Add your first section below",
-      "sectionsHeadingCompact": "Sections"
+      "sectionsHeadingCompact": "Sections",
+      "addSection": "Add section"
     },
     "themePanel": {
       "apply": "Apply",
@@ -133,6 +171,7 @@
       "applyPresetConfirmTitle": "Apply {{name}}? This will replace your current fonts and colors. Your section content won't change."
     },
     "topBar": {
+      "exit": "Exit",
       "title": "Storefront Builder",
       "unsavedChanges": "You have unsaved changes",
       "undo": "Undo",
@@ -145,7 +184,23 @@
     "viewportToggle": {
       "desktop": "Desktop",
       "mobile": "Mobile",
+      "tablet": "Tablet",
+      "largeDesktop": "Large desktop",
+      "fit": "Fit screen",
       "ariaLabel": "Viewport"
+    },
+    "sectionPicker": {
+      "searchPlaceholder": "Search sections",
+      "noResults": "No sections found",
+      "addThisSection": "Add this section"
+    },
+    "blockList": {
+      "heading": "Blocks",
+      "add": "Add block",
+      "addNamed": "Add {{name}}",
+      "maxReached": "Maximum reached",
+      "edit": "Edit block",
+      "remove": "Remove block"
     }
   },
   "fields": {
@@ -181,10 +236,17 @@
     "brandValues": {
       "defaultHeading": "Why shop with us",
       "emptyState": "Add your first brand value below",
-      "defaultValueLabel": "Value"
+      "defaultValueLabel": "Value",
+      "blockLabel": "Value",
+      "addBlock": "Add value",
+      "descriptionPlaceholder": "Add a description…"
     },
     "collectionList": {
       "defaultHeading": "Shop by category"
+    },
+    "categoryGrid": {
+      "defaultHeading": "Shop by category",
+      "emptyState": "No categories added yet."
     },
     "contactForm": {
       "defaultHeading": "Get in touch",
@@ -193,7 +255,8 @@
       "phonePlaceholder": "Phone",
       "subjectPlaceholder": "Subject",
       "messagePlaceholder": "Your message",
-      "sendButton": "Send"
+      "sendButton": "Send",
+      "subtextPlaceholder": "Add supporting text…"
     },
     "dividerSpacer": {
       "label": "Spacer ({{height}}px)"
@@ -202,7 +265,9 @@
       "defaultQuestion": "Question",
       "defaultAnswer": "Answer goes here.",
       "defaultHeading": "Frequently asked questions",
-      "emptyState": "Add your first FAQ below"
+      "emptyState": "Add your first FAQ below",
+      "blockLabel": "FAQ",
+      "addBlock": "Add FAQ item"
     },
     "featuredProducts": {
       "soldOut": "Sold out",
@@ -217,20 +282,27 @@
     "header": {
       "defaultNavShop": "Shop",
       "defaultNavAbout": "About",
-      "defaultStoreName": "My Store"
+      "defaultStoreName": "My Store",
+      "moreLinks": "More",
+      "menu": "Menu"
     },
     "heroBanner": {
       "defaultHeading": "Welcome to our store",
-      "defaultButtonText": "Shop now"
+      "defaultButtonText": "Shop now",
+      "subtextPlaceholder": "Add supporting text…"
     },
     "imageWithText": {
-      "defaultHeading": "About our story"
+      "defaultHeading": "About our story",
+      "bodyPlaceholder": "Add body text…",
+      "defaultButtonText": "Learn more",
+      "eyebrowPlaceholder": "Eyebrow label"
     },
     "newsletterSignup": {
       "defaultHeading": "Join our newsletter",
       "emailPlaceholder": "your@email.com",
       "subscribeButton": "Subscribe",
-      "disclaimer": "No spam. Unsubscribe anytime."
+      "disclaimer": "No spam. Unsubscribe anytime.",
+      "subtextPlaceholder": "Add supporting text…"
     },
     "richText": {
       "emptyState": "Add content to this section."
@@ -239,7 +311,110 @@
       "defaultHeading": "What customers say",
       "emptyState": "Add your first quote below",
       "defaultQuote": "Great experience!",
-      "defaultAuthor": "Happy customer"
+      "defaultAuthor": "Happy customer",
+      "blockLabel": "Testimonial",
+      "addBlock": "Add testimonial"
+    },
+    "videoBanner": {
+      "defaultHeading": "Cinematic brand moment",
+      "defaultButtonText": "Shop now",
+      "subtextPlaceholder": "Add supporting text…"
+    },
+    "productCarousel": {
+      "defaultHeading": "You might also like"
+    },
+    "productSpotlight": {
+      "defaultDescription": "A closer look at this product.",
+      "defaultVariant": "Default",
+      "soldOut": "Sold out",
+      "defaultButtonText": "Add to cart"
+    },
+    "teamAbout": {
+      "defaultHeading": "Meet the team",
+      "defaultName": "Team member",
+      "emptyState": "Add your first team member below",
+      "subtextPlaceholder": "Add supporting text…",
+      "blockLabel": "Team member",
+      "addBlock": "Add team member",
+      "rolePlaceholder": "Add a role…",
+      "bioPlaceholder": "Add a bio…",
+      "socialLinkPlaceholder": "Add a social link…"
+    },
+    "starRatingBar": {
+      "defaultLinkLabel": "Read reviews",
+      "reviewsCountPlaceholder": "2,400+",
+      "taglinePlaceholder": "Add a tagline…"
+    },
+    "pressLogos": {
+      "defaultHeading": "As seen in",
+      "emptyState": "Add your first logo below",
+      "blockLabel": "Logo",
+      "addBlock": "Add logo"
+    },
+    "countdownTimer": {
+      "defaultHeading": "Sale ends in",
+      "defaultExpiredMessage": "Sale ended",
+      "defaultButtonText": "Shop the sale",
+      "days": "Days",
+      "hours": "Hours",
+      "minutes": "Minutes",
+      "seconds": "Seconds",
+      "subtextPlaceholder": "Add supporting text…"
+    },
+    "promotionalBanner": {
+      "defaultMessage": "Free shipping on orders over $50",
+      "defaultButtonText": "Shop now",
+      "headingPlaceholder": "Add a heading…"
+    },
+    "imageGallery": {
+      "emptyState": "Add at least 2 images to display the gallery",
+      "headingPlaceholder": "Add a heading…",
+      "blockLabel": "Image",
+      "addBlock": "Add image"
+    },
+    "beforeAfterSlider": {
+      "defaultBeforeLabel": "Before",
+      "defaultAfterLabel": "After",
+      "captionPlaceholder": "Add a caption…"
+    },
+    "mapEmbed": {
+      "defaultHeading": "Find us",
+      "mapAriaLabel": "Store location map",
+      "noAddress": "Add an address to show it on the map",
+      "addressPlaceholder": "Add your address…",
+      "phonePlaceholder": "Add a phone number…",
+      "storeHoursPlaceholder": "Add store hours…"
+    }
+  },
+  "templates": {
+    "gallery": {
+      "heading": "Theme",
+      "subtitle": "Pick a starting point for your website. You can fine-tune fonts, colors, and content anytime.",
+      "activeLabel": "Currently active",
+      "editSite": "Edit your website",
+      "switchTo": "Use this theme",
+      "seePreview": "See preview",
+      "backToThemes": "Back to themes",
+      "previewNotFound": "This theme could not be found.",
+      "switchChoiceTitle": "Switch to {{name}}?",
+      "switchChoiceDescription": "Choose how you'd like to apply this theme.",
+      "switchChoiceKeepContent": "Keep my content",
+      "switchChoiceKeepContentDescription": "Update colors, fonts, and header/footer style. Your pages and sections stay as they are.",
+      "switchChoiceStartFresh": "Start fresh with this theme",
+      "switchChoiceStartFreshDescription": "Replace your pages, header, footer, and media with this theme's defaults.",
+      "switchConfirmAction": "Switch theme"
+    },
+    "clothing": {
+      "label": "Clothing",
+      "description": "Editorial fashion styling for apparel and accessory brands."
+    },
+    "fnb": {
+      "label": "Food & Beverage",
+      "description": "Warm, appetite-friendly styling for restaurants and cafés."
+    },
+    "manufacture": {
+      "label": "Manufacture",
+      "description": "Clean, industrial styling for manufacturers and B2B suppliers."
     }
   }
 }

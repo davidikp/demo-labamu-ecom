@@ -9,12 +9,11 @@ import {
   useSensors,
 } from '@dnd-kit/core';
 import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
-import { Image as ImageIcon, Palette } from 'lucide-react';
+import { Image as ImageIcon, Palette, PanelLeft, Plus } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Tabs, IconBtn } from '../../../ce-ui';
 import { useCompactSidebar } from '../hooks/useCompactSidebar';
 import SectionListItem from './SectionListItem';
-import AddSectionList from './AddSectionList';
 import PagesPanel from './PagesPanel';
 import { MAX_SECTIONS_PER_PAGE } from '../state/builderReducer';
 
@@ -53,7 +52,10 @@ export default function Sidebar({
   onSelect,
   onToggleGlobalHidden,
   onReorder,
-  onAdd,
+  onSelectBlock,
+  onAddBlock,
+  onMoveBlock,
+  onRequestAddSection,
   onOpenTheme,
   onOpenMedia,
   pages,
@@ -65,6 +67,7 @@ export default function Sidebar({
   onDeletePage,
   onUpdatePageSeo,
   onTogglePageNavHidden,
+  onReorderPages,
 }) {
   const { t } = useTranslation();
   const isCompact = useCompactSidebar();
@@ -131,7 +134,7 @@ export default function Sidebar({
 
   const sectionsBody = (
     <>
-      <div className="flex-1 overflow-y-auto p-2">
+      <div className="min-h-0 flex-1 overflow-y-auto p-2">
         <p className="px-2 pb-1 text-[11px] font-medium uppercase tracking-wide text-gray-400">{t('sectionBuilder:editor.sidebar.globalHeading')}</p>
         <GlobalRow
           label={t('sectionBuilder:editor.sidebar.header')}
@@ -153,13 +156,26 @@ export default function Sidebar({
                   <SectionListItem
                     key={section.id}
                     section={section}
-                    selected={selectedId === section.id}
+                    selectedId={selectedId}
                     onSelect={() => onSelect(section.id)}
+                    onSelectBlock={onSelectBlock}
+                    onAddBlock={onAddBlock}
+                    onMoveBlock={onMoveBlock}
                   />
                 ))}
               </ul>
             </SortableContext>
           </DndContext>
+        )}
+
+        {onRequestAddSection && (
+          <button
+            type="button"
+            onClick={onRequestAddSection}
+            className="mt-1 flex w-full items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50"
+          >
+            <Plus size={16} /> {t('sectionBuilder:editor.sidebar.addSection', 'Add section')}
+          </button>
         )}
 
         <div className="my-2 border-t border-gray-100" />
@@ -171,13 +187,11 @@ export default function Sidebar({
           onSelect={() => onSelect('footer')}
         />
       </div>
-
-      <AddSectionList sectionCount={sections.length} onAdd={onAdd} />
     </>
   );
 
   const body = (
-    <div className="flex h-full w-full flex-col">
+    <div className="flex h-full min-h-0 w-full flex-col">
       {tabBar}
       {tab === 'sections' ? (
         sectionsBody
@@ -192,6 +206,7 @@ export default function Sidebar({
           onDeletePage={onDeletePage}
           onUpdateSeo={onUpdatePageSeo}
           onToggleNavHidden={onTogglePageNavHidden}
+          onReorderPages={onReorderPages}
         />
       )}
     </div>
@@ -211,7 +226,7 @@ export default function Sidebar({
           onClick={() => setOverlayOpen(true)}
           className="flex h-9 w-9 items-center justify-center rounded-md text-gray-600 hover:bg-gray-100"
         >
-          ▤
+          <PanelLeft size={18} />
         </button>
       </div>
 

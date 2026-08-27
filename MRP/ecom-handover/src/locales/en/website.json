@@ -209,7 +209,96 @@
       ],
       "followUs": "Follow Us"
     },
-    "previewOnly": "Demo Preview Only"
+    "previewOnly": "Demo Preview Only",
+    "cart": {
+      "pageTitle": "Cart",
+      "empty": "Your cart is empty.",
+      "added": "Added to cart",
+      "pickupOnly": "Pickup Only",
+      "remove": "Remove from cart"
+    },
+    "checkout": {
+      "customer": {
+        "title": "Customer Information",
+        "reset": "Reset",
+        "edit": "Edit",
+        "add": "Add Customer Information",
+        "notesLabel": "Notes",
+        "modalTitle": "Customer Information",
+        "modalSubtitle": "Please enter your phone number to process the order",
+        "continue": "Continue",
+        "phoneRequired": "Please enter your phone number",
+        "phoneAlreadyRegistered": "This phone number is already registered",
+        "detailTitle": "Add Customer Information",
+        "editTitle": "Edit Customer Information",
+        "detailSubtitle": "Make sure the information entered is valid for order processing.",
+        "firstTimeNotice": "It looks like this is your first time here. Please provide your name to continue your order",
+        "field": {
+          "name": "Name",
+          "namePlaceholder": "Input Name",
+          "phone": "Phone",
+          "email": "Email",
+          "emailPlaceholder": "Input Email",
+          "country": "Country",
+          "countryPlaceholder": "Select Country",
+          "province": "Province",
+          "provincePlaceholder": "Select Province",
+          "city": "City",
+          "cityPlaceholder": "Select City",
+          "district": "District",
+          "districtPlaceholder": "Select District",
+          "region": "Region",
+          "regionPlaceholder": "Select Region",
+          "zip": "ZIP/Postal Code",
+          "zipLoading": "Loading...",
+          "zipPlaceholder": "e.g. 12345",
+          "address": "Address",
+          "addressPlaceholder": "e.g. Jalan Mawar No.1",
+          "pinpoint": "Pinpoint Address",
+          "pinpointPlaceholder": "Street name, building, house number",
+          "notes": "Notes",
+          "notesPlaceholder": "e.g. Drop at receptionist"
+        },
+        "pinTitle": "Pinned location",
+        "pinInstructionTitle": "Pin the right point",
+        "pinInstructionSubtitle": "We'll deliver to the map address. Please verify the point and adjust if necessary.",
+        "pinnedLabel": "Pinpoint Address",
+        "fieldRequired": "Field cannot be empty",
+        "saveForNext": "Save data for the next order",
+        "back": "Back",
+        "save": "Save",
+        "saveChanges": "Save Changes",
+        "required": "Please add customer information first"
+      },
+      "shipping": {
+        "title": "Shipping Options",
+        "delivery": "Delivery",
+        "pickup": "Pick Up",
+        "courierNeedsCustomer": "Add customer information to see courier options.",
+        "outOfCoverage": "Your address is outside the merchant's delivery area. Please use a different delivery address.",
+        "pickupLocationLabel": "Pick Up Purchase in Store",
+        "pickupLocationDefault": "Store address not set",
+        "pickupLocationError": "Unable to load pickup location",
+        "reloadLocation": "Reload Location",
+        "staleNotice": "The shipping cost must be recalculated because your cart has changed. Recalculate it before placing your order.",
+        "recalculate": "Recalculate Shipping Cost"
+      },
+      "notes": {
+        "title": "Order Notes",
+        "placeholder": "Add a note for this order"
+      },
+      "summary": {
+        "title": "Order Summary",
+        "subtotal": "Subtotal",
+        "tax": "Tax (11%)",
+        "shipping": "Shipping Cost",
+        "total": "Total Shopping"
+      },
+      "purchase": {
+        "button": "Purchase",
+        "success": "Order placed (demo only — no real order was created)."
+      }
+    }
   },
   "studio": {
     "title": "Studio",

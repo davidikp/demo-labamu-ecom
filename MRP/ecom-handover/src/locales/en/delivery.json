@@ -16,7 +16,8 @@
     "delivery": {
       "label": "Delivery",
       "description": "You offer delivery to customer locations"
-    }
+    },
+    "selectAtLeastOne": "Select at least one option"
   },
   "pickupInfo": {
     "title": "Pickup Info",
@@ -37,6 +38,7 @@
     "zip": "ZIP/Postal Code",
     "zipPlaceholder": "Select ZIP/Postal Code",
     "zipInputPlaceholder": "e.g. 12345",
+    "zipLoading": "Loading...",
     "address": "Address",
     "addressPlaceholder": "e.g. Jalan Mawar No.1",
     "pinpointAddress": "Pinpoint Address",
@@ -78,6 +80,7 @@
     "connectFailed": "Failed to connect Lalamove service",
     "disconnectSuccess": "Lalamove service successfully disconnected",
     "disconnectFailed": "Failed to disconnect Lalamove service",
+    "outOfCoverage": "Your address is outside the courier's coverage area. Please use a different delivery address.",
     "connectMissingFields": "Please fill in both API Key and API Secret",
     "productionNotice": "The integration only works with API credentials from the Production environment. Sandbox credentials aren't supported.",
     "apiKey": "API Key",
@@ -118,5 +121,11 @@
   },
   "map": {
     "attribution": "© OpenStreetMap contributors"
+  },
+  "noCourierModal": {
+    "title": "No Delivery Service Connected",
+    "description": "Delivery is enabled, but no delivery service is connected. If you continue, the Delivery option will be turned off automatically. You can connect a delivery service and enable it again anytime.",
+    "cancel": "Cancel",
+    "continue": "Continue"
   }
 }

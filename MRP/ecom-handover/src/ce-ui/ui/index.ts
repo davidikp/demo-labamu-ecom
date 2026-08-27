@@ -149,6 +149,8 @@ export type { TimePickerProps, TimePickerCoreProps, TimeValue } from "./time-pic
 
 export { DateTimePicker } from "./date-time-picker"
 export type { DateTimePickerProps } from "./date-time-picker"
+export { DateTimeField } from "./date-time-field"
+export type { DateTimeFieldProps } from "./date-time-field"
 
 export { ImageCrop } from "./image-crop"
 export type { ImageCropProps } from "./image-crop"

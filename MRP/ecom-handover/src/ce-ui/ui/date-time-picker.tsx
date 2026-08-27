@@ -14,6 +14,14 @@ export interface DateTimePickerProps {
   format?: "12h" | "24h"
   /** Minute increment step. Default: 1 */
   minuteStep?: number
+  /**
+   * Disallows any date before this moment — greys out earlier calendar days
+   * entirely, and (24h format only) also disables hours/minutes earlier
+   * than `minDate`'s time-of-day when the day currently selected is the
+   * same day `minDate` falls on. Pass `new Date()` to block scheduling
+   * anything in the past.
+   */
+  minDate?: Date
   showWeekNumbers?: boolean
   className?: string
   testId?: string
@@ -26,6 +34,7 @@ export const DateTimePicker: React.FC<DateTimePickerProps> = ({
   onChange,
   format = "24h",
   minuteStep = 1,
+  minDate,
   showWeekNumbers,
   className,
   testId,
@@ -35,9 +44,12 @@ export const DateTimePicker: React.FC<DateTimePickerProps> = ({
   const [viewMonth, setViewMonth] = React.useState(() => (value ?? now).getMonth())
 
   // Preserve time independently so it isn't lost when no date is selected yet
+  // — defaults to the current time (not midnight) so that, combined with
+  // `minDate`, the initial state isn't already sitting in the disabled
+  // "before now" range the moment a caller passes minDate={new Date()}.
   const [localTime, setLocalTime] = React.useState<TimeValue>(() => ({
-    hours: value?.getHours() ?? 0,
-    minutes: value?.getMinutes() ?? 0,
+    hours: value?.getHours() ?? now.getHours(),
+    minutes: value?.getMinutes() ?? now.getMinutes(),
   }))
 
   const timeValue: TimeValue = value
@@ -60,8 +72,25 @@ export const DateTimePicker: React.FC<DateTimePickerProps> = ({
     }
     const d = new Date(date)
     d.setHours(timeValue.hours, timeValue.minutes, 0, 0)
+    // Landing on minDate's own day with a carried-over time that's earlier
+    // in the day than minDate itself would otherwise produce a selection
+    // the time column can't actually represent as selected (its minutes
+    // for that hour are disabled) — snap forward to minDate's time instead.
+    if (minDate && sameDay(d, minDate) && d.getTime() < minDate.getTime()) {
+      d.setHours(minDate.getHours(), minDate.getMinutes(), 0, 0)
+    }
     onChange?.(d)
   }
+
+  // Also applies before any day has been explicitly clicked yet (`!value`)
+  // — the time columns are already live and interactive at that point (and
+  // default to the current time, not midnight), so leaving them unrestricted
+  // until a day is picked would let someone dial in an already-past time
+  // that only gets blocked retroactively once they click a day.
+  const minTime: TimeValue | undefined =
+    minDate && (!value || sameDay(value, minDate))
+      ? { hours: minDate.getHours(), minutes: minDate.getMinutes() }
+      : undefined
 
   const handleTimeChange = (time: TimeValue) => {
     setLocalTime(time)
@@ -91,6 +120,7 @@ export const DateTimePicker: React.FC<DateTimePickerProps> = ({
           onNext={nextMonth}
           onMonthYearChange={(y, m) => { setViewYear(y); setViewMonth(m) }}
           showWeekNumbers={showWeekNumbers}
+          minDate={minDate}
         />
       </div>
 
@@ -102,6 +132,7 @@ export const DateTimePicker: React.FC<DateTimePickerProps> = ({
         <TimePickerCore
           value={timeValue}
           onChange={handleTimeChange}
+          minTime={minTime}
           onNow={() => {
             const n = new Date()
             setViewYear(n.getFullYear())

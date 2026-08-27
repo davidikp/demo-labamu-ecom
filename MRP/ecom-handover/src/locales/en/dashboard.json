@@ -4,7 +4,6 @@
         "notifications": "Notifications",
         "userProfile": "User Profile",
         "viewStorefront": "View Website",
-        "editWebsite": "Edit Your Website",
         "logout": "Logout"
     },
     "sidebar": {
@@ -14,6 +13,12 @@
         "catalog": "Catalog",
         "package": "Package",
         "modifier": "Modifier",
+        "onlineStore": "Online Store",
+        "websiteStudio": "Website Studio",
+        "siteBuilder": "Site Builder",
+        "pageList": "Page List",
+        "theme": "Theme",
+        "pages": "Pages",
         "orders": "Orders",
         "rfq": "Request for Quotes",
         "bookings": "Bookings",
@@ -139,6 +144,22 @@
         "dismiss": "Dismiss"
     },
     "catalog": {
+        "title": "Catalog",
+        "searchPlaceholder": "Search",
+        "errorTitle": "Failed to load catalog",
+        "retry": "Retry",
+        "columns": {
+            "catalogName": "Catalog Name",
+            "category": "Category",
+            "weight": "Weight",
+            "volume": "Volume",
+            "sellingPrice": "Selling Price",
+            "websiteVisibility": "Website Visibility"
+        },
+        "emptyFiltered": "No Search Results Found",
+        "emptyFilteredSub": "Try searching with a different term, okay?",
+        "emptyDefault": "No Catalog Yet",
+        "emptyDefaultSub": "We couldn't find any catalog from your store.",
         "filter": {
             "searchPlaceholder": "Search",
             "removeFilter": "Remove Filter",
@@ -176,6 +197,7 @@
             "deactivateWarningDesc": "This modifier must be selected at least {{min}}.",
             "deactivateBtn": "Deactivate Modifier",
             "loadError": "Failed to load modifier",
+            "toggleFailed": "Failed to update modifier",
             "enabledMsg": "Modifier has been enabled",
             "disabledMsg": "Modifier has been disabled",
             "availabilityTitle": "Modifier Availability",

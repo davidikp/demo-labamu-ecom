@@ -20,9 +20,11 @@ interface TimeColumnProps {
   selectedIndex: number
   onSelect: (i: number) => void
   ariaLabel: string
+  /** Indices strictly below this are rendered disabled/unselectable — used to block times before a `minTime` threshold. */
+  minIndex?: number
 }
 
-const TimeColumn: React.FC<TimeColumnProps> = ({ values, selectedIndex, onSelect, ariaLabel }) => {
+const TimeColumn: React.FC<TimeColumnProps> = ({ values, selectedIndex, onSelect, ariaLabel, minIndex }) => {
   const ref = React.useRef<HTMLDivElement>(null)
   const mounted = React.useRef(false)
 
@@ -45,28 +47,35 @@ const TimeColumn: React.FC<TimeColumnProps> = ({ values, selectedIndex, onSelect
       className="overflow-y-auto flex-1 min-w-[64px] [&::-webkit-scrollbar]:hidden"
       style={{ height: COL_H, scrollbarWidth: "none" }}
     >
-      {values.map((v, i) => (
-        <button
-          key={i}
-          type="button"
-          role="option"
-          aria-selected={i === selectedIndex}
-          onClick={() => onSelect(i)}
-          style={{ height: ITEM_H }}
-          className="w-full flex items-center justify-center px-2"
-        >
-          <span
-            className={cn(
-              "w-full h-9 flex items-center justify-center rounded-lb-sm font-lb text-[16px] leading-none transition-colors duration-100",
-              i === selectedIndex
-                ? "bg-lb-brand font-lb-bold text-white"
-                : "text-lb-on-surface-2 hover:text-lb-on-surface"
-            )}
+      {values.map((v, i) => {
+        const disabled = minIndex != null && i < minIndex
+        return (
+          <button
+            key={i}
+            type="button"
+            role="option"
+            aria-selected={i === selectedIndex}
+            aria-disabled={disabled}
+            disabled={disabled}
+            onClick={() => onSelect(i)}
+            style={{ height: ITEM_H }}
+            className="w-full flex items-center justify-center px-2 disabled:cursor-not-allowed"
           >
-            {v}
-          </span>
-        </button>
-      ))}
+            <span
+              className={cn(
+                "w-full h-9 flex items-center justify-center rounded-lb-sm font-lb text-[16px] leading-none transition-colors duration-100",
+                disabled
+                  ? "text-lb-on-surface-3 opacity-40"
+                  : i === selectedIndex
+                    ? "bg-lb-brand font-lb-bold text-white"
+                    : "text-lb-on-surface-2 hover:text-lb-on-surface"
+              )}
+            >
+              {v}
+            </span>
+          </button>
+        )
+      })}
     </div>
   )
 }
@@ -86,6 +95,14 @@ export interface TimePickerCoreProps {
   format?: "12h" | "24h"
   /** Minute increment step. Default: 1 */
   minuteStep?: number
+  /**
+   * Disables hours/minutes before this time-of-day (24h format only — the
+   * 12h hour column's index order doesn't map linearly to hour-of-day, so
+   * enforcing a threshold there would need separate AM/PM-aware logic this
+   * doesn't implement). Callers are expected to only pass this when the
+   * calendar day currently selected is the same day `minTime` falls on.
+   */
+  minTime?: TimeValue
 }
 
 export interface TimePickerProps extends TimePickerCoreProps {
@@ -101,6 +118,7 @@ export const TimePickerCore: React.FC<TimePickerCoreProps> = ({
   onNow,
   format = "24h",
   minuteStep = 1,
+  minTime,
 }) => {
   const locale = useLocale()
 
@@ -121,6 +139,17 @@ export const TimePickerCore: React.FC<TimePickerCoreProps> = ({
   const minuteIndex = Math.round(min / minuteStep) % minuteCount
   // Index in hours12Vals: 12→0, 1→1, ..., 11→11
   const h12Index = h12display === 12 ? 0 : h12display
+
+  // 24h-format-only min-time enforcement (see the prop's own doc comment).
+  const minHourIndex = format === "24h" ? minTime?.hours : undefined
+  const minMinuteIndex =
+    format === "24h" && minTime
+      ? h24 < minTime.hours
+        ? minuteCount // whole hour is before the threshold — block every minute
+        : h24 === minTime.hours
+          ? Math.ceil(minTime.minutes / minuteStep)
+          : undefined
+      : undefined
 
   const emit = (newH24: number, newMinIndex: number) =>
     onChange?.({ hours: newH24, minutes: newMinIndex * minuteStep })
@@ -160,6 +189,7 @@ export const TimePickerCore: React.FC<TimePickerCoreProps> = ({
             selectedIndex={h24}
             onSelect={handleHour24}
             ariaLabel={locale.timePicker.hoursLabel}
+            minIndex={minHourIndex}
           />
         ) : (
           <TimeColumn
@@ -177,6 +207,7 @@ export const TimePickerCore: React.FC<TimePickerCoreProps> = ({
           selectedIndex={minuteIndex}
           onSelect={handleMinute}
           ariaLabel={locale.timePicker.minutesLabel}
+          minIndex={minMinuteIndex}
         />
 
         {format === "12h" && (
@@ -213,6 +244,7 @@ export const TimePicker: React.FC<TimePickerProps> = ({
   onChange,
   format = "24h",
   minuteStep = 1,
+  minTime,
   className,
   testId,
 }) => (
@@ -223,7 +255,7 @@ export const TimePicker: React.FC<TimePickerProps> = ({
     )}
     data-testid={toTestId(testId, "time_picker")}
   >
-    <TimePickerCore value={value} onChange={onChange} format={format} minuteStep={minuteStep} />
+    <TimePickerCore value={value} onChange={onChange} format={format} minuteStep={minuteStep} minTime={minTime} />
   </div>
 )
 

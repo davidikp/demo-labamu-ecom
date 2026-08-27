@@ -108,6 +108,7 @@
     "cancelEdit": "Cancel Edit",
     "saveChanges": "Save Changes",
     "discardTitle": "Discard Changes?",
+    "continueEditing": "Continue Editing",
     "noChangesTitle": "No Changes Made",
     "noChangesDesc": "Please update the catalog value before saving"
   },

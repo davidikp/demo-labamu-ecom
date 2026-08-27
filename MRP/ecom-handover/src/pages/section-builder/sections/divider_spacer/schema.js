@@ -1,3 +1,5 @@
+import { SECTION_CHROME_FIELDS_WIDTH_ONLY } from '../shared/sectionChrome';
+
 /** US-11.H4 — Divider / Spacer. */
 export const schema = {
   type_variant: {
@@ -11,4 +13,5 @@ export const schema = {
     dependsOn: { field: 'type_variant', equals: 'divider' },
   },
   divider_color: { type: 'color', label: 'Divider color', default: { slot: 'border' }, group: 'color', dependsOn: { field: 'type_variant', equals: 'divider' } },
+  ...SECTION_CHROME_FIELDS_WIDTH_ONLY,
 };

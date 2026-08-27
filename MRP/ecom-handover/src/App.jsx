@@ -49,6 +49,10 @@ const HouzezPreview = React.lazy(() => import('./pages/websites/templates/houzez
 const TemplateBuilder = React.lazy(() => import('./pages/websites/TemplateBuilder'));
 const SectionBuilder = React.lazy(() => import('./pages/section-builder/SectionBuilder'));
 const SectionBuilderPreview = React.lazy(() => import('./pages/section-builder/PreviewLive'));
+const PagesManagement = React.lazy(() => import('./pages/online-store/PagesManagement'));
+const PageEditor = React.lazy(() => import('./pages/online-store/PageEditor'));
+const ThemePreview = React.lazy(() => import('./pages/online-store/ThemePreview'));
+const PagePreview = React.lazy(() => import('./pages/online-store/PagePreview'));
 
 // Simple mock auth context — replace with real auth later
 function isAuthenticated() {
@@ -87,6 +91,11 @@ export default function App() {
           <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/websites" element={<WebsiteTemplates />} />
+            <Route path="/online-store/theme" element={<ComingSoon />} />
+            <Route path="/online-store/pages" element={<PagesManagement />} />
+            <Route path="/online-store/pages/new" element={<PageEditor />} />
+            <Route path="/online-store/pages/:pageId" element={<PageEditor />} />
+            <Route path="/online-store/preferences" element={<ComingSoon />} />
             <Route path="/catalog" element={<CatalogProducts />} />
             <Route path="/catalog/bulk-edit" element={<BulkEditCatalog />} />
             <Route path="/catalog/package/bulk-edit" element={<BulkEditCatalog />} />
@@ -134,7 +143,32 @@ export default function App() {
               <SectionBuilderPreview />
             </BuilderErrorBoundary>
           } />
+          {/* Theme gallery's "See Preview" — full-page render of a theme's
+              own default home page, no live draft/auth required. */}
+          <Route path="/online-store/theme/:templateId/preview" element={
+            <BuilderErrorBoundary>
+              <ThemePreview />
+            </BuilderErrorBoundary>
+          } />
+          {/* Page editor's "Preview" — full-page render of the merchant's real
+              site chrome (header/footer/theme) with this page's rich-text
+              content as the body, no app layout chrome. */}
+          <Route path="/online-store/pages/:pageId/preview" element={
+            <ProtectedRoute>
+              <BuilderErrorBoundary>
+                <PagePreview />
+              </BuilderErrorBoundary>
+            </ProtectedRoute>
+          } />
           <Route path="/section-builder/:storeId" element={
+            <BuilderErrorBoundary>
+              <ProtectedRoute>
+                <SectionBuilder />
+              </ProtectedRoute>
+            </BuilderErrorBoundary>
+          } />
+          {/* Deep link from Online Store > Pages into a specific page */}
+          <Route path="/section-builder/:storeId/pages/:pageId" element={
             <BuilderErrorBoundary>
               <ProtectedRoute>
                 <SectionBuilder />

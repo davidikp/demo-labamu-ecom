@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { ChevronDown, ChevronRight, Pencil, X, ArrowUp, ArrowDown } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { slugify, isSlugTaken, defaultMetaTitle } from '../sections/pageHelpers';
 import { shouldShowCounter } from './fields/fieldHelpers';
@@ -107,8 +108,8 @@ function SeoFields({ page, storeName, onUpdateSeo }) {
 
   return (
     <div className="mt-1 border-t border-gray-100 pt-1">
-      <button type="button" onClick={() => setExpanded((v) => !v)} className="text-[11px] font-medium text-gray-500 hover:text-gray-700">
-        {expanded ? '▾' : '▸'} {t('sectionBuilder:editor.pagesPanel.seoHeading')}
+      <button type="button" onClick={() => setExpanded((v) => !v)} className="flex items-center gap-1 text-[11px] font-medium text-gray-500 hover:text-gray-700">
+        {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />} {t('sectionBuilder:editor.pagesPanel.seoHeading')}
       </button>
       {expanded && (
         <div className="mt-2 space-y-2">
@@ -149,7 +150,7 @@ function SeoFields({ page, storeName, onUpdateSeo }) {
   );
 }
 
-function PageRow({ page, active, isSystem, storeName, onSelect, onRename, onDelete, onUpdateSeo, onToggleNavHidden }) {
+function PageRow({ page, active, isSystem, storeName, onSelect, onRename, onDelete, onUpdateSeo, onToggleNavHidden, onMove, moveDisabled }) {
   const { t } = useTranslation();
   const [editing, setEditing] = useState(false);
   const [draftName, setDraftName] = useState(page.name);
@@ -163,6 +164,28 @@ function PageRow({ page, active, isSystem, storeName, onSelect, onRename, onDele
   return (
     <li className={'rounded-md px-2 py-1.5 ' + (active ? 'bg-blue-50' : 'hover:bg-gray-50')}>
       <div className="flex items-center gap-2">
+        {onMove && (
+          <div className="flex shrink-0 flex-col">
+            <button
+              type="button"
+              aria-label={t('sectionBuilder:editor.canvas.moveUp')}
+              disabled={moveDisabled?.up}
+              onClick={() => onMove(page.id, -1)}
+              className="text-gray-400 hover:text-gray-700 disabled:opacity-30"
+            >
+              <ArrowUp size={12} />
+            </button>
+            <button
+              type="button"
+              aria-label={t('sectionBuilder:editor.canvas.moveDown')}
+              disabled={moveDisabled?.down}
+              onClick={() => onMove(page.id, 1)}
+              className="text-gray-400 hover:text-gray-700 disabled:opacity-30"
+            >
+              <ArrowDown size={12} />
+            </button>
+          </div>
+        )}
         {editing ? (
           <input
             autoFocus
@@ -182,7 +205,7 @@ function PageRow({ page, active, isSystem, storeName, onSelect, onRename, onDele
 
         {!isSystem && !editing && (
           <button type="button" aria-label={t('sectionBuilder:editor.pagesPanel.rename')} onClick={() => setEditing(true)} className="text-gray-400 hover:text-gray-700">
-            ✎
+            <Pencil size={13} />
           </button>
         )}
         {isSystem ? (
@@ -196,7 +219,7 @@ function PageRow({ page, active, isSystem, storeName, onSelect, onRename, onDele
           </button>
         ) : (
           <button type="button" aria-label={t('sectionBuilder:editor.common.delete')} onClick={() => setConfirmingDelete(true)} className="text-gray-400 hover:text-red-600">
-            ✕
+            <X size={14} />
           </button>
         )}
       </div>
@@ -205,7 +228,8 @@ function PageRow({ page, active, isSystem, storeName, onSelect, onRename, onDele
 
       <ConfirmDialog
         open={confirmingDelete}
-        title={t('sectionBuilder:editor.pagesPanel.deleteConfirmTitle', { name: page.name })}
+        title={t('sectionBuilder:editor.pagesPanel.deleteConfirmHeading', 'Delete page?')}
+        description={t('sectionBuilder:editor.pagesPanel.deleteConfirmTitle', { name: page.name })}
         confirmLabel={t('sectionBuilder:editor.common.delete')}
         danger
         onConfirm={() => {
@@ -219,13 +243,26 @@ function PageRow({ page, active, isSystem, storeName, onSelect, onRename, onDele
 }
 
 /** Pages tab (US-6.1..US-6.6). */
-export default function PagesPanel({ pages, activePageId, storeName, onSelectPage, onAddPage, onRenamePage, onDeletePage, onUpdateSeo, onToggleNavHidden }) {
+export default function PagesPanel({ pages, activePageId, storeName, onSelectPage, onAddPage, onRenamePage, onDeletePage, onUpdateSeo, onToggleNavHidden, onReorderPages }) {
   const { t } = useTranslation();
   const systemPages = pages.filter((p) => p.type === 'system');
   const customPages = pages.filter((p) => p.type === 'custom');
 
+  // Only custom pages are reorderable — system pages (Home, Product,
+  // Collection, Cart, Checkout) have a fixed, meaningful order. Moving a
+  // custom page swaps it within that sub-list, then re-derives the full
+  // pages array's id order (system pages first, unchanged) for REORDER_PAGES.
+  const handleMoveCustomPage = (pageId, direction) => {
+    const idx = customPages.findIndex((p) => p.id === pageId);
+    const targetIdx = idx + direction;
+    if (idx === -1 || targetIdx < 0 || targetIdx >= customPages.length) return;
+    const reordered = [...customPages];
+    [reordered[idx], reordered[targetIdx]] = [reordered[targetIdx], reordered[idx]];
+    onReorderPages([...systemPages, ...reordered].map((p) => p.id));
+  };
+
   return (
-    <div className="flex h-full w-full flex-col">
+    <div className="flex min-h-0 flex-1 w-full flex-col">
       <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
         <h2 className="text-sm font-semibold text-gray-900">{t('sectionBuilder:editor.pagesPanel.heading')}</h2>
         <span className="text-xs text-gray-400">{t('sectionBuilder:editor.pagesPanel.pageCount', { n: pages.length })}</span>
@@ -255,7 +292,7 @@ export default function PagesPanel({ pages, activePageId, storeName, onSelectPag
           <p className="p-3 text-sm text-gray-500">{t('sectionBuilder:editor.pagesPanel.noCustomPages')}</p>
         ) : (
           <ul className="space-y-1">
-            {customPages.map((page) => (
+            {customPages.map((page, index) => (
               <PageRow
                 key={page.id}
                 page={page}
@@ -267,6 +304,8 @@ export default function PagesPanel({ pages, activePageId, storeName, onSelectPag
                 onDelete={onDeletePage}
                 onUpdateSeo={onUpdateSeo}
                 onToggleNavHidden={onToggleNavHidden}
+                onMove={onReorderPages ? handleMoveCustomPage : undefined}
+                moveDisabled={{ up: index === 0, down: index === customPages.length - 1 }}
               />
             ))}
           </ul>

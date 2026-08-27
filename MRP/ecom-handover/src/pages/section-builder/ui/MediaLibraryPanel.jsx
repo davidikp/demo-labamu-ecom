@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { MediaUploadField } from '../../../ce-ui';
 import { matchesSearch, findUsages } from '../sections/mediaHelpers';
@@ -84,7 +85,7 @@ export default function MediaLibraryPanel({ mode, mediaLibrary, state, onUpload,
         <h2 className="text-sm font-semibold text-gray-900">{t('sectionBuilder:editor.mediaLibraryPanel.heading')}</h2>
         {onClose && (
           <button type="button" onClick={onClose} aria-label={t('sectionBuilder:editor.common.close')} className="text-gray-400 hover:text-gray-700">
-            ✕
+            <X size={14} />
           </button>
         )}
       </div>

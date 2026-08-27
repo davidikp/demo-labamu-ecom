@@ -172,6 +172,7 @@ export function HouzezPreview({
   const [customerPinpointOptions, setCustomerPinpointOptions] = useState([]);
   const [customerPinpointLoading, setCustomerPinpointLoading] = useState(false);
   const [customerSelectedPlace, setCustomerSelectedPlace] = useState(null);
+  const [, setPickupLocationRetryCount] = useState(0);
   const customerPinpointTimeoutRef = useRef(null);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [detailQty, setDetailQty] = useState(1);
@@ -821,6 +822,10 @@ export function HouzezPreview({
         errors[field] = hpT('checkout.customer.fieldRequired', 'Field cannot be empty');
       }
     });
+    const draftPhone = String(customerDetailDraft?.phone || '').trim();
+    if (!errors.phone && draftPhone && draftPhone !== customerInfo?.phone && MOCK_CUSTOMERS_DB[draftPhone]) {
+      errors.phone = hpT('checkout.customer.phoneAlreadyRegistered', 'This phone number is already registered');
+    }
     setCustomerDetailErrors(errors);
     if (Object.keys(errors).length > 0) return;
     setCustomerInfo({ ...customerDetailDraft, fullAddress: buildFullAddress(customerDetailDraft) });
@@ -2223,6 +2228,12 @@ export function HouzezPreview({
                   <p style={{ margin: '0 0 4px', fontSize: '14px', fontWeight: 700, color: '#1A1A1A' }}>{customerInfo.name}</p>
                   <p style={{ margin: '0 0 4px', fontSize: '13px', color: '#4B5563' }}>+62{customerInfo.phone}{customerInfo.email ? ` | ${customerInfo.email}` : ''}</p>
                   {(customerInfo.fullAddress || customerInfo.address) && <p style={{ margin: '0 0 4px', fontSize: '13px', color: '#6B7280' }}>{customerInfo.fullAddress || customerInfo.address}</p>}
+                  {customerInfo.pinpointAddress && (
+                    <p style={{ margin: '0 0 4px', fontSize: '13px', color: '#374151', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0 }}><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                      {hpT('checkout.customer.pinnedLabel', 'Pinpoint Address')}
+                    </p>
+                  )}
                   {customerInfo.notes && <p style={{ margin: 0, fontSize: '13px', color: '#6B7280' }}>{hpT('checkout.customer.notesLabel', 'Notes')}: {customerInfo.notes}</p>}
                 </div>
               ) : (
@@ -2309,13 +2320,32 @@ export function HouzezPreview({
                   </div>
                 )}
                 {shippingMethod === 'pickup' && (
-                  <div style={{ marginTop: '12px', display: 'flex', gap: '10px', alignItems: 'flex-start', background: '#F9FAFB', borderRadius: '8px', padding: '12px' }}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6B7280" strokeWidth="2" style={{ flexShrink: 0, marginTop: '2px' }}><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
-                    <div>
-                      <p style={{ margin: 0, fontSize: '12px', color: '#6B7280' }}>{hpT('checkout.shipping.pickupLocationLabel', 'Pick Up Purchase in Store')}</p>
-                      <p style={{ margin: '2px 0 0', fontSize: '13px', fontWeight: 700, color: '#1A1A1A' }}>{builderConfig?.storeAddress || hpT('checkout.shipping.pickupLocationDefault', 'Store address not set')}</p>
+                  builderConfig?.storeAddress ? (
+                    <div style={{ marginTop: '12px', display: 'flex', gap: '10px', alignItems: 'flex-start', background: '#F9FAFB', borderRadius: '8px', padding: '12px' }}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6B7280" strokeWidth="2" style={{ flexShrink: 0, marginTop: '2px' }}><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                      <div>
+                        <p style={{ margin: 0, fontSize: '12px', color: '#6B7280' }}>{hpT('checkout.shipping.pickupLocationLabel', 'Pick Up Purchase in Store')}</p>
+                        <p style={{ margin: '2px 0 0', fontSize: '13px', fontWeight: 700, color: '#1A1A1A' }}>{builderConfig.storeAddress}</p>
+                      </div>
                     </div>
-                  </div>
+                  ) : (
+                    <div style={{ marginTop: '12px' }}>
+                      <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', background: '#FFF', border: '1px solid #DC2626', borderRadius: '8px', padding: '12px' }}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6B7280" strokeWidth="2" style={{ flexShrink: 0, marginTop: '2px' }}><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                        <div>
+                          <p style={{ margin: 0, fontSize: '12px', color: '#6B7280' }}>{hpT('checkout.shipping.pickupLocationLabel', 'Pick Up Purchase in Store')}</p>
+                          <p style={{ margin: '2px 0 0', fontSize: '13px', fontWeight: 700, color: '#DC2626' }}>{hpT('checkout.shipping.pickupLocationError', 'Unable to load pickup location')}</p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => setPickupLocationRetryCount(c => c + 1)}
+                        style={{ marginTop: '10px', display: 'flex', alignItems: 'center', gap: '6px', background: 'none', border: 'none', color: '#374151', fontSize: '13px', fontWeight: 600, cursor: 'pointer', padding: 0 }}
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 12a9 9 0 1 1 3 6.7"/><path d="M3 16v-4h4"/></svg>
+                        {hpT('checkout.shipping.reloadLocation', 'Reload Location')}
+                      </button>
+                    </div>
+                  )
                 )}
               </div>
 
@@ -2518,7 +2548,7 @@ export function HouzezPreview({
                       allowNegative={false}
                       decimalPlaces={0}
                       disabled={customerZipLoading}
-                      placeholder={customerZipLoading ? hpT('checkout.customer.field.zipLoading', 'Loading...') : 'e.g. 12345'}
+                      placeholder={customerZipLoading ? hpT('checkout.customer.field.zipLoading', 'Loading...') : hpT('checkout.customer.field.zipPlaceholder', 'e.g. 12345')}
                       value={customerDetailDraft?.zip || ''}
                       onChange={e => updateCustomerDraft('zip', e.target.value)}
                       errorText={customerDetailErrors.zip}
@@ -2554,6 +2584,9 @@ export function HouzezPreview({
                   />
 
                   {customerSelectedPlace && customerSelectedPlace.lat != null && customerSelectedPlace.lng != null && (
+                    <div>
+                      <p style={{ margin: '0 0 4px', fontSize: '14px', fontWeight: 700, color: '#1A1A1A' }}>{hpT('checkout.customer.pinInstructionTitle', 'Pin the right point')}</p>
+                      <p style={{ margin: '0 0 10px', fontSize: '12px', color: '#6B7280' }}>{hpT('checkout.customer.pinInstructionSubtitle', "We'll deliver to the map address. Please verify the point and adjust if necessary.")}</p>
                     <div style={{ position: 'relative', borderRadius: '8px', overflow: 'hidden' }}>
                       <StaticMapPreview lat={customerSelectedPlace.lat} lng={customerSelectedPlace.lng} width={592} height={200} />
                       <div
@@ -2566,6 +2599,7 @@ export function HouzezPreview({
                         <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: '#1A1A1A' }}>{hpT('checkout.customer.pinTitle', 'Pinned location')}</p>
                         <p style={{ margin: '2px 0 0', fontSize: '12px', color: '#4B5563' }}>{customerSelectedPlace.label}</p>
                       </div>
+                    </div>
                     </div>
                   )}
                   </>)}
@@ -2594,7 +2628,7 @@ export function HouzezPreview({
                     {hpT('checkout.customer.back', 'Back')}
                   </button>
                   <button onClick={handleCustomerDetailSave} style={{ padding: '10px 22px', borderRadius: '8px', border: 'none', background: '#1A1A1A', color: '#FFF', fontSize: '14px', fontWeight: 600, cursor: 'pointer' }}>
-                    {hpT('checkout.customer.save', 'Save')}
+                    {isEditingCustomer ? hpT('checkout.customer.saveChanges', 'Save Changes') : hpT('checkout.customer.save', 'Save')}
                   </button>
                 </div>
               </div>

@@ -38,6 +38,25 @@ const ORDER_STATUS_BADGE = {
   Cancelled: { color: 'red', tone: 'soft' },
 };
 
+const STATUS_LABEL_KEYS = {
+  'In Progress': 'orders:detail.status.inProgress',
+  Completed: 'orders:detail.status.completed',
+  Cancelled: 'orders:detail.status.cancelled',
+};
+
+const STEP_LABEL_KEYS = {
+  'Order in Process': 'orders:detail.steps.orderInProcess',
+  'Waiting for Pickup': 'orders:detail.steps.waitingForPickup',
+  'On Delivery': 'orders:detail.steps.onDelivery',
+  'Order Delivered': 'orders:detail.steps.orderDelivered',
+  'Waiting to be Collected': 'orders:detail.steps.waitingToBeCollected',
+  'Order Collected': 'orders:detail.steps.orderCollected',
+};
+
+function translateStep(t, step) {
+  return STEP_LABEL_KEYS[step] ? t(STEP_LABEL_KEYS[step]) : step;
+}
+
 function Stepper({ steps, activeIndex, failed }) {
   const n = steps.length;
   const inset = 50 / n; // % offset from each edge to the first/last circle's center
@@ -208,8 +227,12 @@ export default function OrderDetail() {
   }
 
   async function handleConfirmAction() {
+    const wasConfirmingPickup = confirmAction === 'confirmPickup';
     setConfirmAction(null);
     await runAdvance();
+    if (wasConfirmingPickup) {
+      showSnackbar(t('orders:detail.pickupConfirmedSuccess'), 'green');
+    }
   }
 
   async function handlePlaceOrderSubmit(bookingDetails) {
@@ -240,6 +263,14 @@ export default function OrderDetail() {
     showSnackbar(t('orders:detail.trackOrderDemo'), 'grey');
   }
 
+  function handleViewProof() {
+    showSnackbar(t('orders:detail.documentDemoNotice'), 'grey');
+  }
+
+  function handleViewPinpoint() {
+    showSnackbar(t('orders:detail.pinpointDemoNotice'), 'grey');
+  }
+
   if (error && !loading) {
     return (
       <div style={{ padding: '24px', background: '#F4F4F4', minHeight: 'calc(100vh - 56px)' }}>
@@ -256,11 +287,12 @@ export default function OrderDetail() {
   const isNoDriverFound = isDelivery && !!order?.no_driver_found;
   const isDone = order && order.step_index === order.steps.length - 1;
   const actionLabel = isDelivery
-    ? (order?.step_index === 0 || isNoDriverFound ? t('orders:detail.placeOrder') : t('orders:detail.nextStep', { step: order?.steps?.[order.step_index + 1] || '' }))
+    ? (order?.step_index === 0 || isNoDriverFound ? t('orders:detail.placeOrder') : t('orders:detail.nextStep', { step: translateStep(t, order?.steps?.[order.step_index + 1]) || '' }))
     : (order?.step_index === 0 ? t('orders:detail.markAsReady') : t('orders:detail.confirmPickupButton'));
-  const displaySteps = isNoDriverFound
+  const displaySteps = (isNoDriverFound
     ? order.steps.map((s, i) => i === order.step_index ? t('orders:detail.noDriverStep') : s)
-    : order?.steps;
+    : order?.steps
+  )?.map(s => translateStep(t, s));
   // Delivery orders auto-advance through the middle steps (Waiting for Pickup,
   // On Delivery) with no merchant action needed, so the footer is hidden then.
   const isAutoAdvancing = order && isDelivery && !isNoDriverFound
@@ -309,8 +341,7 @@ export default function OrderDetail() {
 
               {isDelivery && (
                 <div style={{ marginTop: '8px', borderTop: '1px solid #E9E9E9', paddingTop: '8px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  <InfoRow dense label={t('orders:detail.awb')} value={order.awb} />
-                  <InfoRow dense label={t('orders:detail.fragile')} value={order.fragile} />
+                  <InfoRow dense label={t('orders:detail.fragile')} value={order.fragile === 'Yes' ? t('orders:detail.yes') : order.fragile === 'No' ? t('orders:detail.no') : order.fragile} />
                   <InfoRow dense label={t('orders:detail.courierProvider')} value={order.courier_provider} />
                   <InfoRow dense label={t('orders:detail.trackingCode')} value={order.tracking_code} />
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -318,6 +349,35 @@ export default function OrderDetail() {
                     {order.tracking_link && order.tracking_link !== '-' ? (
                       <span onClick={handleTrackOrder} style={{ fontSize: '14px', color: '#006BFF', fontWeight: 700, cursor: 'pointer' }}>
                         {t('orders:detail.trackOrder')}
+                      </span>
+                    ) : (
+                      <span style={{ fontSize: '14px', color: '#282828', fontWeight: 500 }}>-</span>
+                    )}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: '14px', color: '#7E7E7E' }}>{t('orders:detail.proofOfDelivery')}</span>
+                    {order.proof_of_delivery_url ? (
+                      <span onClick={handleViewProof} style={{ fontSize: '14px', color: '#006BFF', fontWeight: 700, cursor: 'pointer' }}>
+                        {t('orders:detail.viewDocument')}
+                      </span>
+                    ) : (
+                      <span style={{ fontSize: '14px', color: '#282828', fontWeight: 500 }}>-</span>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {!isDelivery && order.pickup_address && (
+                <div style={{ marginTop: '8px', borderTop: '1px solid #E9E9E9', paddingTop: '8px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px' }}>
+                    <span style={{ fontSize: '14px', color: '#7E7E7E', flexShrink: 0 }}>{t('orders:detail.pickupAddress')}</span>
+                    <span style={{ fontSize: '14px', color: '#282828', fontWeight: 500, textAlign: 'right' }}>{order.pickup_address}</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: '14px', color: '#7E7E7E' }}>{t('orders:detail.pinpointAddress')}</span>
+                    {order.pickup_pinpoint ? (
+                      <span onClick={handleViewPinpoint} style={{ fontSize: '14px', color: '#006BFF', fontWeight: 700, cursor: 'pointer' }}>
+                        {t('orders:detail.viewPinpoint')}
                       </span>
                     ) : (
                       <span style={{ fontSize: '14px', color: '#282828', fontWeight: 500 }}>-</span>
@@ -332,7 +392,7 @@ export default function OrderDetail() {
             <div style={{ padding: '20px' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
                 <span style={{ fontSize: '14px', color: '#7E7E7E' }}>{t('orders:detail.orderInfo')}</span>
-                <StatusBadge label={order.order_status} {...(ORDER_STATUS_BADGE[order.order_status] || {})} />
+                <StatusBadge label={STATUS_LABEL_KEYS[order.order_status] ? t(STATUS_LABEL_KEYS[order.order_status]) : order.order_status} {...(ORDER_STATUS_BADGE[order.order_status] || {})} />
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -347,7 +407,7 @@ export default function OrderDetail() {
                 <InfoRow dense label={t('orders:detail.orderTime')} value={order.order_time} />
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <span style={{ fontSize: '14px', color: '#7E7E7E' }}>{t('orders:detail.paymentStatus')}</span>
-                  <StatusBadge label={order.payment_status} color="green" tone="soft" />
+                  <StatusBadge label={order.payment_status === 'Paid' ? t('orders:detail.paid') : order.payment_status} color="green" tone="soft" />
                 </div>
               </div>
             </div>
@@ -365,6 +425,11 @@ export default function OrderDetail() {
                 <p style={{ margin: 0, fontSize: '14px', color: '#7E7E7E' }}>{maskPhone(order.customer_phone)} | {order.customer_email}</p>
                 {isDelivery && order.customer_address && (
                   <p style={{ margin: '4px 0 0', fontSize: '14px', color: '#7E7E7E', maxWidth: '360px' }}>{order.customer_address}</p>
+                )}
+                {isDelivery && order.customer_pinpoint && (
+                  <span onClick={handleViewPinpoint} style={{ display: 'inline-block', marginTop: '6px', fontSize: '14px', color: '#006BFF', fontWeight: 700, cursor: 'pointer' }}>
+                    {t('orders:detail.viewPinpoint')}
+                  </span>
                 )}
               </div>
               <a href={`https://wa.me/${order.customer_phone.replace(/[^\d]/g, '')}`} target="_blank" rel="noreferrer"

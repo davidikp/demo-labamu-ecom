@@ -9,6 +9,12 @@
  */
 export function defaultsForSchema(schema) {
   return Object.fromEntries(
-    Object.entries(schema).map(([key, field]) => [key, field.default ?? null])
+    // structuredClone so an array/object default (e.g. collection_list's
+    // `collections`) isn't the same shared reference handed to every new
+    // section built from this schema — without it, two sections created
+    // from the same default would alias one array, and RepeaterField's
+    // `onChange([...items, newItem])` on one would leave the other still
+    // pointing at the original, now-stale reference.
+    Object.entries(schema).map(([key, field]) => [key, field.default != null ? structuredClone(field.default) : null])
   );
 }

@@ -36,6 +36,16 @@ const mainBtnVariants = cva(
           "bg-lb-red text-white",
           "hover:enabled:bg-lb-red/90",
         ],
+        tertiary: [
+          "bg-transparent text-lb-brand",
+          "hover:enabled:bg-lb-brand-light",
+          "disabled:bg-transparent",
+        ],
+        "danger-tertiary": [
+          "bg-transparent text-lb-red",
+          "hover:enabled:bg-[#FAE6E8]",
+          "disabled:bg-transparent",
+        ],
       },
       size: {
         xl: "h-14 px-6 rounded-lb-btn text-[16px] font-lb-bold leading-[22px] tracking-[0.11px] gap-2",

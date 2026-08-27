@@ -4,7 +4,6 @@
         "notifications": "Notifikasi",
         "userProfile": "Profil Pengguna",
         "viewStorefront": "Lihat Website",
-        "editWebsite": "Edit Website Anda",
         "logout": "Keluar"
     },
     "sidebar": {
@@ -14,6 +13,12 @@
         "catalog": "Katalog",
         "package": "Paket",
         "modifier": "Modifier",
+        "onlineStore": "Toko Online",
+        "websiteStudio": "Website Studio",
+        "siteBuilder": "Site Builder",
+        "pageList": "Daftar Halaman",
+        "theme": "Tema",
+        "pages": "Halaman",
         "orders": "Pesanan",
         "rfq": "Permintaan Penawaran",
         "bookings": "Pemesanan",
@@ -140,6 +145,22 @@
         "dismiss": "Tutup"
     },
     "catalog": {
+        "title": "Katalog",
+        "searchPlaceholder": "Cari",
+        "errorTitle": "Gagal memuat katalog",
+        "retry": "Coba Lagi",
+        "columns": {
+            "catalogName": "Nama Katalog",
+            "category": "Kategori",
+            "weight": "Berat",
+            "volume": "Volume",
+            "sellingPrice": "Harga Jual",
+            "websiteVisibility": "Visibilitas Website"
+        },
+        "emptyFiltered": "Hasil Pencarian Tidak Ditemukan",
+        "emptyFilteredSub": "Coba cari dengan kata kunci lain, ya?",
+        "emptyDefault": "Belum Ada Katalog",
+        "emptyDefaultSub": "Tidak dapat menemukan katalog apapun dari tokomu.",
         "filter": {
             "searchPlaceholder": "Cari",
             "removeFilter": "Hapus Filter",
@@ -173,12 +194,13 @@
         },
         "detail": {
             "close": "tutup",
-            "deactivateWarningTitle": "Layanan yang terhubung dengan modifier ini akan menjadi tidak tersedia",
-            "deactivateWarningDesc": "Pastikan modifier ini dipilih minimal {{min}} ya.",
+            "deactivateWarningTitle": "Layanan yang terkait dengan modifier ini akan menjadi tidak tersedia",
+            "deactivateWarningDesc": "Modifier ini harus dipilih minimal {{min}} item.",
             "deactivateBtn": "Nonaktifkan Modifier",
             "loadError": "Gagal memuat modifier",
-            "enabledMsg": "Berhasil! Modifier telah diaktifkan",
-            "disabledMsg": "Berhasil! Modifier telah dinonaktifkan",
+            "toggleFailed": "Gagal mengubah modifier",
+            "enabledMsg": "Modifier telah diaktifkan",
+            "disabledMsg": "Modifier telah dinonaktifkan",
             "availabilityTitle": "Ketersediaan Modifier",
             "availabilityDesc": "Klik toggle untuk mengatur ketersediaan",
             "minActiveInfo": "Minimal {{min}} opsi harus aktif untuk mengaktifkan modifier ini.",

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Undo2, Redo2, MoreVertical } from 'lucide-react';
+import { ArrowLeft, Undo2, Redo2, MoreVertical } from 'lucide-react';
 import { MainBtn, IconBtn, Tooltip } from '../../../ce-ui';
 import ViewportToggle from './ViewportToggle';
 
@@ -22,6 +22,7 @@ export default function TopBar({
   onPreview,
   onPublish,
   onDiscard,
+  onExit,
 }) {
   const { t } = useTranslation();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -36,6 +37,15 @@ export default function TopBar({
   return (
     <header className="flex h-14 shrink-0 items-center justify-between border-b border-gray-200 bg-white px-4">
       <div className="flex items-center gap-3 min-w-0">
+        <Tooltip content={t('sectionBuilder:editor.topBar.exit')}>
+          <IconBtn
+            icon={<ArrowLeft size={16} />}
+            variant="ghost"
+            size="sm"
+            aria-label={t('sectionBuilder:editor.topBar.exit')}
+            onClick={onExit}
+          />
+        </Tooltip>
         <span className="font-semibold text-gray-900 truncate">{t('sectionBuilder:editor.topBar.title')}</span>
         <span className="text-gray-300">/</span>
         <span className="text-gray-700 truncate">{pageName}</span>

@@ -1,18 +1,15 @@
-/** US-11.D4 — Brand Values. */
+import { SECTION_CHROME_FIELDS } from '../shared/sectionChrome';
+import { HEADING_SIZE_FIELD } from '../shared/headingSize';
+
+/** US-11.D4 — Brand Values. Value items are now blocks (see blockConfig). */
 export const schema = {
   heading: { type: 'text', label: 'Section heading', maxLength: 100, default: 'Why shop with us', group: 'content' },
   show_heading: { type: 'boolean', label: 'Show heading', default: true, group: 'content' },
-  values: {
-    type: 'repeater',
-    label: 'Value items',
-    maxItems: 6,
-    group: 'content',
-    itemSchema: {
-      icon: { type: 'text', label: 'Icon (emoji)', maxLength: 4, default: '⭐' },
-      label: { type: 'text', label: 'Label', maxLength: 100, default: '' },
-      description: { type: 'text', label: 'Description', maxLength: 400, default: '' },
-    },
-  },
-  background_color: { type: 'color', label: 'Background color', default: { slot: 'background' }, group: 'color' },
+  ...HEADING_SIZE_FIELD,
   icon_color: { type: 'color', label: 'Icon color', default: { slot: 'accent' }, group: 'color' },
+  ...SECTION_CHROME_FIELDS,
+  padding_top: { ...SECTION_CHROME_FIELDS.padding_top, default: 40 },
+  padding_bottom: { ...SECTION_CHROME_FIELDS.padding_bottom, default: 40 },
 };
+
+export const blockConfig = { max: 6, legacyDataKey: 'values', allowed: ['value', 'heading', 'text', 'button', 'image', 'group'], presets: ['value', 'value', 'value'] };

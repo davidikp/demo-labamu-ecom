@@ -209,7 +209,96 @@
       ],
       "followUs": "Ikuti Kami"
     },
-    "previewOnly": "Hanya Pratinjau Demo"
+    "previewOnly": "Hanya Pratinjau Demo",
+    "cart": {
+      "pageTitle": "Keranjang",
+      "empty": "Keranjangmu kosong.",
+      "added": "Berhasil ditambahkan ke keranjang",
+      "pickupOnly": "Ambil Sendiri",
+      "remove": "Hapus dari keranjang"
+    },
+    "checkout": {
+      "customer": {
+        "title": "Informasi Pelanggan",
+        "reset": "Atur Ulang",
+        "edit": "Ubah",
+        "add": "Tambah informasi pelanggan",
+        "notesLabel": "Catatan",
+        "modalTitle": "Informasi Pelanggan",
+        "modalSubtitle": "Silakan masukkan nomor telepon Anda untuk memproses pesanan.",
+        "continue": "Lanjutkan",
+        "phoneRequired": "Kolom tidak boleh kosong",
+        "phoneAlreadyRegistered": "Nomor telepon ini sudah terdaftar",
+        "detailTitle": "Tambah Informasi Pelanggan",
+        "editTitle": "Ubah Informasi Pelanggan",
+        "detailSubtitle": "Pastikan informasi yang dimasukkan valid untuk pemrosesan pesanan. Perubahan apapun harus diajukan melalui penjual.",
+        "firstTimeNotice": "Sepertinya ini kunjungan pertama Anda di sini. Silakan berikan data Anda untuk melanjutkan pesanan.",
+        "field": {
+          "name": "Nama",
+          "namePlaceholder": "Masukkan Nama",
+          "phone": "Telepon",
+          "email": "Email",
+          "emailPlaceholder": "Masukkan Email",
+          "country": "Negara",
+          "countryPlaceholder": "Pilih Negara",
+          "province": "Provinsi",
+          "provincePlaceholder": "Pilih Provinsi",
+          "city": "Kota",
+          "cityPlaceholder": "Pilih Kota",
+          "district": "Kecamatan",
+          "districtPlaceholder": "Pilih Kecamatan",
+          "region": "Kelurahan",
+          "regionPlaceholder": "Pilih Kelurahan",
+          "zip": "Kode Pos",
+          "zipLoading": "Memuat...",
+          "zipPlaceholder": "Contoh: 12345",
+          "address": "Alamat",
+          "addressPlaceholder": "Contoh: Jalan Mawar No.1",
+          "pinpoint": "Titik Lokasi Alamat",
+          "pinpointPlaceholder": "Nama jalan, gedung, nomor rumah",
+          "notes": "Catatan",
+          "notesPlaceholder": "Contoh: Silakan tinggalkan paket di resepsionis"
+        },
+        "pinTitle": "Lokasi yang ditandai",
+        "pinInstructionTitle": "Tandai titik yang tepat",
+        "pinInstructionSubtitle": "Kami akan mengirim ke alamat pada peta. Mohon periksa titik lokasi dan sesuaikan jika perlu.",
+        "pinnedLabel": "Titik Alamat",
+        "fieldRequired": "Kolom tidak boleh kosong",
+        "saveForNext": "Simpan data untuk pesanan berikutnya",
+        "back": "Kembali",
+        "save": "Simpan",
+        "saveChanges": "Simpan Perubahan",
+        "required": "Tambahkan informasi pelanggan terlebih dahulu"
+      },
+      "shipping": {
+        "title": "Opsi Pengiriman",
+        "delivery": "Pengiriman",
+        "pickup": "Ambil Sendiri",
+        "courierNeedsCustomer": "Tambahkan informasi pelanggan untuk melihat opsi kurir.",
+        "outOfCoverage": "Alamat Anda berada di luar area pengiriman yang tersedia. Mohon gunakan alamat pengiriman lain.",
+        "pickupLocationLabel": "Ambil Pembelian di Toko",
+        "pickupLocationDefault": "Alamat toko belum diatur",
+        "pickupLocationError": "Tidak dapat memuat lokasi pengambilan",
+        "reloadLocation": "Muat Ulang Lokasi",
+        "staleNotice": "Biaya pengiriman harus dihitung ulang karena isi keranjang belanja Anda telah berubah. Hitung ulang sebelum melakukan pemesanan.",
+        "recalculate": "Hitung Ulang Biaya Pengiriman"
+      },
+      "notes": {
+        "title": "Catatan Pesanan",
+        "placeholder": "Tambahkan catatan untuk pesanan ini"
+      },
+      "summary": {
+        "title": "Ringkasan Pesanan",
+        "subtotal": "Subtotal",
+        "tax": "PPN (11%)",
+        "shipping": "Biaya Pengiriman",
+        "total": "Total Belanja"
+      },
+      "purchase": {
+        "button": "Bayar",
+        "success": "Pesanan berhasil dibuat (hanya demo — tidak ada pesanan sungguhan yang dibuat)."
+      }
+    }
   },
   "studio": {
     "title": "Studio",

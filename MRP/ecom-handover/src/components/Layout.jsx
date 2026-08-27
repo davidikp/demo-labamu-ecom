@@ -2,8 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
-  ExternalLink, Pencil, Bell,
-  LayoutDashboard, BookOpen, ShoppingCart, FileText, Calendar,
+  ExternalLink, Bell, Pencil,
+  LayoutDashboard, BookOpen, Store, ShoppingCart, FileText, Calendar,
   MessageSquare, Truck, Globe, UserCog, ChevronDown, ChevronLeft, ChevronRight, Check,
 } from 'lucide-react';
 import Button from './ui/Button';
@@ -22,6 +22,14 @@ const MENU_ITEMS = [
       { id: 'catalog', path: '/catalog', labelKey: 'dashboard:sidebar.catalog', label: 'Catalog' },
       { id: 'package', path: '/catalog/package', labelKey: 'dashboard:sidebar.package', label: 'Package' },
       { id: 'modifier', path: '/catalog/modifier', labelKey: 'dashboard:sidebar.modifier', label: 'Modifier' },
+    ],
+  },
+  {
+    id: 'website-studio', icon: Store, labelKey: 'dashboard:sidebar.websiteStudio', label: 'Website Studio',
+    children: [
+      { id: 'site-builder', path: '/online-store/theme', labelKey: 'dashboard:sidebar.siteBuilder', label: 'Site Builder' },
+      { id: 'page-list', path: '/online-store/pages', labelKey: 'dashboard:sidebar.pageList', label: 'Page List' },
+      { id: 'preferences', path: '/online-store/preferences', labelKey: 'dashboard:sidebar.preferences', label: 'Preferences' },
     ],
   },
   { id: 'orders', path: '/orders', icon: ShoppingCart, labelKey: 'dashboard:sidebar.orders', label: 'Orders' },
@@ -461,6 +469,17 @@ export default function Layout() {
           top: 0,
           zIndex: 100,
         }}>
+          {/* Edit Website Button — jumps straight into the section-builder
+              editor for the store's live draft, from anywhere in the app. */}
+          <Button
+            variant="secondary"
+            size="small"
+            leftIcon={<Pencil size={16} />}
+            onClick={() => navigate('/section-builder/demo')}
+          >
+            {t('dashboard:header.editWebsite', 'Edit website')}
+          </Button>
+
           {/* View Website Button */}
           <Button
             variant="secondary"
@@ -469,16 +488,6 @@ export default function Layout() {
             onClick={() => window.open('/storefront', '_blank')}
           >
             {t('dashboard:header.viewStorefront')}
-          </Button>
-
-          {/* Edit Your Website Button */}
-          <Button
-            variant="secondary"
-            size="small"
-            leftIcon={<Pencil size={16} />}
-            onClick={() => navigate('/websites')}
-          >
-            {t('dashboard:header.editWebsite')}
           </Button>
 
           <div style={{ width: '1px', height: '32px', background: '#E9E9E9' }} />

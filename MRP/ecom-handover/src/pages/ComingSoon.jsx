@@ -1,6 +1,8 @@
 import { useLocation } from 'react-router-dom';
 
 const TITLES = {
+  '/online-store/theme': 'Site Builder',
+  '/online-store/preferences': 'Preferences',
   '/orders': 'Orders',
   '/catalog/package': 'Package',
   '/catalog/modifier': 'Modifier',
