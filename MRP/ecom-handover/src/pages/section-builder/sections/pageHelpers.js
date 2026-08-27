@@ -44,3 +44,16 @@ export function visibilityBucket(page) {
   if (page.visibility === 'hidden') return 'hidden';
   return 'visible';
 }
+
+/**
+ * Full public-facing URL for a page. `domain` is the real
+ * `<company_slug>.labamu.co.id` storefront domain (see
+ * `pages/online-store/storeDomain.js`) — pass it in explicitly rather than
+ * looking it up here, since it comes from `useCompany()` (a React context)
+ * and this module stays plain/context-free. Single source of truth for the
+ * URL shape so Page List's copy-URL column and the Page editor's own
+ * copy-URL affordance can't drift on the format.
+ */
+export function pageUrlFor(page, domain) {
+  return `https://${domain}${page?.slug ?? ''}`;
+}

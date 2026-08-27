@@ -8,10 +8,13 @@ import { createFreshState } from '../section-builder/state/useSectionBuilder';
 import { runDraftAction } from '../section-builder/state/runDraftAction';
 import { ACTIONS } from '../section-builder/state/builderReducer';
 import ConfirmDialog from '../section-builder/ui/ConfirmDialog';
-import { visibilityBucket } from '../section-builder/sections/pageHelpers';
+import { visibilityBucket, pageUrlFor } from '../section-builder/sections/pageHelpers';
 import { formatRelativeTime } from './timeUtils';
 import SimulateTrigger from './SimulateTrigger';
+import CopyUrlButton from './CopyUrlButton';
+import { storeDomainFor } from './storeDomain';
 import { useSnackbar } from '../../contexts/SnackbarContext';
+import { useCompany } from '../../contexts/CompanyContext';
 
 // TODO: replace with the real active store id once multi-store routing
 // exists — matches the hardcoded id used by Layout.jsx's builder entry and
@@ -55,6 +58,8 @@ export default function PagesManagement() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { showSnackbar } = useSnackbar();
+  const { companyData } = useCompany();
+  const storeDomain = storeDomainFor(companyData);
   const [draft, setDraft] = useState(() => loadDraft(STORE_ID) ?? createFreshState(STORE_ID));
 
   const [visibilityFilter, setVisibilityFilter] = useState('all');
@@ -239,6 +244,27 @@ export default function PagesManagement() {
       key: 'visibility',
       header: t('sectionBuilder:onlineStore.pages.columnVisibility', 'Visibility'),
       render: (_value, row) => visibilityBadge(row, t),
+    },
+    {
+      key: 'url',
+      header: t('sectionBuilder:onlineStore.pages.columnUrl', 'URL'),
+      render: (_value, row) => {
+        const fullUrl = row.slug ? pageUrlFor(row, storeDomain) : null;
+        return (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+            <span
+              title={fullUrl ?? undefined}
+              style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '13px', color: '#6B7280' }}
+            >
+              {/* Displayed without the protocol (matches Shopify's own
+                  "storename.myshopify.com/handle" convention) — the copy
+                  button still copies the full https:// URL. */}
+              {fullUrl ? fullUrl.replace(/^https:\/\//, '') : '—'}
+            </span>
+            {fullUrl && <CopyUrlButton url={fullUrl} size={14} />}
+          </div>
+        );
+      },
     },
     {
       key: 'sections',

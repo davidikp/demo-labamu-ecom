@@ -47,7 +47,6 @@ const OrderList = React.lazy(() => import('./pages/OrderList'));
 const OrderDetail = React.lazy(() => import('./pages/OrderDetail'));
 const HouzezPreview = React.lazy(() => import('./pages/websites/templates/houzez/HouzezPreview'));
 const TemplateBuilder = React.lazy(() => import('./pages/websites/TemplateBuilder'));
-const SectionBuilder = React.lazy(() => import('./pages/section-builder/SectionBuilder'));
 const SectionBuilderPreview = React.lazy(() => import('./pages/section-builder/PreviewLive'));
 const PagesManagement = React.lazy(() => import('./pages/online-store/PagesManagement'));
 const PageEditor = React.lazy(() => import('./pages/online-store/PageEditor'));
@@ -163,15 +162,16 @@ export default function App() {
           <Route path="/section-builder/:storeId" element={
             <BuilderErrorBoundary>
               <ProtectedRoute>
-                <SectionBuilder />
+                <ComingSoon />
               </ProtectedRoute>
             </BuilderErrorBoundary>
           } />
-          {/* Deep link from Online Store > Pages into a specific page */}
+          {/* Deep link from Online Store > Pages into a specific page —
+              same as Site Builder, this is disabled behind Coming Soon. */}
           <Route path="/section-builder/:storeId/pages/:pageId" element={
             <BuilderErrorBoundary>
               <ProtectedRoute>
-                <SectionBuilder />
+                <ComingSoon />
               </ProtectedRoute>
             </BuilderErrorBoundary>
           } />
