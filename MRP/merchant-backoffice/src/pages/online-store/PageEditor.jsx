@@ -8,7 +8,7 @@ import { loadDraft } from '../section-builder/state/storage';
 import { createFreshState } from '../section-builder/state/useSectionBuilder';
 import { runDraftAction } from '../section-builder/state/runDraftAction';
 import { ACTIONS } from '../section-builder/state/builderReducer';
-import { slugify, isSlugTaken, createPageId, visibilityBucket } from '../section-builder/sections/pageHelpers';
+import { slugify, isSlugTaken, createPageId, visibilityBucket, pageUrlFor } from '../section-builder/sections/pageHelpers';
 import { schemaForType } from '../section-builder/sections/index';
 import { defaultsForSchema } from '../section-builder/sections/schemaDefaults';
 import { makeBlock } from '../section-builder/sections/blockHelpers';
@@ -16,6 +16,9 @@ import ConfirmDialog from '../section-builder/ui/ConfirmDialog';
 import RichTextEditor from './RichTextEditor';
 import GenerateTextModal from './GenerateTextModal';
 import SimulateTrigger from './SimulateTrigger';
+import CopyUrlButton from './CopyUrlButton';
+import { storeDomainFor } from './storeDomain';
+import { useCompany } from '../../contexts/CompanyContext';
 
 // TODO: replace with the real active store id once multi-store routing
 // exists — matches the hardcoded id used across online-store/*.
@@ -153,6 +156,8 @@ export default function PageEditor() {
   const navigate = useNavigate();
   const { pageId: routePageId } = useParams();
   const { showSnackbar } = useSnackbar();
+  const { companyData } = useCompany();
+  const storeDomain = storeDomainFor(companyData);
   const isCreate = routePageId === undefined;
 
   const [draft, setDraft] = useState(() => loadDraft(STORE_ID) ?? createFreshState(STORE_ID));
@@ -332,10 +337,34 @@ export default function PageEditor() {
 
   const [isDuplicating, setIsDuplicating] = useState(false);
 
+  // Duplicate a Page — clicking the button no longer duplicates immediately;
+  // it opens a confirmation modal (Shopify's "Duplicate page?" pattern) with
+  // an editable, pre-filled "Copy of X" title, so the user can rename the
+  // copy before it's created instead of only after.
+  const [confirmDuplicate, setConfirmDuplicate] = useState(false);
+  const [duplicateTitle, setDuplicateTitle] = useState('');
+  const [duplicateTitleError, setDuplicateTitleError] = useState(null);
+
+  const openDuplicateModal = () => {
+    if (!pageId || !existingPage) return;
+    setDuplicateTitle(nextCopyTitle(existingPage.name, draft.pages));
+    setDuplicateTitleError(null);
+    setConfirmDuplicate(true);
+  };
+
+  const closeDuplicateModal = () => {
+    setConfirmDuplicate(false);
+    setDuplicateTitleError(null);
+  };
+
   const handleDuplicate = () => {
     if (!pageId || !existingPage || isDuplicating) return;
+    const newName = duplicateTitle.trim();
+    if (!newName) {
+      setDuplicateTitleError(t('sectionBuilder:onlineStore.pageEditor.titleRequired', 'Field cannot be empty'));
+      return;
+    }
     setIsDuplicating(true);
-    const newName = nextCopyTitle(existingPage.name, draft.pages);
     const newId = createPageId(newName);
     const baseSlug = slugify(newName);
     const slug = isSlugTaken(baseSlug, draft.pages) ? `${baseSlug}-${newId.slice(-8)}` : baseSlug;
@@ -350,7 +379,10 @@ export default function PageEditor() {
       visibility: 'hidden',
       visibleFrom: null,
     };
-    runDraftAction(STORE_ID, { type: ACTIONS.ADD_PAGE, page });
+    const next = runDraftAction(STORE_ID, { type: ACTIONS.ADD_PAGE, page });
+    setDraft(next);
+    setIsDuplicating(false);
+    setConfirmDuplicate(false);
     showSnackbar(t('sectionBuilder:onlineStore.pageEditor.duplicatedSnackbar', 'Page successfully duplicated'), 'green');
     navigate(`/online-store/pages/${newId}`);
   };
@@ -372,6 +404,18 @@ export default function PageEditor() {
     // showing the preview. This link is our own internal route, not
     // third-party content, so there's no tab-nabbing risk being traded away.
     window.open(`/online-store/pages/${pageId}/preview`, '_blank');
+  };
+
+  // Add New Page has no pageId yet — handlePreview above early-returns
+  // without one, since the preview route needs a real, persisted page to
+  // read. So the Preview button in create mode saves first (same as "Edit
+  // in Editor"'s handleSaveThenEditInEditor), then opens the preview for
+  // the page it just created. persistPage() itself already surfaces any
+  // validation failure (e.g. empty title) as an inline field error, so a
+  // null return here just means "don't navigate anywhere."
+  const handleSaveThenPreview = () => {
+    const id = persistPage();
+    if (id) window.open(`/online-store/pages/${id}/preview`, '_blank');
   };
 
   const [confirmUnsavedEditor, setConfirmUnsavedEditor] = useState(false);
@@ -616,9 +660,12 @@ export default function PageEditor() {
               />
               {!isCreate && pageId && (
                 <>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">
-                    {t('sectionBuilder:onlineStore.pageEditor.urlHandle', 'URL handle')}
-                  </label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-medium text-gray-600">
+                      {t('sectionBuilder:onlineStore.pageEditor.urlHandle', 'URL handle')}
+                    </label>
+                    <CopyUrlButton url={pageUrlFor(existingPage, storeDomain)} size={13} />
+                  </div>
                   <div className="flex items-center rounded-lg border border-gray-300 focus-within:border-[#006BFF] overflow-hidden">
                     <span className="pl-3 text-sm text-gray-400">/</span>
                     <input
@@ -734,7 +781,7 @@ export default function PageEditor() {
               variant="secondary"
               size="lg"
               label={t('sectionBuilder:onlineStore.pageEditor.duplicate', 'Duplicate')}
-              onClick={handleDuplicate}
+              onClick={openDuplicateModal}
             />
           )}
           {!isCreate && pageId && (
@@ -743,6 +790,18 @@ export default function PageEditor() {
               size="lg"
               label={t('sectionBuilder:onlineStore.pageEditor.preview', 'Preview')}
               onClick={handlePreview}
+            />
+          )}
+          {/* Add New Page (no pageId yet) — Preview saves the page first,
+              then opens it, instead of only being available once you've
+              already saved once via the primary Save button. */}
+          {isCreate && !pageId && (
+            <MainBtn
+              variant="secondary"
+              size="lg"
+              label={t('sectionBuilder:onlineStore.pageEditor.preview', 'Preview')}
+              onClick={handleSaveThenPreview}
+              disabled={isSaving}
             />
           )}
           {!isCreate && pageId && (
@@ -779,6 +838,40 @@ export default function PageEditor() {
         onConfirm={handleDelete}
         onCancel={() => setConfirmDelete(false)}
       />
+
+      <Popup
+        open={confirmDuplicate}
+        onClose={closeDuplicateModal}
+        platform="desktop"
+        title={t('sectionBuilder:onlineStore.pageEditor.duplicateConfirmTitle', 'Duplicate page?')}
+        primaryAction={{
+          label: t('sectionBuilder:onlineStore.pageEditor.duplicate', 'Duplicate'),
+          onClick: handleDuplicate,
+          disabled: isDuplicating,
+          loading: isDuplicating,
+        }}
+        secondaryAction={{
+          label: t('sectionBuilder:onlineStore.pageEditor.cancel', 'Cancel'),
+          onClick: closeDuplicateModal,
+        }}
+      >
+        <label className="mb-1.5 block text-xs font-medium text-lb-on-surface-2">
+          {t('sectionBuilder:onlineStore.pageEditor.duplicatePageTitleLabel', 'Page title')}
+        </label>
+        <input
+          type="text"
+          autoFocus
+          value={duplicateTitle}
+          onChange={(e) => {
+            setDuplicateTitle(e.target.value);
+            if (duplicateTitleError) setDuplicateTitleError(null);
+          }}
+          className={`w-full rounded-lg border px-3 py-2 text-sm text-gray-800 outline-none focus:border-[#006BFF] ${
+            duplicateTitleError ? 'border-red-500' : 'border-gray-300'
+          }`}
+        />
+        {duplicateTitleError && <p className="mt-1 text-xs text-red-500">{duplicateTitleError}</p>}
+      </Popup>
 
       <Popup
         open={confirmUnsavedEditor}

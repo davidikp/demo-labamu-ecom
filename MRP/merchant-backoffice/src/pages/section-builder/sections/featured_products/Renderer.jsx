@@ -1,57 +1,21 @@
 import { memo } from 'react';
+import { ChevronRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import catalog from '../../mocks/catalog.json';
 import EditableText from '../../ui/EditableText';
+import StorefrontContainer from '../../ui/primitives/StorefrontContainer';
+import { resolveMedia } from '../../ui/fields/imageValue';
+import ProductCard from '../shared/ProductCard';
 import { HEADING_SIZE_CLASS } from '../shared/headingSize';
 import { ASPECT_RATIO_CLASS } from '../shared/imageAspectRatio';
 import { useResponsiveMobile } from '../shared/useResponsiveMobile';
 
-// TODO(catalog integration): sourced from the static mock fixture — swap
-// for a real products API once one exists (see api/client.js's registerMock
-// pattern, already used for /storefront/products).
-function ProductCard({ product, showPrice, showQuickAdd, aspectClass }) {
-  const { t } = useTranslation();
-  const soldOut = product.stock === 0;
-  return (
-    <div className="text-left">
-      <div className={`mb-2 flex items-center justify-center rounded-md bg-gray-100 text-gray-300 ${aspectClass}`}>
-        {product.image ? <img src={product.image} alt={product.name} className="h-full w-full rounded-md object-cover" /> : t('sectionBuilder:sections.common.noImage')}
-      </div>
-      <p className="text-sm text-gray-700">{product.name}</p>
-      {showPrice !== false && (
-        <p className="text-sm font-semibold text-gray-900">
-          {soldOut ? (
-            <span className="font-medium text-gray-400">{t('sectionBuilder:sections.featuredProducts.soldOut')}</span>
-          ) : (
-            <>
-              ${product.price.toFixed(2)}
-              {product.compareAtPrice && (
-                <span className="ml-1 font-normal text-gray-400 line-through">${product.compareAtPrice.toFixed(2)}</span>
-              )}
-            </>
-          )}
-        </p>
-      )}
-      {showQuickAdd && !soldOut && (
-        <button
-          type="button"
-          disabled
-          className="mt-2 w-full rounded-md bg-gray-900 px-3 py-1.5 text-xs font-medium text-white"
-        >
-          {t('sectionBuilder:sections.featuredProducts.quickAdd', 'Add to cart')}
-        </button>
-      )}
-    </div>
-  );
-}
+const COLS_CLASS = { '1': 'grid-cols-1', '2': 'grid-cols-2', '3': 'grid-cols-3', '4': 'grid-cols-4', '5': 'grid-cols-5', '6': 'grid-cols-6' };
 
-const COLS_CLASS = { '1': 'grid-cols-1', '2': 'grid-cols-2', '3': 'grid-cols-3', '4': 'grid-cols-4', '5': 'grid-cols-5' };
+// Fixed card width for the horizontal-scroll mobile layout — matches the
+// golden-reference Houzez product row (140px cards, scroll-snapped).
+const SCROLL_CARD_WIDTH = { width: '140px', flexShrink: 0, scrollSnapAlign: 'start' };
 
-// Shape-adapter shim: catalog.json has no `category` field, so — consistent
-// with the same derivation used in catalog_list/Renderer.jsx's ADAPTED_PRODUCTS
-// shim — we fall back to each product's `vendor` (or 'General' if absent) as
-// a stand-in display category, so the two sections show consistent groupings
-// for the same mock products.
 function deriveCategory(product) {
   return product.vendor || 'General';
 }
@@ -70,38 +34,63 @@ function groupProductsByCategory(products) {
   return groups;
 }
 
-// `data.products` is a repeater where each item picks its own source: a
-// real catalog product (by id) or fully custom title/image/price/url —
-// resolved here into the normalized shape ProductCard expects. Mirrors
-// collection_list's `collections` field. Empty/unset falls back to the
-// first few catalog products — the original, pre-picker default — so
-// sections saved before this field existed don't render nothing.
-function productsForSection(data) {
+function productsForSection(data, mediaLibrary) {
   const items = data.products ?? [];
   if (!items.length) return catalog.products.slice(0, 4);
   return items
     .map((item) => {
       if (item.source === 'custom') {
-        const price = parseFloat(item.price);
-        return { id: item.id, name: item.title, image: item.image, price: Number.isFinite(price) ? price : 0, compareAtPrice: null, stock: 1 };
+        return { id: item.id, name: item.title, image: resolveMedia(item.image, mediaLibrary)?.url ?? null, price: item.price || '', compareAtPrice: null, stock: 1 };
       }
       return catalog.products.find((p) => p.id === item.product_id) ?? null;
     })
     .filter(Boolean);
 }
 
-function FeaturedProductsRenderer({ data, onEdit, isMobile }) {
+/** Renders one row of product cards, either as a wrapping grid or — when
+ * `mobile` and `mobile_layout === 'horizontal_scroll'` — a single
+ * scroll-snapped row (golden-reference Houzez mobile behavior). */
+function ProductRow({ products, theme, data, aspectClass, colsClass, mobile, horizontalScroll }) {
+  if (mobile && horizontalScroll) {
+    return (
+      <div className="flex gap-4 overflow-x-auto pb-2" style={{ scrollSnapType: 'x mandatory', WebkitOverflowScrolling: 'touch' }}>
+        {products.map((product) => (
+          <ProductCard key={product.id} product={product} theme={theme} showPrice={data.show_price} showQuickAdd={data.show_quick_add} aspectClass={aspectClass} widthStyle={SCROLL_CARD_WIDTH} />
+        ))}
+      </div>
+    );
+  }
+  return (
+    <div className={`grid gap-4 ${colsClass}`}>
+      {products.map((product) => (
+        <ProductCard key={product.id} product={product} theme={theme} showPrice={data.show_price} showQuickAdd={data.show_quick_add} aspectClass={aspectClass} />
+      ))}
+    </div>
+  );
+}
+
+function ViewAllLink({ label, theme }) {
+  const primary = theme?.colors?.primary;
+  return (
+    <p className={`flex shrink-0 items-center gap-1 text-sm font-semibold ${primary ? '' : 'text-gray-700 underline'}`} style={{ color: primary }}>
+      {label} <ChevronRight size={16} strokeWidth={2.5} />
+    </p>
+  );
+}
+
+function FeaturedProductsRenderer({ data, onEdit, isMobile, mediaLibrary, theme }) {
   const { t } = useTranslation();
   const mobile = useResponsiveMobile(isMobile);
-  const products = productsForSection(data);
+  const products = productsForSection(data, mediaLibrary);
   const colsClass = COLS_CLASS[mobile ? data.columns_mobile ?? '2' : data.columns_desktop ?? '4'] ?? 'grid-cols-2';
+  const horizontalScroll = data.mobile_layout === 'horizontal_scroll';
   const groups = data.group_by_category ? groupProductsByCategory(products) : null;
   const headingSizeClass = HEADING_SIZE_CLASS[data.heading_size] ?? HEADING_SIZE_CLASS.medium;
   const aspectClass = ASPECT_RATIO_CLASS[data.image_aspect_ratio] ?? ASPECT_RATIO_CLASS.square;
   const viewAllLabel = t('sectionBuilder:sections.featuredProducts.viewAll');
 
   return (
-    <section className="px-6">
+    <StorefrontContainer as="section" theme={theme}>
       {(data.show_heading !== false || (!groups && data.show_view_all !== false)) && (
         <div className="mb-6 flex items-center justify-between gap-4">
           {data.show_heading !== false ? (
@@ -119,9 +108,7 @@ function FeaturedProductsRenderer({ data, onEdit, isMobile }) {
           ) : (
             <span />
           )}
-          {!groups && data.show_view_all !== false && (
-            <p className="shrink-0 text-sm font-medium text-gray-700 underline">{viewAllLabel} →</p>
-          )}
+          {!groups && data.show_view_all !== false && <ViewAllLink label={viewAllLabel} theme={theme} />}
         </div>
       )}
       {groups ? (
@@ -130,26 +117,16 @@ function FeaturedProductsRenderer({ data, onEdit, isMobile }) {
             <div key={group.category}>
               <div className="mb-4 flex items-center justify-between">
                 <h3 className="text-base font-semibold text-gray-900">{group.category}</h3>
-                {data.show_view_all !== false && (
-                  <p className="shrink-0 text-sm font-medium text-gray-700 underline">{viewAllLabel} →</p>
-                )}
+                {data.show_view_all !== false && <ViewAllLink label={viewAllLabel} theme={theme} />}
               </div>
-              <div className={`grid gap-4 ${colsClass}`}>
-                {group.products.map((product) => (
-                  <ProductCard key={product.id} product={product} showPrice={data.show_price} showQuickAdd={data.show_quick_add} aspectClass={aspectClass} />
-                ))}
-              </div>
+              <ProductRow products={group.products} theme={theme} data={data} aspectClass={aspectClass} colsClass={colsClass} mobile={mobile} horizontalScroll={horizontalScroll} />
             </div>
           ))}
         </div>
       ) : (
-        <div className={`grid gap-4 ${colsClass}`}>
-          {products.map((product) => (
-            <ProductCard key={product.id} product={product} showPrice={data.show_price} showQuickAdd={data.show_quick_add} aspectClass={aspectClass} />
-          ))}
-        </div>
+        <ProductRow products={products} theme={theme} data={data} aspectClass={aspectClass} colsClass={colsClass} mobile={mobile} horizontalScroll={horizontalScroll} />
       )}
-    </section>
+    </StorefrontContainer>
   );
 }
 

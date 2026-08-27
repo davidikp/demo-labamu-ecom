@@ -30,6 +30,7 @@ export default function SettingsPanel({
   onRemove,
   removeLabel,
   activePage,
+  viewport,
 }) {
   const { t } = useTranslation();
   if (!entity) {
@@ -87,6 +88,7 @@ export default function SettingsPanel({
                     onAddMedia={onAddMedia}
                     onOpenLibrary={onOpenLibrary}
                     activePage={activePage}
+                    viewport={viewport}
                   />
                   {field.contrastCheck && (
                     <ContrastBadge

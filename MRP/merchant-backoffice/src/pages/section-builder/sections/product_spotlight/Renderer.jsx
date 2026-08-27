@@ -18,7 +18,7 @@ function ProductSpotlightRenderer({ data, blocks = [], theme, mediaLibrary, onEd
   const detailsOrder = imageFirst ? 'order-2' : 'order-1';
 
   return (
-    <section className="px-6">
+    <section className="relative px-6">
       {data.source_mode === 'manual' ? (
         <BlockStream
           sectionType="product_spotlight"

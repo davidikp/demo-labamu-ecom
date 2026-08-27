@@ -1,8 +1,10 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ArrowLeft } from 'lucide-react';
 import Canvas from '../section-builder/ui/Canvas';
+import ViewportToggle from '../section-builder/ui/ViewportToggle';
+import { DEFAULT_BREAKPOINT } from '../section-builder/themes/breakpoints';
 import { siteTemplateById, defaultPreviewDataFor } from '../section-builder/state/siteTemplates';
 
 /**
@@ -10,11 +12,16 @@ import { siteTemplateById, defaultPreviewDataFor } from '../section-builder/stat
  * Store > Theme) — a chrome-free, read-only render of that theme's own
  * default home page, at real size (unlike the gallery card's scaled-down
  * canvas). Never a merchant's real content — see `defaultPreviewDataFor`.
+ *
+ * Uses the same 5-way ViewportToggle/BREAKPOINTS the section-builder canvas
+ * uses (mobile/tablet/desktop/large desktop/fit) so a merchant can check how
+ * a theme looks at each size before committing to it, not just desktop.
  */
 export default function ThemePreview() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { templateId } = useParams();
+  const [viewport, setViewport] = useState(DEFAULT_BREAKPOINT);
 
   const template = useMemo(() => siteTemplateById(templateId), [templateId]);
   const previewData = useMemo(() => (template ? defaultPreviewDataFor(template) : null), [template]);
@@ -45,9 +52,12 @@ export default function ThemePreview() {
         <span className="text-sm text-gray-500">
           {t(`sectionBuilder:templates.${template.id}.label`, template.name)}
         </span>
+        <div className="ml-auto">
+          <ViewportToggle viewport={viewport} onChange={setViewport} />
+        </div>
       </div>
       <Canvas
-        viewport="desktop"
+        viewport={viewport}
         header={previewData.header}
         footer={previewData.footer}
         sections={previewData.sections}
@@ -55,6 +65,17 @@ export default function ThemePreview() {
         mediaLibrary={previewData.mediaLibrary ?? []}
         selectedId={null}
         readOnly
+        // Header/footer nav links (and any block linking elsewhere) only
+        // render as real, clickable elements when `onNavigate` is passed —
+        // see header/Renderer.jsx's renderLink — otherwise they're inert
+        // spans, which is what made every "button" look broken here. Every
+        // SITE_TEMPLATES entry currently defines just one `home` page, so
+        // there's nowhere else to actually navigate to yet; this at least
+        // makes the links behave like real, hoverable/clickable links
+        // instead of static text. currentPath="/" marks Home as active,
+        // matching what a merchant would expect to see highlighted.
+        onNavigate={() => {}}
+        currentPath="/"
       />
     </div>
   );

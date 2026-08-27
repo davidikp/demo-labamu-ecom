@@ -26,7 +26,7 @@ function ImageWithTextRenderer({ data, blocks = [], theme, mediaLibrary, blockCt
       <div className={`flex items-center justify-center overflow-hidden rounded-md bg-gray-100 text-gray-300 ${aspectClass} ${imageOrder}`}>
         {image ? <img src={image.url} alt={image.filename} className="h-full w-full object-cover" /> : t('sectionBuilder:sections.common.noImage')}
       </div>
-      <div className={`flex flex-col justify-center ${textOrder}`}>
+      <div className={`relative flex flex-col justify-center ${textOrder}`}>
         <BlockStream
           sectionType="image_with_text"
           blocks={blocks}

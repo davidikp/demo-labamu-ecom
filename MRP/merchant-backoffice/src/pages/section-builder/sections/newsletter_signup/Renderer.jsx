@@ -1,9 +1,9 @@
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { resolveSectionScheme } from '../shared/sectionChrome';
 import { themedButtonStyle } from '../shared/themedButtonStyle';
 import BlockStream from '../../ui/BlockStream';
 import EditableText from '../../ui/EditableText';
+import { useSectionChrome } from '../../ui/SectionChromeContext';
 
 // TODO(backend): submission/validation/rate-limiting/customer-list storage
 // (US-9.1's AC) needs a real endpoint — this renders the form only.
@@ -11,12 +11,15 @@ function NewsletterSignupRenderer({ data, blocks = [], theme, mediaLibrary, onEd
   const { t } = useTranslation();
   // Reused below as the subscribe button's text color (a white button whose
   // label matches the section's own background reads correctly against it).
-  const { background: bg } = resolveSectionScheme(data.color_scheme, theme.colors);
+  // SectionShell (the wrapper this Renderer always mounts under) already
+  // resolved data.color_scheme once — read it from context instead of
+  // importing resolveSectionScheme and recomputing it here.
+  const { background: bg } = useSectionChrome();
   const isSplit = data.layout_style === 'split';
 
   return (
     <section className={`px-6 ${isSplit ? '' : 'text-center'}`}>
-      <div className={isSplit ? 'flex items-center justify-between gap-6' : 'mx-auto max-w-md'}>
+      <div className={isSplit ? 'relative flex items-center justify-between gap-6' : 'relative mx-auto max-w-md'}>
         <BlockStream
           sectionType="newsletter_signup"
           blocks={blocks}

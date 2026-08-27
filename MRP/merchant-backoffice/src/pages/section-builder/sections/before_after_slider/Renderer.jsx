@@ -28,7 +28,7 @@ function BeforeAfterSliderRenderer({ data, blocks = [], theme, mediaLibrary, onE
   };
 
   return (
-    <section className="px-6">
+    <section className="relative px-6">
       <BlockStream
         sectionType="before_after_slider"
         blocks={blocks}

@@ -2,6 +2,7 @@ import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import catalog from '../../mocks/catalog.json';
 import EditableText from '../../ui/EditableText';
+import { resolveMedia } from '../../ui/fields/imageValue';
 import { HEADING_SIZE_CLASS } from '../shared/headingSize';
 import { ASPECT_RATIO_CLASS } from '../shared/imageAspectRatio';
 import { useResponsiveMobile } from '../shared/useResponsiveMobile';
@@ -18,13 +19,13 @@ const COLS_CLASS = { '1': 'grid-cols-1', '2': 'grid-cols-2', '3': 'grid-cols-3',
 // Empty/unset falls back to "show everything" in the catalog — the
 // original, pre-picker behavior — so sections saved before this field
 // existed don't suddenly render nothing.
-function collectionsForSection(data) {
+function collectionsForSection(data, mediaLibrary) {
   const items = data.collections ?? [];
   if (!items.length) return catalog.collections;
   return items
     .map((item) => {
       if (item.source === 'custom') {
-        return { id: item.id, name: item.title, image: item.image, url: item.url };
+        return { id: item.id, name: item.title, image: resolveMedia(item.image, mediaLibrary)?.url ?? null, url: item.url };
       }
       const collection = catalog.collections.find((c) => c.handle === item.handle);
       return collection ? { id: item.id, name: collection.name, image: collection.image, url: `/collections/${collection.handle}` } : null;
@@ -32,10 +33,10 @@ function collectionsForSection(data) {
     .filter(Boolean);
 }
 
-function CollectionListRenderer({ data, onEdit, isMobile }) {
+function CollectionListRenderer({ data, onEdit, isMobile, mediaLibrary }) {
   const { t } = useTranslation();
   const mobile = useResponsiveMobile(isMobile);
-  const collections = collectionsForSection(data);
+  const collections = collectionsForSection(data, mediaLibrary);
   const colsClass = COLS_CLASS[mobile ? data.columns_mobile ?? '2' : data.columns_desktop ?? '3'] ?? 'grid-cols-2';
   const headingSizeClass = HEADING_SIZE_CLASS[data.heading_size] ?? HEADING_SIZE_CLASS.medium;
   const aspectClass = ASPECT_RATIO_CLASS[data.image_aspect_ratio] ?? ASPECT_RATIO_CLASS.square;

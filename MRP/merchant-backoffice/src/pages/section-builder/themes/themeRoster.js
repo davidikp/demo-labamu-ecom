@@ -7,16 +7,24 @@ import { themes } from './registry';
  * fully-validated theme definitions (currently just Xinear). This roster
  * lists every theme the gallery should display, including planned themes
  * that have no implementation yet ("Coming soon" stubs).
+ *
+ * `previewImage` — a static marketing screenshot (public/assets/templates/
+ * <id>/<id>.png), served as-is from the public folder rather than imported
+ * as a module asset. Ported from the reference ecom-from-bella project's
+ * WebsiteTemplates.jsx theme cards, which use the same images. Present for
+ * every roster entry, including the still-`comingSoon` stubs — there's no
+ * real theme built for those yet in this app, but the screenshot gives the
+ * Discover gallery a real preview instead of a gradient placeholder.
  */
 export const THEME_ROSTER = [
-  { id: 'xinear', name: 'Xinear', comingSoon: false },
-  { id: 'houzez', name: 'Houzez', comingSoon: true },
-  { id: 'barger', name: 'Barger', comingSoon: true },
-  { id: 'napoli', name: 'Napoli', comingSoon: true },
-  { id: 'local', name: 'Local', comingSoon: true },
-  { id: 'photostoodio', name: 'PhotoStoodio', comingSoon: true },
-  { id: 'medic', name: 'Medic', comingSoon: true },
-  { id: 'dekor', name: 'Dekor', comingSoon: true },
+  { id: 'xinear', name: 'Xinear', comingSoon: false, previewImage: '/assets/templates/xinear/xinear.png' },
+  { id: 'houzez', name: 'Houzez', comingSoon: false, previewImage: '/assets/templates/houzez/houzez.png' },
+  { id: 'barger', name: 'Barger', comingSoon: true, previewImage: '/assets/templates/barger/barger.png' },
+  { id: 'napoli', name: 'Napoli', comingSoon: true, previewImage: '/assets/templates/napoli/napoli.png' },
+  { id: 'local', name: 'Local', comingSoon: true, previewImage: '/assets/templates/local/local.png' },
+  { id: 'photostoodio', name: 'PhotoStoodio', comingSoon: true, previewImage: '/assets/templates/photostoodio/photostoodio.png' },
+  { id: 'medic', name: 'Medic', comingSoon: true, previewImage: '/assets/templates/medic/medic.png' },
+  { id: 'dekor', name: 'Dekor', comingSoon: true, previewImage: '/assets/templates/dekor/dekor.png' },
 ];
 
 // Dev-time sanity check — every roster entry marked as real (comingSoon:

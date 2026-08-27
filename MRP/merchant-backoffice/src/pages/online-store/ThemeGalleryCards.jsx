@@ -168,30 +168,47 @@ export function DraftThemeRow({
   );
 }
 
+/**
+ * Ported from ecom-from-bella's WebsiteTemplates.jsx theme-card design: a
+ * rounded-2xl card that lifts with a blue border/shadow on hover, a 4:3
+ * thumbnail, and a hover overlay carrying the Preview action (their overlay
+ * also carries the primary action — Edit — but here Add stays inline below
+ * the card next to the name, matching this app's previous layout, rather
+ * than requiring a hover to find it). Coming-soon stubs opt out of the hover
+ * lift/border/overlay entirely (`discover-card--static`) — there's genuinely
+ * nothing to preview yet, only the badge.
+ */
 export function DiscoverCard({ item, previewData, isAdding, comingSoon, onAdd, onPreview }) {
   const { t } = useTranslation();
   return (
-    <div className="discover-card">
-      <div className={`discover-card__preview${comingSoon ? '' : ' template-overlay-container'}`}>
-        {previewData ?? <div className="discover-card__placeholder">{item.name}</div>}
-        {/* No hover-preview overlay for coming-soon stubs — there is
-            genuinely nothing to preview yet. Real entries (Xinear) keep the
-            existing overlay/Preview button even though its preview is
-            currently just a placeholder. */}
-        {!comingSoon && (
-          <div className="template-overlay">
-            <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); onPreview(item); }}
-              style={{ background: '#FFFFFF', border: 'none', borderRadius: '8px', padding: '10px 20px', fontSize: '13px', fontWeight: 700, color: '#282828', cursor: 'pointer' }}
-            >
-              {t('sectionBuilder:onlineStore.themes.preview', 'Preview')}
-            </button>
-          </div>
-        )}
+    <div className="discover-card-container">
+      <div className={`discover-card${comingSoon ? ' discover-card--static' : ''}`}>
+        <div className={`discover-card__preview${comingSoon ? '' : ' template-overlay-container'}`}>
+          {previewData ?? <div className="discover-card__placeholder">{item.name}</div>}
+          {comingSoon && (
+            <span className="discover-card__coming-soon-badge">
+              {t('sectionBuilder:onlineStore.themes.comingSoon', 'Coming soon')}
+            </span>
+          )}
+          {/* No hover overlay for coming-soon stubs — there is genuinely
+              nothing to preview yet. Real entries (Xinear) keep the Preview
+              button even though the preview is currently just a
+              placeholder; Add lives in the footer row below instead. */}
+          {!comingSoon && (
+            <div className="template-overlay">
+              <button
+                type="button"
+                className="discover-overlay-btn discover-overlay-btn--secondary"
+                onClick={(e) => { e.stopPropagation(); onPreview(item); }}
+              >
+                {t('sectionBuilder:onlineStore.themes.preview', 'Preview')}
+              </button>
+            </div>
+          )}
+        </div>
       </div>
       <div className="discover-card__footer">
-        <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: '#282828' }}>{item.name}</p>
+        <p className="discover-card__name">{item.name}</p>
         <MainBtn
           variant="secondary"
           size="sm"

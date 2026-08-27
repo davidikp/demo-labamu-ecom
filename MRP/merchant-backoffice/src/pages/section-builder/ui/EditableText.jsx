@@ -18,6 +18,14 @@ export default function EditableText({
   style,
   placeholder = '',
   multiline = false,
+  // Block Renderers pass their own block's `blockCtx.onSelect` here so that
+  // clicking into the text to edit it also selects the containing block
+  // (needed for BlockStream's insert-"+" affordance, which is gated on
+  // block selection) — without this, the mousedown/click stopPropagation
+  // below (needed to keep text-editing clicks from bubbling up to
+  // section-level select/deselect) would also silently prevent block
+  // selection, since it never reaches BlockBoundary's own onClick.
+  onFocusSelect,
 }) {
   const ref = useRef(null);
   const Tag = as;
@@ -46,9 +54,14 @@ export default function EditableText({
       aria-label={placeholder || undefined}
       data-sb-placeholder={placeholder || undefined}
       spellCheck={false}
-      // Don't let a click that lands text-editing bubble up to section
-      // select / canvas deselect.
-      onMouseDown={(e) => e.stopPropagation()}
+      // Explicitly select the containing block first (if wired), then stop
+      // the click from bubbling further — so it still reaches this block's
+      // own select handler without also landing on section select / canvas
+      // deselect above it.
+      onMouseDown={(e) => {
+        onFocusSelect?.();
+        e.stopPropagation();
+      }}
       onClick={(e) => e.stopPropagation()}
       onBlur={commit}
       onKeyDown={(e) => {

@@ -32,7 +32,7 @@ function StarRatingBarRenderer({ data, blocks = [], theme, mediaLibrary, onEdit,
   const rating = data.overall_rating ?? 4.8;
 
   return (
-    <section className="px-6 text-sm">
+    <section className="relative px-6 text-sm">
       <BlockStream
         sectionType="star_rating_bar"
         blocks={blocks}

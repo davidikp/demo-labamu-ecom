@@ -81,11 +81,17 @@ function FillWidthPreviewCanvas({ header, footer, sections, theme, mediaLibrary,
 // below), and defensively, any stale/unknown templateId (e.g. a leftover
 // localStorage record referencing a deleted old-pool id) so nothing ever
 // renders blank or throws.
-function PreviewPlaceholder({ name, comingSoon }) {
+function PreviewPlaceholder({ name, comingSoon, aspectRatio = 'aspect-[16/9]' }) {
+  // Declares its own aspect ratio (default 16:9, matching its original
+  // behavior for published/draft contexts) rather than relying on a parent
+  // container ratio, so callers with a different shape — discoverItems use
+  // 4:3, matching FillWidthPreviewCanvas's own aspectRatio prop there — can
+  // override it without a conflicting ratio declared on both the container
+  // and its content. The coming-soon badge lives on the DiscoverCard
+  // wrapper itself (so it's not duplicated for discover items), not here.
   return (
-    <div className={`relative aspect-[16/9] w-full overflow-hidden discover-card__placeholder${comingSoon ? ' discover-card__placeholder--coming-soon' : ''}`}>
+    <div className={`relative w-full overflow-hidden discover-card__placeholder ${aspectRatio}${comingSoon ? ' discover-card__placeholder--coming-soon' : ''}`}>
       {name}
-      {comingSoon && <span className="discover-card__coming-soon-badge">Coming soon</span>}
     </div>
   );
 }
@@ -224,17 +230,27 @@ export default function ThemeGallery() {
     return <PreviewPlaceholder name={draftThemeRecord.name} />;
   }
 
-  // Xinear is now a real SITE_TEMPLATES entry (real header/footer/media/
-  // page content, not just color/typography tokens) — render its actual
-  // illustrative default preview via a live Canvas, same as clothing/fnb/
-  // manufacture would if they ever appeared here. For the remaining roster
-  // items (still `comingSoon` stubs, or any future item that isn't yet
-  // backed by a real SITE_TEMPLATES entry), there is genuinely nothing to
-  // preview, so fall back to the placeholder.
+  // Every THEME_ROSTER entry now carries a static `previewImage` screenshot
+  // (ported from ecom-from-bella's WebsiteTemplates.jsx cards, which use the
+  // same images) — that's always preferred over a live Canvas render here,
+  // matching the reference design exactly (it never live-renders a card,
+  // always a static image), and it's the only real preview available at all
+  // for the still-`comingSoon` stubs, which have no SITE_TEMPLATES content
+  // to render live in the first place. The live-Canvas/placeholder fallback
+  // stays only as defense against a future roster entry that's missing one.
   function discoverPreviewElement(item) {
+    if (item.previewImage) {
+      return (
+        <img
+          src={item.previewImage}
+          alt={item.name}
+          className="discover-card__preview-img aspect-[4/3]"
+        />
+      );
+    }
     const template = siteTemplateById(item.id);
-    if (template) return <FillWidthPreviewCanvas {...defaultPreviewDataFor(template)} aspectRatio="aspect-[16/10]" />;
-    return <PreviewPlaceholder name={item.name} comingSoon={item.comingSoon} />;
+    if (template) return <FillWidthPreviewCanvas {...defaultPreviewDataFor(template)} aspectRatio="aspect-[4/3]" />;
+    return <PreviewPlaceholder name={item.name} comingSoon={item.comingSoon} aspectRatio="aspect-[4/3]" />;
   }
 
   function handleOpen() {
@@ -381,9 +397,19 @@ export default function ThemeGallery() {
   }
 
   function handleDiscoverPreview(item) {
-    // No real template/content backs a discover-only fixture — this is a
-    // deliberately no-op affordance rather than over-engineering a preview
-    // route for decorative fixtures.
+    // Xinear (and any future roster item backed by a real SITE_TEMPLATES
+    // entry — see discoverPreviewElement above, which already renders a
+    // live thumbnail for exactly this case) gets the same full "See
+    // Preview" route as a published/draft theme. This previously always
+    // no-op'd regardless of whether real content existed, which is why the
+    // Preview button did nothing for Xinear specifically — only the
+    // genuinely content-less `comingSoon` stubs should stay a no-op, since
+    // there's truly nothing to preview for those.
+    const template = siteTemplateById(item.id);
+    if (template) {
+      handleSeePreview(template);
+      return;
+    }
     console.log('Preview (discover, illustrative only):', item.name);
   }
 
@@ -392,10 +418,16 @@ export default function ThemeGallery() {
       <style>{`
         .template-overlay {
           position: absolute; inset: 0; background: rgba(0, 0, 0, 0.5); opacity: 0;
-          display: flex; align-items: center; justify-content: center;
-          transition: opacity 0.2s; backdrop-filter: blur(4px);
+          display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px;
+          transition: opacity 0.2s; backdrop-filter: blur(4px); padding: 24px; z-index: 20;
         }
         .template-overlay-container:hover .template-overlay { opacity: 1; }
+        .discover-overlay-btn {
+          width: 140px; padding: 10px 20px; font-size: 13px; font-weight: 700;
+          border-radius: 12px; cursor: pointer; transition: all 0.15s ease; font-family: 'Lato', sans-serif;
+        }
+        .discover-overlay-btn--secondary { background: #FFFFFF; color: #006BFF; border: 1px solid #006BFF; }
+        .discover-overlay-btn--secondary:hover { background: #F0F6FF; border-color: #0055D4; }
 
         .section-heading { margin: 0 0 16px; font-size: 18px; font-weight: 700; color: #282828; }
 
@@ -434,18 +466,46 @@ export default function ThemeGallery() {
         .discover-grid {
           display: grid;
           grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-          gap: 24px;
+          gap: 32px;
         }
+        /* Ported from ecom-from-bella's WebsiteTemplates.jsx theme-card
+           design (.template-card/.template-card-container) - rounded-2xl,
+           lifts + blue border/shadow on hover. Unlike the reference (whose
+           Edit action lives in the hover overlay), Add stays inline next to
+           the name below the card, matching this app's previous layout, so
+           it doesn't require a hover to find. Coming-soon stubs opt out of
+           the hover lift/border entirely (nothing to click into) via the
+           discover-card--static modifier. */
+        .discover-card-container { display: flex; flex-direction: column; gap: 16px; }
         .discover-card {
-          display: flex; flex-direction: column;
-          border: 1px solid #E9E9E9; border-radius: 12px; overflow: hidden; background: #FFFFFF;
+          position: relative;
+          border-radius: 16px; overflow: hidden;
+          border: 1px solid #F3F4F6; background: #F9FAFB;
+          cursor: pointer; transition: all 0.3s ease;
         }
+        .discover-card:hover {
+          transform: translateY(-4px);
+          border-color: #006BFF;
+          box-shadow: 0 12px 24px rgba(0, 107, 255, 0.12);
+        }
+        .discover-card--static { cursor: default; }
+        .discover-card--static:hover { transform: none; border-color: #F3F4F6; box-shadow: none; }
         .discover-card__preview {
-          position: relative; aspect-ratio: 16 / 10; background: #F3F4F6;
+          /* No aspect-ratio of its own — its content (a static preview img,
+             FillWidthPreviewCanvas, or PreviewPlaceholder — see
+             discoverPreviewElement) declares its own aspect-[4/3] via a
+             class/prop, same convention published/draft previews already
+             use, so there's exactly one source of truth for the ratio
+             instead of two competing declarations. */
+          position: relative; background: #F3F4F6;
         }
+        /* Ported from ecom-from-bella's .template-img. */
+        .discover-card__preview-img { width: 100%; object-fit: cover; object-position: top center; display: block; }
         .discover-card__footer {
-          display: flex; align-items: center; justify-content: space-between; gap: 8px;
-          padding: 12px 14px; border-top: 1px solid #E9E9E9; background: #FFFFFF;
+          display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 4px;
+        }
+        .discover-card__name {
+          margin: 0; font-size: 16px; font-weight: 700; color: #111827;
         }
         .discover-card__placeholder {
           position: relative;
@@ -456,9 +516,9 @@ export default function ThemeGallery() {
           background: linear-gradient(135deg, #F3F4F6 0%, #EAEBEE 100%); color: #9CA3AF;
         }
         .discover-card__coming-soon-badge {
-          position: absolute; top: 10px; right: 10px;
-          padding: 4px 10px; border-radius: 100px; font-size: 10px; font-weight: 700;
-          background: #E5E7EB; color: #6B7280; letter-spacing: 0.02em;
+          position: absolute; top: 16px; right: 16px; z-index: 5;
+          padding: 6px 14px; border-radius: 100px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
+          background: #E5E7EB; color: #6B7280;
         }
 
         .more-menu-popover {

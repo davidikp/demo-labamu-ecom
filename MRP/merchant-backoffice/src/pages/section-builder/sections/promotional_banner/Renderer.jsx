@@ -21,7 +21,7 @@ function PromotionalBannerRenderer({ data, blocks = [], theme, mediaLibrary, blo
     <section
       className={`flex flex-wrap items-center gap-3 px-6 ${sideBySide ? 'justify-between' : 'flex-col justify-center text-center'} ${outsideSchedule ? 'opacity-40' : ''}`}
     >
-      <div className={`flex items-center gap-2 ${sideBySide ? '' : 'flex-col'}`}>
+      <div className={`relative flex items-center gap-2 ${sideBySide ? '' : 'flex-col'}`}>
         {data.icon && <span className="text-lg">{data.icon}</span>}
         <BlockStream
           sectionType="promotional_banner"

@@ -39,8 +39,12 @@ export function resolveSectionScheme(schemeKey, themeColors) {
 export const SECTION_CHROME_FIELDS = {
   color_scheme: { type: 'select', label: 'Color scheme', default: 'background', group: 'color', options: COLOR_SCHEME_OPTIONS },
   full_width: { type: 'boolean', label: 'Full width', default: false, group: 'layout' },
-  padding_top: { type: 'range', label: 'Padding top', min: 0, max: 120, step: 4, default: 48, unit: 'px', group: 'layout' },
-  padding_bottom: { type: 'range', label: 'Padding bottom', min: 0, max: 120, step: 4, default: 48, unit: 'px', group: 'layout' },
+  // responsive: true (Phase 1 — see themes/breakpoints.js) — stored value is
+  // a plain number until the merchant overrides a specific breakpoint, at
+  // which point it promotes to `{ $res: true, mobile: ..., desktop: ... }`.
+  // Resolved back to a scalar per-breakpoint in SectionShell.jsx.
+  padding_top: { type: 'range', label: 'Padding top', min: 0, max: 120, step: 4, default: 48, unit: 'px', group: 'layout', responsive: true },
+  padding_bottom: { type: 'range', label: 'Padding bottom', min: 0, max: 120, step: 4, default: 48, unit: 'px', group: 'layout', responsive: true },
 };
 
 /** Merged into header/footer — global chrome, not page content, so no padding controls. */

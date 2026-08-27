@@ -4,6 +4,7 @@ import { seedBlocks, sectionSupportsBlocks } from '../sections/blockHelpers';
 import { blockDef } from '../sections/blocks/registry';
 import { defaultTheme, createDefaultGlobals } from './defaultTheme';
 import { defaultProductItems } from '../sections/featured_products/schema';
+import { HOUZEZ_HERO_RECIPE } from '../sections/shared/heroRecipes';
 
 /**
  * @module section-builder/state/siteTemplates
@@ -459,6 +460,283 @@ export const SITE_TEMPLATES = [
       },
     ],
   },
+  {
+    id: 'houzez',
+    name: 'Houzez',
+    // Sourced from Houzez's real Figma design (Labamu E-Commerce MVP 2,
+    // node 81:71854 light / 81:72885 dark — see themes/houzez.js for the
+    // matching --theme-* color/typography layer) and from the coded
+    // reference prototype's own i18n copy (src/locales/en/website.json's
+    // template_houzez namespace in ecom-from-bella), reused verbatim as
+    // real source content. Like Xinear, this is a single home-page
+    // storefront — the reference design has no separate about/contact
+    // pages, every section lives on one anchor-navigated homepage.
+    theme: {
+      typography: { heading_font: 'Lato', body_font: 'Lato', heading_size: 'medium', body_size: 'medium', letter_spacing: 'normal', heading_transform: 'none' },
+      colors: {
+        // surface matches HouzezPreview.jsx's category-icon-circle background
+        // (#EDF3F0) exactly; rating matches its 5-star review color (#FACC15)
+        // — both read verbatim from the golden reference, not the Figma export.
+        background: '#ffffff', surface: '#edf3f0', primary: '#16894b', primary_text: '#ffffff',
+        accent: '#16894b', accent_text: '#ffffff', text_primary: '#1b1916', text_secondary: '#767573', border: '#f3f4f6',
+        rating: '#facc15',
+      },
+      // Layout tokens matched to HouzezPreview.jsx (golden reference):
+      // maxWidth 1280px + `calc(100% - 80px)` (40px gutter each side desktop,
+      // stepping down to 16px on mobile), 12px card radius (product/review
+      // cards), and a soft card shadow (product-card hover / dropdown shadow
+      // family) instead of the schema's flat default. See
+      // shared/themedLayout.js for the concrete px/CSS values these resolve to.
+      layout: { container_width: '1280', container_gutter: 'spacious', card_corners: 12, card_shadow: 'subtle' },
+      // Internal visual recipe for hero_banner's 'split_panel' layout and
+      // 'theme' overlay — golden-reference exact measurements/gradient
+      // stops/hero typography. Not part of theme-settings-schema.json, so
+      // it never appears in the merchant-facing Theme panel. See
+      // sections/shared/heroRecipes.js.
+      heroRecipe: HOUZEZ_HERO_RECIPE,
+    },
+    header: {
+      layout_variant: 'inline',
+      logo_text: 'Houzez',
+      logo_image: image('houzez-logo'),
+      show_border: true,
+      show_language_switcher: true,
+      // The reference prototype's language pill offers English/Indonesian.
+      languages: [
+        { id: 'houzez-lang-en', code: 'EN', label: 'English' },
+        { id: 'houzez-lang-id', code: 'ID', label: 'Bahasa Indonesia' },
+      ],
+      show_search_icon: false,
+      // enableCheckout defaults to false in the reference prototype's own
+      // BASE_CONFIG (catalog/RFQ-first, not cart-first) — no cart icon by
+      // default to match.
+      show_cart_icon: false,
+      // Reference nav (Home + 6 feature anchors) collapses into the "⋯"
+      // overflow dropdown beyond 5 — matches the prototype's own overflow
+      // behavior exactly (see HouzezPreview.jsx's displayedNav/overflowNav).
+      nav_overflow_after: 5,
+      nav_links: [
+        { id: 'houzez-nav-home', label: 'Home', url: '/' },
+        { id: 'houzez-nav-shop', label: 'Shop', url: '/shop' },
+        { id: 'houzez-nav-appointment', label: 'Appointment', url: '/appointment' },
+        { id: 'houzez-nav-reviews', label: 'Reviews', url: '/reviews' },
+        { id: 'houzez-nav-contact', label: 'Contact', url: '/contact' },
+        { id: 'houzez-nav-location', label: 'Location', url: '/location' },
+        { id: 'houzez-nav-quote', label: 'Quote', url: '/quote' },
+      ],
+    },
+    footer: {
+      layout_variant: 'columns',
+      logo_text: 'Houzez',
+      logo_image: image('houzez-logo'),
+      show_border: true,
+      social_links: [
+        { id: 'houzez-social-x', platform: 'x', url: '#' },
+        { id: 'houzez-social-instagram', platform: 'instagram', url: '#' },
+        { id: 'houzez-social-facebook', platform: 'facebook', url: '#' },
+        { id: 'houzez-social-youtube', platform: 'youtube', url: '#' },
+        { id: 'houzez-social-linkedin', platform: 'linkedin', url: '#' },
+      ],
+      address_heading: 'Tangerang',
+      address_body: 'Alam Sutera, Jl. Jalur Sutera Boulevard No.45, Kunciran, Kec. Pinang, Kota Tangerang, Banten 15320',
+      phone: '0858-3456-0890',
+      email: 'houzez@gmail.com',
+      link_columns: [
+        {
+          id: 'houzez-footer-category',
+          heading: 'Category',
+          links: [
+            { id: 'houzez-footer-category-house', label: 'House Construction', url: '/shop' },
+            { id: 'houzez-footer-category-glass', label: 'Glass Pane', url: '/shop' },
+            { id: 'houzez-footer-category-safety', label: 'Safety Tools', url: '/shop' },
+            { id: 'houzez-footer-category-foundation', label: 'Foundation', url: '/shop' },
+            { id: 'houzez-footer-category-paints', label: 'Paints and Flooring', url: '/shop' },
+            { id: 'houzez-footer-category-roofing', label: 'Roofing', url: '/shop' },
+            { id: 'houzez-footer-category-doors', label: 'Doors and Windows', url: '/shop' },
+            { id: 'houzez-footer-category-excavation', label: 'Excavation', url: '/shop' },
+          ],
+        },
+      ],
+      copyright_text: '©2026 Houzez. All rights reserved.',
+      show_social_icons: true,
+    },
+    media: media('houzez', [
+      { key: 'logo', filename: 'assets/houzez-logo.png', width: 125, height: 45 },
+      { key: 'banner', filename: 'assets/houzez-banner.png', width: 640, height: 419 },
+      { key: 'appointment', filename: 'assets/houzez-appointment.png', width: 1440, height: 331 },
+      { key: 'contact', filename: 'assets/houzez-contact.png', width: 520, height: 520 },
+      // A real Figma/prototype asset, registered for completeness — like
+      // Xinear's store-map.png, map_embed's Renderer always draws a Google
+      // Maps iframe (or gray placeholder) and has no image field to attach
+      // this to, so it currently has nowhere to render.
+      { key: 'map', filename: 'assets/houzez-map.png', width: 730, height: 320 },
+      // Same story as 'map' — a real asset with no home in
+      // quote_request_form's current fixed-field schema (no image field).
+      // Will have somewhere to go once quote_request_form grows an RFQ
+      // hero/background per the RFQ-modal upgrade plan.
+      { key: 'rfq', filename: 'assets/houzez-rfq.png', width: 1920, height: 1080 },
+      // 8 category icons for the icon-circle Categories strip (category_grid).
+      { key: 'cat-house', filename: 'catalog-categories/house-construction.png', width: 40, height: 40 },
+      { key: 'cat-glass', filename: 'catalog-categories/glass-pane.png', width: 40, height: 40 },
+      { key: 'cat-safety', filename: 'catalog-categories/safety-tools.png', width: 40, height: 40 },
+      { key: 'cat-foundation', filename: 'catalog-categories/foundation.png', width: 40, height: 40 },
+      { key: 'cat-paints', filename: 'catalog-categories/paints-and-flooring.png', width: 40, height: 40 },
+      { key: 'cat-roofing', filename: 'catalog-categories/roofing.png', width: 40, height: 40 },
+      { key: 'cat-doors', filename: 'catalog-categories/doors-and-windows.png', width: 40, height: 40 },
+      { key: 'cat-excavation', filename: 'catalog-categories/excavation.png', width: 40, height: 40 },
+      // 12 product photos for the two "Product Group" carousels (High-Rise
+      // Needs / Safety Tools), real names/prices from the reference
+      // prototype's en/website.json template_houzez.products namespace.
+      { key: 'prod-ladder', filename: 'catalog/image-2.png', width: 200, height: 200 },
+      { key: 'prod-level-kit', filename: 'catalog/image-3.png', width: 200, height: 200 },
+      { key: 'prod-scaffold-metal', filename: 'catalog/image-4.png', width: 200, height: 200 },
+      { key: 'prod-scaffold-tower', filename: 'catalog/image-5.png', width: 200, height: 200 },
+      { key: 'prod-rammer', filename: 'catalog/image-6.png', width: 200, height: 200 },
+      { key: 'prod-ladder-steel', filename: 'catalog/image-7.png', width: 200, height: 200 },
+      { key: 'prod-helmet', filename: 'catalog/image-8.png', width: 200, height: 200 },
+      { key: 'prod-harness', filename: 'catalog/image-9.png', width: 200, height: 200 },
+      { key: 'prod-gloves', filename: 'catalog/image-10.png', width: 200, height: 200 },
+      { key: 'prod-lifeline', filename: 'catalog/image-11.png', width: 200, height: 200 },
+      { key: 'prod-helmet-2', filename: 'catalog/image-12.png', width: 200, height: 200 },
+      { key: 'prod-gloves-heavy', filename: 'catalog/image-13.png', width: 200, height: 200 },
+    ]),
+    pages: [
+      {
+        id: 'home', name: 'Home', type: 'system', slug: '/', seo: {}, hiddenFromNav: false,
+        sections: [
+          // 'split_panel' matches the golden reference's framed two-panel
+          // hero (content | image, blended into the theme surface color) —
+          // see hero_banner/schema.js's layout_variant.
+          defaultSection(
+            'houzez-home-hero',
+            'hero_banner',
+            { background_image: image('houzez-banner'), layout_variant: 'split_panel', text_alignment: 'left', content_position: 'center' },
+            [
+              block('heading', { text: 'Create your ideal home with us' }),
+              block('subheading', { text: 'Everything you need to build your home, we provide.' }),
+            ],
+          ),
+          // Icon-circle Categories strip — same 8 categories/icons/order as
+          // the real design, at Houzez's own 8-column desktop layout.
+          defaultSection('houzez-home-categories', 'category_grid', {
+            show_heading: false, columns_desktop: '8', columns_mobile: '4',
+            items: [
+              { id: 'houzez-cat-house', label: 'House Construction', icon_image: image('houzez-cat-house'), url: '/shop' },
+              { id: 'houzez-cat-glass', label: 'Glass Pane', icon_image: image('houzez-cat-glass'), url: '/shop' },
+              { id: 'houzez-cat-safety', label: 'Safety Tools', icon_image: image('houzez-cat-safety'), url: '/shop' },
+              { id: 'houzez-cat-foundation', label: 'Foundation', icon_image: image('houzez-cat-foundation'), url: '/shop' },
+              { id: 'houzez-cat-paints', label: 'Paints and Flooring', icon_image: image('houzez-cat-paints'), url: '/shop' },
+              { id: 'houzez-cat-roofing', label: 'Roofing', icon_image: image('houzez-cat-roofing'), url: '/shop' },
+              { id: 'houzez-cat-doors', label: 'Doors and Windows', icon_image: image('houzez-cat-doors'), url: '/shop' },
+              { id: 'houzez-cat-excavation', label: 'Excavation', icon_image: image('houzez-cat-excavation'), url: '/shop' },
+            ],
+          }),
+          // Matches the golden-reference ProductGroup: 6-column desktop grid,
+          // horizontal-scroll-snap row on mobile (see featured_products'
+          // columns_desktop/mobile_layout options).
+          defaultSection('houzez-home-highrise', 'featured_products', {
+            heading: 'High-Rise Needs', columns_desktop: '6', mobile_layout: 'horizontal_scroll',
+            products: [
+              { id: 'houzez-prod-ladder', source: 'custom', title: 'KRISBOW Ladder Rolling Multi PRLRM1108 1.1m 4...', image: image('houzez-prod-ladder'), price: 'Rp 4.200.000' },
+              { id: 'houzez-prod-level-kit', source: 'custom', title: 'DEWALT Builders Level Kit DW090PK 1set', image: image('houzez-prod-level-kit'), price: 'Rp 16.000.000' },
+              { id: 'houzez-prod-scaffold-metal', source: 'custom', title: 'METALTECH Portable Scaffold 6-11/64 ft.L Steel...', image: image('houzez-prod-scaffold-metal'), price: 'Rp 13.885.000' },
+              { id: 'houzez-prod-scaffold-tower', source: 'custom', title: 'WERNER Scaffold Tower 75 H, 41D335', image: image('houzez-prod-scaffold-tower'), price: 'Rp 13.885.000' },
+              { id: 'houzez-prod-rammer', source: 'custom', title: 'Hyundai Tamping Rammers HDCR 88H 1pc', image: image('houzez-prod-rammer'), price: 'Rp 23.330.000' },
+              { id: 'houzez-prod-ladder-steel', source: 'custom', title: 'Cotterman Rolling Steel Ladder - 450-Lb. Capacit...', image: image('houzez-prod-ladder-steel'), price: 'Rp 53.196.000' },
+            ],
+          }),
+          defaultSection('houzez-home-safety', 'featured_products', {
+            heading: 'Safety Tools', columns_desktop: '6', mobile_layout: 'horizontal_scroll',
+            products: [
+              { id: 'houzez-prod-helmet', source: 'custom', title: 'Safety Helmet Construction Helmet Darl...', image: image('houzez-prod-helmet'), price: 'Rp 723.000' },
+              { id: 'houzez-prod-harness', source: 'custom', title: 'Safety Full Body Harness Five Point Construction D...', image: image('houzez-prod-harness'), price: 'Rp 166.000' },
+              { id: 'houzez-prod-gloves', source: 'custom', title: '48-22-8951 CUT 5 Dipped Safety Gloves Size M - 00...', image: image('houzez-prod-gloves'), price: 'Rp 185.000' },
+              { id: 'houzez-prod-lifeline', source: 'custom', title: 'Rebel Self Retracting Lifeline - Stainless Cable...', image: image('houzez-prod-lifeline'), price: 'Rp 3.023.000' },
+              { id: 'houzez-prod-helmet-2', source: 'custom', title: 'Safety Helmet Construction Helmet Darl...', image: image('houzez-prod-helmet-2'), price: 'Rp 2.100.000' },
+              { id: 'houzez-prod-gloves-heavy', source: 'custom', title: 'SARUNG TANGAN SAFETY KONG HEAVY DUTY HIGH...', image: image('houzez-prod-gloves-heavy'), price: 'Rp 225.000' },
+            ],
+          }),
+          // A plain 'background' hero_banner with a 'theme' overlay — the
+          // golden reference's green gradient wash is just a themed overlay
+          // choice, not a reason for a bespoke Appointment section type.
+          // color_scheme: 'primary' gives white heading/subhead text (theme
+          // primary_text) without hardcoding a color here; the button's
+          // 'inverted' style gives the white-pill/green-text CTA the same way.
+          defaultSection(
+            'houzez-home-appointment',
+            'hero_banner',
+            {
+              background_image: image('houzez-appointment'), min_height: 400,
+              overlay_style: 'theme', overlay_opacity: 95,
+              color_scheme: 'primary', text_alignment: 'left', content_position: 'center',
+            },
+            [
+              block('heading', { text: 'Book an Appointment!' }),
+              block('subheading', { text: 'Let’s meet and discuss further on your construction needs' }),
+              block('button', { label: 'Book Now', url: '/appointment', style: 'inverted' }),
+            ],
+          ),
+          defaultSection(
+            'houzez-home-testimonials',
+            'testimonials',
+            { heading: 'What They Say', columns_desktop: '3' },
+            [
+              block('quote', {
+                quote: 'Worked with Houzez on all my property. Never once I were disappointed because they are bomb',
+                reviewer_name: 'John Doe',
+                star_rating: '5',
+              }),
+              block('quote', {
+                quote: 'Worked with Houzez on all my property. Never once I were disappointed because they are bomb',
+                reviewer_name: 'Angelina Carpenter',
+                star_rating: '5',
+              }),
+              block('quote', {
+                quote: 'Worked with Houzez on all my property. Never once I were disappointed because they are bomb',
+                reviewer_name: 'Nichole Smith',
+                star_rating: '5',
+              }),
+            ],
+          ),
+          defaultSection('houzez-home-rating', 'rating_form', {
+            heading: 'Leave us your thoughts on how do you like our service',
+            name_field_label: 'Name', message_field_label: 'Review', button_label: 'Give Rating',
+          }),
+          defaultSection(
+            'houzez-home-contact',
+            'contact_form',
+            { reply_to_email: '' },
+            [
+              block('heading', { text: 'Contact Us' }),
+              block('text', { content: 'Contact us For further business inquiries or collaborations' }),
+              block('form_field', { label: 'Name', field_type: 'text', required: true }),
+              block('form_field', { label: 'Email', field_type: 'email', required: true }),
+              block('form_field', { label: 'Phone Number', field_type: 'tel', required: false }),
+              block('form_field', { label: 'Message', field_type: 'textarea', required: true }),
+            ],
+          ),
+          defaultSection(
+            'houzez-home-map',
+            'map_embed',
+            { address: 'Alam Sutera, Jl. Jalur Sutera Boulevard No.45, Kunciran, Kec. Pinang, Kota Tangerang, Banten 15320' },
+            [block('heading', { text: 'Visit Our Showroom!' }), block('text', { content: 'Come see our great craftmanship here.' })],
+          ),
+          // 'detailed' layout — a static preview of the real design's
+          // structured RFQ request (customer info, product line items,
+          // attachments, notes). Visual only for now, like every other form
+          // section — a working modal (open/close, real add/remove line
+          // items, real submission) is a follow-up once there's a backend
+          // module to store submitted RFQs against.
+          defaultSection('houzez-home-quote', 'quote_request_form', {
+            heading: 'Request a Quote',
+            subtext: 'Need an estimation of cost of you build? Drop us your request and we’ll reach you with a quote.',
+            button_label: 'Request a Quote',
+            layout: 'detailed',
+          }),
+        ],
+      },
+    ],
+  },
 ];
 
 export function siteTemplateById(id) {
@@ -474,7 +752,20 @@ export function siteTemplateById(id) {
  */
 export function defaultPreviewDataFor(template) {
   const globals = createDefaultGlobals(template.pages);
-  const theme = { ...defaultTheme, ...template.theme };
+  // Per-group shallow merge (not a flat `{...defaultTheme, ...template.theme}`):
+  // a template overriding e.g. `theme.layout.container_width` should only
+  // override that one field, not silently drop every other layout default
+  // (section_spacing, section_padding, image_corners, ...) the template
+  // doesn't mention.
+  const theme = {
+    ...defaultTheme,
+    ...template.theme,
+    typography: { ...defaultTheme.typography, ...template.theme?.typography },
+    colors: { ...defaultTheme.colors, ...template.theme?.colors },
+    buttons: { ...defaultTheme.buttons, ...template.theme?.buttons },
+    layout: { ...defaultTheme.layout, ...template.theme?.layout },
+    product_cards: { ...defaultTheme.product_cards, ...template.theme?.product_cards },
+  };
   const header = { ...globals.header, data: { ...globals.header.data, ...template.header } };
   const footer = { ...globals.footer, data: { ...globals.footer.data, ...template.footer } };
   return { header, footer, sections: template.pages[0]?.sections ?? [], theme, mediaLibrary: template.media };

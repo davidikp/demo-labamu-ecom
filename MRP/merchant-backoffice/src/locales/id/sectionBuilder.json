@@ -182,6 +182,9 @@
     "viewportToggle": {
       "desktop": "Desktop",
       "mobile": "Seluler",
+      "tablet": "Tablet",
+      "largeDesktop": "Desktop besar",
+      "fit": "Sesuaikan layar",
       "ariaLabel": "Viewport"
     },
     "sectionPicker": {
@@ -223,7 +226,9 @@
   "sections": {
     "common": {
       "noImage": "Tidak ada gambar",
-      "link": "Tautan"
+      "link": "Tautan",
+      "soldOut": "Habis terjual",
+      "addToCart": "Tambah ke keranjang"
     },
     "announcementBar": {
       "defaultMessage": "Gratis ongkir untuk pembelian di atas Rp750.000"
@@ -238,6 +243,10 @@
     },
     "collectionList": {
       "defaultHeading": "Belanja per Kategori"
+    },
+    "categoryGrid": {
+      "defaultHeading": "Belanja per Kategori",
+      "emptyState": "Anda belum menambahkan kategori."
     },
     "contactForm": {
       "defaultHeading": "Hubungi Kami",
@@ -273,7 +282,9 @@
     "header": {
       "defaultNavShop": "Belanja",
       "defaultNavAbout": "Tentang",
-      "defaultStoreName": "Toko Saya"
+      "defaultStoreName": "Toko Saya",
+      "moreLinks": "Lainnya",
+      "menu": "Menu"
     },
     "heroBanner": {
       "defaultHeading": "Selamat Datang di Toko Kami",
@@ -393,8 +404,17 @@
       "switchChoiceStartFreshDescription": "Ganti halaman, header, footer, dan media Anda dengan default tema ini.",
       "switchConfirmAction": "Ganti tema"
     },
-    "clothing": { "label": "Fashion", "description": "Gaya editorial untuk brand pakaian dan aksesori." },
-    "fnb": { "label": "Makanan & Minuman", "description": "Gaya hangat yang menggugah selera untuk restoran dan kafe." },
-    "manufacture": { "label": "Manufaktur", "description": "Gaya bersih dan industrial untuk manufaktur dan pemasok B2B." }
+    "clothing": {
+      "label": "Fashion",
+      "description": "Gaya editorial untuk brand pakaian dan aksesori."
+    },
+    "fnb": {
+      "label": "Makanan & Minuman",
+      "description": "Gaya hangat yang menggugah selera untuk restoran dan kafe."
+    },
+    "manufacture": {
+      "label": "Manufaktur",
+      "description": "Gaya bersih dan industrial untuk manufaktur dan pemasok B2B."
+    }
   }
 }

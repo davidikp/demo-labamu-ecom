@@ -184,6 +184,9 @@
     "viewportToggle": {
       "desktop": "Desktop",
       "mobile": "Mobile",
+      "tablet": "Tablet",
+      "largeDesktop": "Large desktop",
+      "fit": "Fit screen",
       "ariaLabel": "Viewport"
     },
     "sectionPicker": {
@@ -225,7 +228,9 @@
   "sections": {
     "common": {
       "noImage": "No image",
-      "link": "Link"
+      "link": "Link",
+      "soldOut": "Sold out",
+      "addToCart": "Add to cart"
     },
     "announcementBar": {
       "defaultMessage": "Free shipping on orders over $50"
@@ -240,6 +245,10 @@
     },
     "collectionList": {
       "defaultHeading": "Shop by category"
+    },
+    "categoryGrid": {
+      "defaultHeading": "Shop by category",
+      "emptyState": "No categories added yet."
     },
     "contactForm": {
       "defaultHeading": "Get in touch",
@@ -275,7 +284,9 @@
     "header": {
       "defaultNavShop": "Shop",
       "defaultNavAbout": "About",
-      "defaultStoreName": "My Store"
+      "defaultStoreName": "My Store",
+      "moreLinks": "More",
+      "menu": "Menu"
     },
     "heroBanner": {
       "defaultHeading": "Welcome to our store",
@@ -395,8 +406,17 @@
       "switchChoiceStartFreshDescription": "Replace your pages, header, footer, and media with this theme's defaults.",
       "switchConfirmAction": "Switch theme"
     },
-    "clothing": { "label": "Clothing", "description": "Editorial fashion styling for apparel and accessory brands." },
-    "fnb": { "label": "Food & Beverage", "description": "Warm, appetite-friendly styling for restaurants and cafés." },
-    "manufacture": { "label": "Manufacture", "description": "Clean, industrial styling for manufacturers and B2B suppliers." }
+    "clothing": {
+      "label": "Clothing",
+      "description": "Editorial fashion styling for apparel and accessory brands."
+    },
+    "fnb": {
+      "label": "Food & Beverage",
+      "description": "Warm, appetite-friendly styling for restaurants and cafés."
+    },
+    "manufacture": {
+      "label": "Manufacture",
+      "description": "Clean, industrial styling for manufacturers and B2B suppliers."
+    }
   }
 }

@@ -33,6 +33,8 @@ import {
   sectionSupportsBlocks,
   isAtBlockMax,
   resolveBlockPath,
+  childBlockTypes,
+  blockConfigForType,
 } from './sections/blockHelpers';
 import BlockList from './ui/BlockList';
 import SectionPickerModal from './ui/SectionPickerModal';
@@ -243,6 +245,18 @@ export default function SectionBuilder() {
     (sectionId, blockType, index, parentPath) => {
       const section = sectionsRef.current.find((s) => s.id === sectionId);
       const def = blockTypeDef(section?.type, blockType);
+
+      // Defense-in-depth (Phase 3 — nested `accepts`/childTypes, see
+      // sections/blocks/registry.js): AddBlockControl already filters its
+      // menu to the target container's allowed types, but this is the one
+      // place every add funnels through regardless of caller, so re-check
+      // here rather than trusting the UI filter alone.
+      const path = parentPath ?? [];
+      const allowed = path.length
+        ? childBlockTypes(resolveBlockPath(section?.blocks, path)?.at(-1)?.type)
+        : blockConfigForType(section?.type)?.allowed;
+      if (allowed && !allowed.includes(blockType)) return;
+
       dispatch({
         type: ACTIONS.ADD_BLOCK,
         pageId: activePageId,
@@ -286,7 +300,20 @@ export default function SectionBuilder() {
   // block from one container to another at any depth, including into or out
   // of a group, in one undo step.
   const handleMoveBlockToPath = useCallback(
-    (sectionId, blockId, fromParentPath, toParentPath, toIndex) =>
+    (sectionId, blockId, fromParentPath, toParentPath, toIndex) => {
+      const section = sectionsRef.current.find((s) => s.id === sectionId);
+
+      // Same accepts/childTypes guard as handleAddBlock — the sidebar tree's
+      // drag-and-drop (SectionListItem.jsx) can move a block across
+      // containers, e.g. out of or into a group, so a cross-container move
+      // needs the same defense-in-depth check a fresh add gets.
+      const toPath = toParentPath ?? [];
+      if (toPath.length) {
+        const movedType = resolveBlockPath(section?.blocks, [...(fromParentPath ?? []), blockId])?.at(-1)?.type;
+        const allowed = childBlockTypes(resolveBlockPath(section?.blocks, toPath)?.at(-1)?.type);
+        if (movedType && allowed && !allowed.includes(movedType)) return;
+      }
+
       dispatch({
         type: ACTIONS.MOVE_BLOCK_TO_PATH,
         pageId: activePageId,
@@ -296,7 +323,8 @@ export default function SectionBuilder() {
         toParentPath,
         toIndex,
         meta: { label: t('sectionBuilder:editor.sectionBuilder.actions.reorderBlocks') },
-      }),
+      });
+    },
     [activePageId, dispatch, t]
   );
 
@@ -587,6 +615,7 @@ export default function SectionBuilder() {
             mediaLibrary={state.mediaLibrary}
             onAddMedia={handleAddMedia}
             onOpenLibrary={handleOpenLibraryPicker}
+            viewport={viewport}
             footer={
               blockTypeDef(null, selectedBlock.type)?.container ? (
                 <BlockList
@@ -613,6 +642,7 @@ export default function SectionBuilder() {
             onAddMedia={handleAddMedia}
             onOpenLibrary={handleOpenLibraryPicker}
             activePage={activePage}
+            viewport={viewport}
             footer={
               selectedEntity && sectionSupportsBlocks(selectedEntity.type) ? (
                 <BlockList

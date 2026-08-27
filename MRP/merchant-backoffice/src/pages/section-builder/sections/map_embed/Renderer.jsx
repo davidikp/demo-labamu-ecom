@@ -28,7 +28,7 @@ function MapEmbedRenderer({ data, blocks = [], theme, mediaLibrary, onEdit, bloc
           to text-above-map on mobile, matching Figma's "Visit Our Store!"
           reference. */}
       <div className="flex flex-col gap-8 md:flex-row md:items-center">
-        <div className="flex w-full flex-col gap-4 md:w-[35%]">
+        <div className="relative flex w-full flex-col gap-4 md:w-[35%]">
           <BlockStream
             sectionType="map_embed"
             blocks={blocks}

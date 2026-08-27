@@ -4,6 +4,7 @@ import { themedButtonStyle } from '../shared/themedButtonStyle';
 import EditableText from '../../ui/EditableText';
 import BlockStream from '../../ui/BlockStream';
 import { useResponsiveMobile } from '../shared/useResponsiveMobile';
+import { resolveHeroRecipe } from '../shared/heroRecipes';
 
 /**
  * Renderers for the shared/generic and bespoke block types (see registry.js).
@@ -14,37 +15,76 @@ import { useResponsiveMobile } from '../shared/useResponsiveMobile';
 const HEADING_SIZE = { small: 'text-xl', medium: 'text-3xl', large: 'text-5xl' };
 const ALIGN = { left: 'text-left', center: 'text-center', right: 'text-right' };
 
-export function HeadingBlock({ block, onEdit }) {
+// `context === 'hero'` is the only opt-in path to hero display typography —
+// every existing call site (normal section content, and hero_banner's own
+// 'background' layout) never passes `context`, so it renders through the
+// unchanged `HEADING_SIZE`/`ALIGN` path exactly as before. Values themselves
+// are never hardcoded here — they come from the theme's recipe (Houzez) or
+// the generic DEFAULT_HERO_RECIPE (every other theme), see heroRecipes.js.
+export function HeadingBlock({ block, onEdit, onSelect, theme, context, isMobile }) {
   const d = block.data ?? {};
+  const mobile = useResponsiveMobile(isMobile);
+  if (context === 'hero') {
+    const t = resolveHeroRecipe(theme).typography.heading;
+    const style = {
+      fontSize: mobile ? t.fontSizeMobile : t.fontSizeDesktop,
+      fontWeight: t.fontWeight,
+      lineHeight: t.lineHeight,
+      maxWidth: mobile ? undefined : t.maxWidthDesktop,
+      color: t.color,
+    };
+    return onEdit ? (
+      <EditableText as="h2" style={style} value={d.text} placeholder="Heading" onCommit={(v) => onEdit('text', v)} onFocusSelect={onSelect} />
+    ) : (
+      <h2 style={style}>{d.text || 'Heading'}</h2>
+    );
+  }
   const cls = `${HEADING_SIZE[d.size] ?? HEADING_SIZE.medium} ${ALIGN[d.alignment] ?? ''} font-bold`;
   return onEdit ? (
-    <EditableText as="h2" className={cls} value={d.text} placeholder="Heading" onCommit={(v) => onEdit('text', v)} />
+    <EditableText as="h2" className={cls} value={d.text} placeholder="Heading" onCommit={(v) => onEdit('text', v)} onFocusSelect={onSelect} />
   ) : (
     <h2 className={cls}>{d.text || 'Heading'}</h2>
   );
 }
 
-export function SubheadingBlock({ block, onEdit }) {
+export function SubheadingBlock({ block, onEdit, onSelect, theme, context, isMobile }) {
   const d = block.data ?? {};
+  const mobile = useResponsiveMobile(isMobile);
+  if (context === 'hero') {
+    const t = resolveHeroRecipe(theme).typography.subtitle;
+    const style = {
+      fontSize: mobile ? t.fontSizeMobile : t.fontSizeDesktop,
+      lineHeight: t.lineHeight,
+      maxWidth: mobile ? undefined : t.maxWidthDesktop,
+      color: t.color,
+    };
+    return onEdit ? (
+      <EditableText as="p" style={style} value={d.text} placeholder="Subheading" onCommit={(v) => onEdit('text', v)} onFocusSelect={onSelect} />
+    ) : (
+      d.text && <p style={style}>{d.text}</p>
+    );
+  }
   return onEdit ? (
-    <EditableText as="p" className="text-lg opacity-80" value={d.text} placeholder="Subheading" onCommit={(v) => onEdit('text', v)} />
+    <EditableText as="p" className="text-lg opacity-80" value={d.text} placeholder="Subheading" onCommit={(v) => onEdit('text', v)} onFocusSelect={onSelect} />
   ) : (
     d.text && <p className="text-lg opacity-80">{d.text}</p>
   );
 }
 
-export function TextBlock({ block, onEdit }) {
+export function TextBlock({ block, onEdit, onSelect }) {
   const d = block.data ?? {};
   return onEdit ? (
-    <EditableText as="p" multiline className="text-sm leading-relaxed opacity-90" value={d.content} placeholder="Add text…" onCommit={(v) => onEdit('content', v)} />
+    <EditableText as="p" multiline className="text-sm leading-relaxed opacity-90" value={d.content} placeholder="Add text…" onCommit={(v) => onEdit('content', v)} onFocusSelect={onSelect} />
   ) : (
     d.content && <div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: d.content }} />
   );
 }
 
-export function ButtonBlock({ block, theme, onEdit }) {
+const BUTTON_STYLE_VARIANT = { secondary: 'outline', inverted: 'inverted' };
+
+export function ButtonBlock({ block, theme, onEdit, onSelect }) {
   const d = block.data ?? {};
-  const variant = d.style === 'secondary' ? 'outline' : 'filled';
+  const variant = BUTTON_STYLE_VARIANT[d.style] ?? 'filled';
   const style = themedButtonStyle(theme.buttons, {
     variant,
     primary: resolveColor({ slot: 'primary' }, theme.colors),
@@ -53,7 +93,7 @@ export function ButtonBlock({ block, theme, onEdit }) {
   return (
     <span style={style}>
       {onEdit ? (
-        <EditableText value={d.label} placeholder="Button" onCommit={(v) => onEdit('label', v)} />
+        <EditableText value={d.label} placeholder="Button" onCommit={(v) => onEdit('label', v)} onFocusSelect={onSelect} />
       ) : (
         d.label || 'Button'
       )}
@@ -78,18 +118,18 @@ export function SpacerBlock({ block }) {
 // ── Bespoke ──────────────────────────────────────────────────────────────
 const STAR_COLOR = '#F59E0B';
 
-export function QuoteBlock({ block, onEdit }) {
+export function QuoteBlock({ block, onEdit, onSelect }) {
   const d = block.data ?? {};
   return (
     <div className="h-full rounded-md border border-gray-200 bg-white p-4">
       <div className="mb-2 text-sm" style={{ color: STAR_COLOR }}>{'★'.repeat(Number(d.star_rating ?? 5))}</div>
       {onEdit ? (
-        <EditableText as="p" multiline className="mb-2 text-sm text-gray-700" value={d.quote} placeholder="Quote…" onCommit={(v) => onEdit('quote', v)} />
+        <EditableText as="p" multiline className="mb-2 text-sm text-gray-700" value={d.quote} placeholder="Quote…" onCommit={(v) => onEdit('quote', v)} onFocusSelect={onSelect} />
       ) : (
         <p className="mb-2 text-sm text-gray-700">"{d.quote || 'Quote'}"</p>
       )}
       {onEdit ? (
-        <EditableText className="text-xs font-medium text-gray-500" value={d.reviewer_name} placeholder="Reviewer" onCommit={(v) => onEdit('reviewer_name', v)} />
+        <EditableText className="text-xs font-medium text-gray-500" value={d.reviewer_name} placeholder="Reviewer" onCommit={(v) => onEdit('reviewer_name', v)} onFocusSelect={onSelect} />
       ) : (
         <p className="text-xs font-medium text-gray-500">{d.reviewer_name || 'Reviewer'}</p>
       )}
@@ -97,12 +137,12 @@ export function QuoteBlock({ block, onEdit }) {
   );
 }
 
-export function FaqBlock({ block, onEdit }) {
+export function FaqBlock({ block, onEdit, onSelect }) {
   const d = block.data ?? {};
   return (
     <div className="border-b border-gray-200 py-3">
       {onEdit ? (
-        <EditableText className="font-medium text-gray-900" value={d.question} placeholder="Question" onCommit={(v) => onEdit('question', v)} />
+        <EditableText className="font-medium text-gray-900" value={d.question} placeholder="Question" onCommit={(v) => onEdit('question', v)} onFocusSelect={onSelect} />
       ) : (
         <p className="font-medium text-gray-900">{d.question || 'Question'}</p>
       )}
@@ -111,19 +151,19 @@ export function FaqBlock({ block, onEdit }) {
   );
 }
 
-export function ValueBlock({ block, theme, onEdit }) {
+export function ValueBlock({ block, theme, onEdit, onSelect }) {
   const d = block.data ?? {};
   const iconColor = resolveColor({ slot: 'accent' }, theme.colors);
   return (
     <div className="text-center">
       <div style={{ color: iconColor }} className="mb-2 text-2xl">{d.icon || '⭐'}</div>
       {onEdit ? (
-        <EditableText className="block font-semibold text-gray-900" value={d.label} placeholder="Label" onCommit={(v) => onEdit('label', v)} />
+        <EditableText className="block font-semibold text-gray-900" value={d.label} placeholder="Label" onCommit={(v) => onEdit('label', v)} onFocusSelect={onSelect} />
       ) : (
         <p className="font-semibold text-gray-900">{d.label || 'Label'}</p>
       )}
       {onEdit ? (
-        <EditableText as="p" multiline className="mt-1 text-sm text-gray-500" value={d.description} placeholder="Description" onCommit={(v) => onEdit('description', v)} />
+        <EditableText as="p" multiline className="mt-1 text-sm text-gray-500" value={d.description} placeholder="Description" onCommit={(v) => onEdit('description', v)} onFocusSelect={onSelect} />
       ) : (
         d.description && <p className="mt-1 text-sm text-gray-500">{d.description}</p>
       )}
@@ -131,7 +171,7 @@ export function ValueBlock({ block, theme, onEdit }) {
   );
 }
 
-export function MemberBlock({ block, mediaLibrary, onEdit }) {
+export function MemberBlock({ block, mediaLibrary, onEdit, onSelect }) {
   const d = block.data ?? {};
   const photo = resolveMedia(d.photo, mediaLibrary);
   return (
@@ -140,12 +180,12 @@ export function MemberBlock({ block, mediaLibrary, onEdit }) {
         {photo ? <img src={photo.url} alt={d.name} className="h-full w-full object-cover" /> : 'Photo'}
       </div>
       {onEdit ? (
-        <EditableText className="block font-semibold text-gray-900" value={d.name} placeholder="Name" onCommit={(v) => onEdit('name', v)} />
+        <EditableText className="block font-semibold text-gray-900" value={d.name} placeholder="Name" onCommit={(v) => onEdit('name', v)} onFocusSelect={onSelect} />
       ) : (
         <p className="font-semibold text-gray-900">{d.name || 'Name'}</p>
       )}
       {onEdit ? (
-        <EditableText className="block text-sm text-gray-500" value={d.role} placeholder="Role" onCommit={(v) => onEdit('role', v)} />
+        <EditableText className="block text-sm text-gray-500" value={d.role} placeholder="Role" onCommit={(v) => onEdit('role', v)} onFocusSelect={onSelect} />
       ) : (
         d.role && <p className="text-sm text-gray-500">{d.role}</p>
       )}
@@ -163,12 +203,12 @@ export function LogoBlock({ block, mediaLibrary }) {
   );
 }
 
-export function AnnouncementBlock({ block, onEdit }) {
+export function AnnouncementBlock({ block, onEdit, onSelect }) {
   const d = block.data ?? {};
   return (
     <span className="inline-flex items-center gap-2">
       {onEdit ? (
-        <EditableText value={d.message} placeholder="Announcement" onCommit={(v) => onEdit('message', v)} />
+        <EditableText value={d.message} placeholder="Announcement" onCommit={(v) => onEdit('message', v)} onFocusSelect={onSelect} />
       ) : (
         d.message || 'Announcement'
       )}
@@ -177,7 +217,7 @@ export function AnnouncementBlock({ block, onEdit }) {
   );
 }
 
-function CardBlock({ block, mediaLibrary, onEdit, fallbackTitle }) {
+function CardBlock({ block, mediaLibrary, onEdit, onSelect, fallbackTitle }) {
   const d = block.data ?? {};
   const image = resolveMedia(d.image, mediaLibrary);
   return (
@@ -186,7 +226,7 @@ function CardBlock({ block, mediaLibrary, onEdit, fallbackTitle }) {
         {image ? <img src={image.url} alt={d.title} className="h-full w-full object-cover" /> : 'No image'}
       </div>
       {onEdit ? (
-        <EditableText className="block text-sm font-medium text-gray-800" value={d.title} placeholder={fallbackTitle} onCommit={(v) => onEdit('title', v)} />
+        <EditableText className="block text-sm font-medium text-gray-800" value={d.title} placeholder={fallbackTitle} onCommit={(v) => onEdit('title', v)} onFocusSelect={onSelect} />
       ) : (
         <p className="text-sm font-medium text-gray-800">{d.title || fallbackTitle}</p>
       )}
@@ -218,10 +258,10 @@ export function FormFieldBlock({ block }) {
   );
 }
 
-export function NavLinkBlock({ block, onEdit }) {
+export function NavLinkBlock({ block, onEdit, onSelect }) {
   const d = block.data ?? {};
   return onEdit ? (
-    <EditableText className="text-sm" value={d.label} placeholder="Link" onCommit={(v) => onEdit('label', v)} />
+    <EditableText className="text-sm" value={d.label} placeholder="Link" onCommit={(v) => onEdit('label', v)} onFocusSelect={onSelect} />
   ) : (
     <span className="text-sm">{d.label || 'Link'}</span>
   );
@@ -240,7 +280,12 @@ export function MenuColumnBlock({ block }) {
   );
 }
 
-const GROUP_CHILD_TYPES = ['heading', 'subheading', 'text', 'button', 'image', 'group'];
+// Single source of truth for what a group block accepts as children —
+// registry.js's `group.childTypes` imports this same constant instead of
+// hardcoding its own copy, so the canvas's on-canvas "Add block" control
+// (below) and the sidebar/settings-panel one (which reads registry.js) can
+// never drift out of sync.
+export const GROUP_CHILD_TYPES = ['heading', 'subheading', 'text', 'button', 'image', 'group'];
 
 const DIRECTION_CLASS = { horizontal: 'flex-row', vertical: 'flex-col' };
 const ALIGN_CLASS = { start: 'items-start', center: 'items-center', end: 'items-end', stretch: 'items-stretch' };
@@ -285,6 +330,7 @@ export function GroupBlock({ block, theme, mediaLibrary, childCtx, isMobile }) {
   const bgColor = d.backgroundColor ? resolveColor(d.backgroundColor, theme?.colors) : undefined;
 
   const className = [
+    'relative', // positioning context for BlockStream's trailing insert-zone (see below)
     'flex',
     DIRECTION_CLASS[direction] ?? 'flex-row',
     ALIGN_CLASS[align] ?? 'items-stretch',
@@ -315,10 +361,16 @@ export function GroupBlock({ block, theme, mediaLibrary, childCtx, isMobile }) {
           gated={false}
           className="contents"
           isMobile={isMobile}
+          // Easyblocks-style hover "+" between items instead of one
+          // end-of-list Add button (see BlockStream.jsx/InsertZone.jsx).
+          // `direction` matches this group's own current (possibly
+          // mobile-overridden) flex direction so the hover strips orient
+          // correctly. An empty group still falls back to a normal,
+          // always-visible Add button inside BlockStream (nothing to hover
+          // near yet).
+          insertBetween
+          direction={direction}
         />
-      )}
-      {empty && childCtx && (
-        <p className="py-2 text-center text-xs text-gray-400">Empty group — add blocks below</p>
       )}
     </div>
   );

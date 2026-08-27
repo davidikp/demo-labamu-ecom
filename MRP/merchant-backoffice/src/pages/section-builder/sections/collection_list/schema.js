@@ -1,6 +1,7 @@
 import { SECTION_CHROME_FIELDS } from '../shared/sectionChrome';
 import { HEADING_SIZE_FIELD } from '../shared/headingSize';
 import { IMAGE_ASPECT_RATIO_FIELD } from '../shared/imageAspectRatio';
+import { SOURCE_FIELD, DEPENDS_ON_CATALOG_SOURCE, DEPENDS_ON_CUSTOM_SOURCE } from '../shared/sourceBinding';
 
 const CATALOG_HANDLE_OPTIONS = [
   { value: 'best-sellers', label: 'Best Sellers' },
@@ -55,23 +56,15 @@ export const schema = {
       // Declared first so it renders above the collection picker, per how
       // an item is actually filled in: choose the source, then either pick
       // a collection or fill in custom fields.
-      source: {
-        type: 'select', label: 'Source', default: 'catalog',
-        // Excluded from RepeaterField's item-summary fallback (which
-        // otherwise shows the first select field's label) — "From catalog"
-        // isn't a useful item summary the way the chosen collection's name
-        // or a custom title is.
-        excludeFromSummary: true,
-        options: [{ value: 'catalog', label: 'From catalog' }, { value: 'custom', label: 'Custom' }],
-      },
+      source: SOURCE_FIELD,
       handle: {
         type: 'select', label: 'Collection',
-        dependsOn: { field: 'source', equals: 'catalog' },
+        dependsOn: DEPENDS_ON_CATALOG_SOURCE,
         options: CATALOG_HANDLE_OPTIONS,
       },
-      title: { type: 'text', label: 'Title', maxLength: 100, default: '', dependsOn: { field: 'source', equals: 'custom' } },
-      image: { type: 'image', label: 'Image', dependsOn: { field: 'source', equals: 'custom' } },
-      url: { type: 'text', label: 'Link URL', default: '', dependsOn: { field: 'source', equals: 'custom' } },
+      title: { type: 'text', label: 'Title', maxLength: 100, default: '', dependsOn: DEPENDS_ON_CUSTOM_SOURCE },
+      image: { type: 'image', label: 'Image', dependsOn: DEPENDS_ON_CUSTOM_SOURCE },
+      url: { type: 'text', label: 'Link URL', default: '', dependsOn: DEPENDS_ON_CUSTOM_SOURCE },
     },
   },
   // Only meaningful for 'cards' — 'circular' is always a single row of

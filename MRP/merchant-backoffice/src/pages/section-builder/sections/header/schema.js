@@ -36,10 +36,26 @@ export const schema = {
   sticky: { type: 'boolean', label: 'Sticky on scroll', default: true, group: 'layout' },
   show_cart_icon: { type: 'boolean', label: 'Show cart icon', default: true, group: 'layout' },
   show_search_icon: { type: 'boolean', label: 'Show search icon', default: true, group: 'layout' },
-  // Decorative-only pill (border + globe icon + "EN" + chevron) — see the
-  // code comment in Renderer.jsx's renderIcons() for why this is NOT a real
-  // i18n control.
+  // Collapses nav links beyond this count into a "⋯" overflow dropdown
+  // instead of letting the nav wrap/overflow the row.
+  nav_overflow_after: { type: 'number', label: 'Collapse nav after N links', min: 2, max: 8, default: 5, group: 'layout' },
+  // Decorative-only pill (border + globe icon + code + chevron) — clicking
+  // it opens/closes a dropdown list of `languages` below, but nothing here
+  // is wired to any real i18n/locale mechanism (see the code comment in
+  // Renderer.jsx's renderLanguageSwitcher() — do not mistake this for a
+  // functional control). `languages` defaults to a single "EN" entry so
+  // existing headers with this flag on render the same single-pill look as
+  // before.
   show_language_switcher: { type: 'boolean', label: 'Show language switcher', default: false, group: 'layout' },
+  languages: {
+    type: 'repeater', label: 'Languages (display only)', group: 'layout',
+    maxItems: 6,
+    default: [{ id: 'lang-en', code: 'EN', label: 'English' }],
+    itemSchema: {
+      code: { type: 'text', label: 'Code', maxLength: 4, default: 'EN' },
+      label: { type: 'text', label: 'Label', maxLength: 40, default: '' },
+    },
+  },
   show_border: { type: 'boolean', label: 'Show bottom border', default: false, group: 'layout' },
   ...SECTION_CHROME_FIELDS_NO_PADDING,
   color_scheme: { ...SECTION_CHROME_FIELDS_NO_PADDING.color_scheme, default: 'primary' },

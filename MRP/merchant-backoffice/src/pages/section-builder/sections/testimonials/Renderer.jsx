@@ -5,20 +5,28 @@ import EditableText from '../../ui/EditableText';
 import BlockBoundary from '../../ui/BlockBoundary';
 import BlockStream from '../../ui/BlockStream';
 import AddBlockControl from '../../ui/AddBlockControl';
+import StorefrontContainer from '../../ui/primitives/StorefrontContainer';
 import { HEADING_SIZE_CLASS } from '../shared/headingSize';
+import { themedCardStyle } from '../shared/themedLayout';
 
 const COLS_CLASS = { '2': 'sm:grid-cols-2', '3': 'sm:grid-cols-3' };
-const STAR_COLOR = '#F59E0B'; // hardcoded per spec — universally recognised as a rating color
+// Default falls back to the previous hardcoded value (a universally-recognised
+// rating color) when a theme doesn't set `colors.rating` — themes opt into a
+// different star color (e.g. Houzez's golden-reference #FACC15) via that
+// token instead of this default ever changing globally.
+const DEFAULT_STAR_COLOR = '#F59E0B';
 
 function TestimonialsRenderer({ data, blocks = [], theme, mediaLibrary, onEdit, blockCtx }) {
   const { t } = useTranslation();
   const colsClass = COLS_CLASS[data.columns_desktop] ?? COLS_CLASS['3'];
+  const starColor = theme?.colors?.rating ?? DEFAULT_STAR_COLOR;
   const quotes = blocks.filter((b) => b.type === 'quote');
   const genericBlocks = blocks.filter((b) => b.type !== 'quote');
   const headingSizeClass = HEADING_SIZE_CLASS[data.heading_size] ?? HEADING_SIZE_CLASS.medium;
+  const cardStyle = themedCardStyle(theme?.layout);
 
   return (
-    <section className="px-6">
+    <StorefrontContainer as="section" theme={theme}>
       {data.show_heading !== false &&
         (onEdit ? (
           <EditableText
@@ -47,10 +55,10 @@ function TestimonialsRenderer({ data, blocks = [], theme, mediaLibrary, onEdit, 
               onSelect={blockCtx ? () => blockCtx.onSelect(b.id) : undefined}
               label={t('sectionBuilder:sections.testimonials.blockLabel', 'Testimonial')}
             >
-              <div className="h-full rounded-md border border-gray-200 bg-white p-4">
-                <div className="mb-2 flex" style={{ color: STAR_COLOR }}>
+              <div className="h-full border border-gray-200 bg-white p-4" style={cardStyle}>
+                <div className="mb-2 flex" style={{ color: starColor }}>
                   {Array.from({ length: Number(b.data?.star_rating ?? 5) }).map((_, i) => (
-                    <Star key={i} size={14} fill={STAR_COLOR} stroke={STAR_COLOR} />
+                    <Star key={i} size={14} fill={starColor} stroke={starColor} />
                   ))}
                 </div>
                 {blockCtx ? (
@@ -84,7 +92,7 @@ function TestimonialsRenderer({ data, blocks = [], theme, mediaLibrary, onEdit, 
       {blockCtx && (blockCtx.selectedBlockId || blockCtx.sectionActive) && !blockCtx.atMax && (
         <div className="mt-4"><AddBlockControl sectionType="testimonials" atMax={false} onAdd={(ty) => blockCtx.onAdd(ty)} variant="canvas" /></div>
       )}
-    </section>
+    </StorefrontContainer>
   );
 }
 

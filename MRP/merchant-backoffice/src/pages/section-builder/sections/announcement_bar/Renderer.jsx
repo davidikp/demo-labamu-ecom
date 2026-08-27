@@ -5,7 +5,7 @@ function AnnouncementBarRenderer({ data, blocks = [], theme, mediaLibrary, block
   return (
     <div
       style={{ textAlign: data.text_alignment ?? 'center' }}
-      className="px-4 text-sm"
+      className="relative px-4 text-sm"
     >
       <BlockStream
         sectionType="announcement_bar"

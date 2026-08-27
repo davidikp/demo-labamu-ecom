@@ -7,7 +7,7 @@ function RichTextRenderer({ data, blocks = [], theme, mediaLibrary, blockCtx }) 
 
   return (
     <div style={{ textAlign: data.text_alignment ?? 'left' }} className="px-6">
-      <div style={{ maxWidth: `${width}px`, margin: centered ? '0 auto' : undefined }}>
+      <div className="relative" style={{ maxWidth: `${width}px`, margin: centered ? '0 auto' : undefined }}>
         <BlockStream
           sectionType="rich_text"
           blocks={blocks}

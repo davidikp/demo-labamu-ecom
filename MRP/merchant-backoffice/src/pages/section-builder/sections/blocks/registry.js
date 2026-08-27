@@ -26,6 +26,7 @@ import {
   NavLinkBlock,
   MenuColumnBlock,
   GroupBlock,
+  GROUP_CHILD_TYPES,
 } from './blockRenderers';
 
 export const BLOCK_TYPES = {
@@ -67,7 +68,11 @@ export const BLOCK_TYPES = {
       url: { type: 'text', label: 'Link URL', default: '/collections/all', group: 'content' },
       style: {
         type: 'select', label: 'Style', default: 'primary', group: 'content',
-        options: [{ value: 'primary', label: 'Primary' }, { value: 'secondary', label: 'Secondary' }],
+        options: [
+          { value: 'primary', label: 'Primary' },
+          { value: 'secondary', label: 'Secondary' },
+          { value: 'inverted', label: 'Inverted (for photo/color backgrounds)' },
+        ],
       },
     },
   },
@@ -93,7 +98,7 @@ export const BLOCK_TYPES = {
     Renderer: GroupBlock,
     container: true,
     // A group can hold another group (Shopify-style nested groups), any depth.
-    childTypes: ['heading', 'subheading', 'text', 'button', 'image', 'group'],
+    childTypes: GROUP_CHILD_TYPES,
     fields: {
       // ── Layout (desktop) ─────────────────────────────────────────────
       direction: {

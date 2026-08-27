@@ -1,15 +1,22 @@
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import BlockStream from '../../ui/BlockStream';
+import StorefrontContainer from '../../ui/primitives/StorefrontContainer';
+import { resolveColor } from '../../ui/fields/colorValue';
+import { themedButtonStyle } from '../shared/themedButtonStyle';
 
 // TODO(backend): submission, email notification, and rate limiting (US-9.1's
 // AC) need a real endpoint — this renders the form fields only.
 function ContactFormRenderer({ blocks = [], theme, mediaLibrary, blockCtx }) {
   const { t } = useTranslation();
+  const buttonStyle = themedButtonStyle(theme.buttons, {
+    primary: resolveColor({ slot: 'primary' }, theme.colors),
+    primaryText: resolveColor({ slot: 'primary_text' }, theme.colors),
+  });
 
   return (
-    <section className="px-6">
-      <div className="max-w-md space-y-3">
+    <StorefrontContainer as="section" theme={theme}>
+      <div className="relative max-w-md space-y-3">
         <BlockStream
           sectionType="contact_form"
           blocks={blocks}
@@ -18,9 +25,9 @@ function ContactFormRenderer({ blocks = [], theme, mediaLibrary, blockCtx }) {
           blockCtx={blockCtx}
           className="flex flex-col gap-3"
         />
-        <span className="inline-block rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white">{t('sectionBuilder:sections.contactForm.sendButton')}</span>
+        <span className="inline-block text-sm" style={buttonStyle}>{t('sectionBuilder:sections.contactForm.sendButton')}</span>
       </div>
-    </section>
+    </StorefrontContainer>
   );
 }
 

@@ -28,6 +28,7 @@ export const SECTION_REGISTRY = [
   { type: 'video_banner', label: 'Video Banner', category: 'hero', description: 'Hero area with a background video and overlaid text.' },
   { type: 'featured_products', label: 'Featured Products', category: 'product', description: 'Grid of hand-picked or collection-sourced products.' },
   { type: 'collection_list', label: 'Collection List', category: 'product', description: 'Showcase multiple collections as browsable cards.' },
+  { type: 'category_grid', label: 'Category Grid', category: 'product', description: 'Row of icon-circle category shortcuts, e.g. a construction-supply category strip.' },
   { type: 'product_carousel', label: 'Product Carousel', category: 'product', description: 'Horizontally scrollable row of products.' },
   { type: 'product_spotlight', label: 'Single Product Spotlight', category: 'product', description: 'Highlight one product with image, details and buy button.' },
   { type: 'image_with_text', label: 'Image with Text', category: 'brand', description: 'Side-by-side image and text block to tell your story.' },

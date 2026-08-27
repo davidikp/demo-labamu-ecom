@@ -18,6 +18,8 @@ import { schema as featuredProductsSchema, blockConfig as featuredProductsBlocks
 import FeaturedProductsRenderer from './featured_products/Renderer';
 import { schema as collectionListSchema, blockConfig as collectionListBlocks } from './collection_list/schema';
 import CollectionListRenderer from './collection_list/Renderer';
+import { schema as categoryGridSchema, blockConfig as categoryGridBlocks } from './category_grid/schema';
+import CategoryGridRenderer from './category_grid/Renderer';
 import { schema as productCarouselSchema, blockConfig as productCarouselBlocks } from './product_carousel/schema';
 import ProductCarouselRenderer from './product_carousel/Renderer';
 import { schema as productSpotlightSchema, blockConfig as productSpotlightBlocks } from './product_spotlight/schema';
@@ -79,6 +81,7 @@ export const SECTION_DEFINITIONS = {
   video_banner: { schema: videoBannerSchema, blockConfig: videoBannerBlocks, Renderer: VideoBannerRenderer },
   featured_products: { schema: featuredProductsSchema, blockConfig: featuredProductsBlocks, Renderer: FeaturedProductsRenderer },
   collection_list: { schema: collectionListSchema, blockConfig: collectionListBlocks, Renderer: CollectionListRenderer },
+  category_grid: { schema: categoryGridSchema, blockConfig: categoryGridBlocks, Renderer: CategoryGridRenderer },
   product_carousel: { schema: productCarouselSchema, blockConfig: productCarouselBlocks, Renderer: ProductCarouselRenderer },
   product_spotlight: { schema: productSpotlightSchema, blockConfig: productSpotlightBlocks, Renderer: ProductSpotlightRenderer },
   image_with_text: { schema: imageWithTextSchema, blockConfig: imageWithTextBlocks, Renderer: ImageWithTextRenderer },

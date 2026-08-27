@@ -63,6 +63,14 @@ export default function AddBlockControl({ sectionType, types: typesProp, atMax, 
       ? 'flex w-full items-center gap-1 rounded px-2 py-1.5 text-left text-xs font-medium text-blue-600 hover:bg-blue-50 disabled:cursor-not-allowed disabled:text-gray-300 disabled:hover:bg-transparent'
       : variant === 'canvas'
       ? 'mt-4 flex items-center gap-1.5 rounded-md border border-dashed border-gray-300 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-40'
+      : variant === 'insert'
+      // Circular "+" (Easyblocks-style insert-between-items affordance) at a
+      // boundary next to the currently *selected* block — BlockStream only
+      // renders this control at all when that's the case (see its
+      // `insertBefore`/trailing-zone gating), so no hover-reveal trick is
+      // needed here; it's always fully opaque once mounted. Icon-only, no
+      // label, sized to sit centered on its boundary strip.
+      ? 'flex h-5 w-5 items-center justify-center rounded-full bg-blue-600 text-white shadow-sm'
       : 'flex w-full items-center justify-center gap-1.5 rounded-md border border-dashed border-gray-300 py-2 text-sm text-gray-600 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40';
 
   const label = multi
@@ -89,9 +97,15 @@ export default function AddBlockControl({ sectionType, types: typesProp, atMax, 
 
   return (
     <div ref={triggerRef} className={variant === 'sidebar' ? '' : 'inline-block'} onClick={(e) => e.stopPropagation()}>
-      <button type="button" disabled={atMax} onClick={handleClick} className={triggerClass}>
-        <Plus size={variant === 'sidebar' ? 13 : 15} />
-        {atMax ? t('sectionBuilder:editor.blockList.maxReached', 'Maximum reached') : label}
+      <button
+        type="button"
+        disabled={atMax}
+        onClick={handleClick}
+        className={triggerClass}
+        aria-label={variant === 'insert' ? (atMax ? t('sectionBuilder:editor.blockList.maxReached', 'Maximum reached') : label) : undefined}
+      >
+        <Plus size={variant === 'sidebar' ? 13 : variant === 'insert' ? 13 : 15} />
+        {variant !== 'insert' && (atMax ? t('sectionBuilder:editor.blockList.maxReached', 'Maximum reached') : label)}
       </button>
 
       {open && multi && coords &&

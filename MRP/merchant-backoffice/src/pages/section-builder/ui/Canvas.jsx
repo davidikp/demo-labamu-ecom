@@ -7,17 +7,16 @@ import { MAX_SECTIONS_PER_PAGE } from '../state/builderReducer';
 import { parseBlockSelection, isAtBlockMax, createBlockCtx } from '../sections/blockHelpers';
 import SectionShell from './SectionShell';
 import { applyThemeToElement } from '../themes/applyTheme';
+import { BREAKPOINTS } from '../themes/breakpoints';
 
-const VIEWPORT_WIDTH = { desktop: 1280, mobile: 390 };
-
-const RenderedEntity = memo(function RenderedEntity({ entity, theme, mediaLibrary, onEdit, blockCtx, isMobile, onNavigate, currentPath }) {
+const RenderedEntity = memo(function RenderedEntity({ entity, theme, mediaLibrary, onEdit, blockCtx, isMobile, breakpoint, onNavigate, currentPath }) {
   const { t } = useTranslation();
   const Renderer = SECTION_DEFINITIONS[entity.type]?.Renderer;
   if (!Renderer) {
     return <p className="p-6 text-xs text-gray-400">{t('sectionBuilder:editor.canvas.unknownSectionType', { type: entity.type })}</p>;
   }
   return (
-    <SectionShell data={entity.data ?? {}} theme={theme}>
+    <SectionShell data={entity.data ?? {}} theme={theme} breakpoint={breakpoint}>
       <Renderer
         data={entity.data ?? {}}
         blocks={entity.blocks ?? []}
@@ -27,6 +26,10 @@ const RenderedEntity = memo(function RenderedEntity({ entity, theme, mediaLibrar
         onEdit={onEdit}
         blockCtx={blockCtx}
         isMobile={isMobile}
+        // Additive alongside `isMobile` (Phase 0 — see themes/breakpoints.js).
+        // Existing Renderers ignore an unknown prop; new/responsive-aware
+        // fields resolve against this instead of the boolean.
+        breakpoint={breakpoint}
         onNavigate={onNavigate}
         currentPath={currentPath}
       />
@@ -34,7 +37,7 @@ const RenderedEntity = memo(function RenderedEntity({ entity, theme, mediaLibrar
   );
 });
 
-const GlobalBlock = memo(function GlobalBlock({ entity, selected, onSelect, onInlineEdit, theme, mediaLibrary, readOnly, isMobile, onNavigate, currentPath }) {
+const GlobalBlock = memo(function GlobalBlock({ entity, selected, onSelect, onInlineEdit, theme, mediaLibrary, readOnly, isMobile, breakpoint, onNavigate, currentPath }) {
   const { t } = useTranslation();
   const handleEdit = useCallback(
     (key, value) => onInlineEdit?.(entity.type, key, value),
@@ -69,6 +72,7 @@ const GlobalBlock = memo(function GlobalBlock({ entity, selected, onSelect, onIn
         mediaLibrary={mediaLibrary}
         onEdit={readOnly ? undefined : handleEdit}
         isMobile={isMobile}
+        breakpoint={breakpoint}
         // Nav links only navigate on the read-only preview/live render — in
         // the interactive builder, clicking one should select the header
         // (the wrapping div's onClick above) rather than jump the merchant
@@ -88,7 +92,7 @@ const GlobalBlock = memo(function GlobalBlock({ entity, selected, onSelect, onIn
  * this component binds `section.id` itself so the props it receives never
  * change identity for unrelated edits.
  */
-const SectionBlock = memo(function SectionBlock({ section, index, count, selectedId, onSelect, onMove, onDuplicate, onDelete, onInlineEdit, onSelectBlock, onAddBlock, onBlockInlineEdit, onRequestAdd, canAdd, theme, mediaLibrary, isMobile }) {
+const SectionBlock = memo(function SectionBlock({ section, index, count, selectedId, onSelect, onMove, onDuplicate, onDelete, onInlineEdit, onSelectBlock, onAddBlock, onBlockInlineEdit, onRequestAdd, canAdd, theme, mediaLibrary, isMobile, breakpoint }) {
   const { t } = useTranslation();
   const selected = selectedId === section.id;
   const handleEdit = useCallback(
@@ -196,7 +200,7 @@ const SectionBlock = memo(function SectionBlock({ section, index, count, selecte
         </button>
       </div>
 
-      <RenderedEntity entity={section} theme={theme} mediaLibrary={mediaLibrary} onEdit={handleEdit} blockCtx={blockCtx} isMobile={isMobile} />
+      <RenderedEntity entity={section} theme={theme} mediaLibrary={mediaLibrary} onEdit={handleEdit} blockCtx={blockCtx} isMobile={isMobile} breakpoint={breakpoint} />
     </div>
   );
 });
@@ -230,7 +234,10 @@ export default function Canvas({
 }) {
   const { t } = useTranslation();
   const isMobile = viewport === 'mobile';
-  const width = VIEWPORT_WIDTH[viewport];
+  // `fit` has no fixed device width — it stretches to the canvas panel
+  // itself (see themes/breakpoints.js), same as the existing `maxWidth:
+  // '100%'` clamp already does for narrower panels.
+  const width = BREAKPOINTS[viewport]?.width ?? '100%';
   const atCap = sections.length >= MAX_SECTIONS_PER_PAGE;
   const canInsert = !readOnly && !!onRequestAddSection && !atCap;
   const pageFrameRef = useRef(null);
@@ -272,7 +279,8 @@ export default function Canvas({
           theme={theme}
           mediaLibrary={mediaLibrary}
           readOnly={readOnly}
-          isMobile={readOnly ? undefined : isMobile}
+          isMobile={isMobile}
+          breakpoint={viewport}
           onNavigate={onNavigate}
           currentPath={currentPath}
         />
@@ -294,7 +302,7 @@ export default function Canvas({
           )
         ) : readOnly ? (
           sections.map((section) => (
-            <RenderedEntity key={section.id} entity={section} theme={theme} mediaLibrary={mediaLibrary} />
+            <RenderedEntity key={section.id} entity={section} theme={theme} mediaLibrary={mediaLibrary} isMobile={isMobile} breakpoint={viewport} />
           ))
         ) : (
           sections.map((section, index) => (
@@ -317,6 +325,7 @@ export default function Canvas({
               theme={theme}
               mediaLibrary={mediaLibrary}
               isMobile={isMobile}
+              breakpoint={viewport}
             />
           ))
         )}
@@ -329,7 +338,8 @@ export default function Canvas({
           theme={theme}
           mediaLibrary={mediaLibrary}
           readOnly={readOnly}
-          isMobile={readOnly ? undefined : isMobile}
+          isMobile={isMobile}
+          breakpoint={viewport}
           onNavigate={onNavigate}
         />
       </div>

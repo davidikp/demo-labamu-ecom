@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
+import { Extension } from '@tiptap/core';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
 import TextAlign from '@tiptap/extension-text-align';
@@ -13,6 +14,8 @@ import { TableRow } from '@tiptap/extension-table-row';
 import { TableHeader } from '@tiptap/extension-table-header';
 import { TableCell } from '@tiptap/extension-table-cell';
 import { CellSelection, TableMap } from '@tiptap/pm/tables';
+import { Plugin, PluginKey } from '@tiptap/pm/state';
+import { Decoration, DecorationSet } from '@tiptap/pm/view';
 import { useTranslation } from 'react-i18next';
 import {
   Bold,
@@ -77,13 +80,10 @@ function clearTableLine(editor, mode) {
   const { doc, selection } = state;
   const $pos = selection.$anchor;
 
-  let tableDepth = -1;
-  for (let d = $pos.depth; d > 0; d -= 1) {
-    if ($pos.node(d).type.spec.tableRole === 'table') {
-      tableDepth = d;
-      break;
-    }
-  }
+  // tableDepthAt is declared further below (function declarations hoist),
+  // shared with the context-menu's own "did this click land in a table"
+  // check so the two don't drift on how that's determined.
+  const tableDepth = tableDepthAt($pos);
   if (tableDepth === -1) return;
 
   const table = $pos.node(tableDepth);
@@ -311,15 +311,11 @@ function ColorPicker({ editor }) {
   );
 }
 
-function TableMenu({ editor }) {
-  const [open, setOpen] = useState(false);
-  const containerRef = useRef(null);
-  useCloseOnOutsideClick(containerRef, open, () => setOpen(false));
-  if (!editor) return null;
-
-  const insideTable = editor.isActive('table');
-
-  const items = insideTable
+// Shared by the toolbar's Table dropdown and the cell right-click context
+// menu (see TableContextMenu below) — one list so the two entry points can
+// never drift on which operations exist or what they do.
+function tableMenuItems(editor, insideTable) {
+  return insideTable
     ? [
         { label: 'Insert row above', run: () => editor.chain().focus().addRowBefore().run() },
         { label: 'Insert row below', run: () => editor.chain().focus().addRowAfter().run() },
@@ -337,6 +333,16 @@ function TableMenu({ editor }) {
           run: () => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run(),
         },
       ];
+}
+
+function TableMenu({ editor }) {
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef(null);
+  useCloseOnOutsideClick(containerRef, open, () => setOpen(false));
+  if (!editor) return null;
+
+  const insideTable = editor.isActive('table');
+  const items = tableMenuItems(editor, insideTable);
 
   return (
     <div className="relative" ref={containerRef}>
@@ -364,6 +370,131 @@ function TableMenu({ editor }) {
     </div>
   );
 }
+
+// Finds the table depth (if any) a resolved doc position sits inside —
+// shared by clearTableLine above and the context-menu position check below,
+// which needs to know *before* deciding whether to preventDefault the
+// browser's native menu.
+function tableDepthAt($pos) {
+  for (let d = $pos.depth; d > 0; d -= 1) {
+    if ($pos.node(d).type.spec.tableRole === 'table') return d;
+  }
+  return -1;
+}
+
+/**
+ * Right-click-on-a-cell context menu — the "when I right click the option is
+ * shown" / cell-focus-state expectation from the table-editing AC. Reuses
+ * the exact same operations list as the toolbar's Table dropdown
+ * (tableMenuItems) so both entry points can never disagree. Only intercepts
+ * the browser's native context menu when the right-click actually landed
+ * inside a table cell — everywhere else in the editor, the default menu
+ * (copy/paste/etc.) still shows.
+ */
+const TABLE_CONTEXT_MENU_WIDTH = 200;
+
+function TableContextMenu({ editor }) {
+  const [menu, setMenu] = useState(null); // { x, y } in viewport coords, or null
+  const menuRef = useRef(null);
+  useCloseOnOutsideClick(menuRef, Boolean(menu), () => setMenu(null));
+
+  useEffect(() => {
+    if (!editor) return undefined;
+    const dom = editor.view.dom;
+
+    function handleContextMenu(e) {
+      const pos = editor.view.posAtCoords({ left: e.clientX, top: e.clientY });
+      if (!pos) return;
+      const $pos = editor.state.doc.resolve(pos.pos);
+      if (tableDepthAt($pos) === -1) return; // not inside a table — let the native menu show
+      e.preventDefault();
+      // Move the editor's own selection into the clicked cell first, so the
+      // table commands below (which all act on the current selection, same
+      // as the toolbar dropdown) operate on the right cell.
+      editor.commands.setTextSelection(pos.pos);
+      // Clamp so a right-click near the right edge doesn't render the menu
+      // partly off-screen.
+      const x = Math.max(8, Math.min(e.clientX, window.innerWidth - TABLE_CONTEXT_MENU_WIDTH - 8));
+      setMenu({ x, y: e.clientY });
+    }
+
+    dom.addEventListener('contextmenu', handleContextMenu);
+    return () => dom.removeEventListener('contextmenu', handleContextMenu);
+  }, [editor]);
+
+  if (!menu) return null;
+  const items = tableMenuItems(editor, true);
+
+  return (
+    <div
+      ref={menuRef}
+      // Explicit pixel width (not just a Tailwind min-width class) — a
+      // `position: fixed` element with only `left`/`top` set should already
+      // shrink-to-fit its content, but this guarantees a compact,
+      // consistent size regardless of what's fighting it.
+      style={{ position: 'fixed', left: menu.x, top: menu.y, zIndex: 50, width: TABLE_CONTEXT_MENU_WIDTH }}
+      className="rounded-md border border-gray-200 bg-white py-1 shadow-lg"
+    >
+      {items.map((item) => (
+        <button
+          key={item.label}
+          type="button"
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => {
+            item.run();
+            setMenu(null);
+          }}
+          className="w-full text-left px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100"
+        >
+          {item.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// Notion-style: highlights whichever table cell the cursor/selection is
+// currently inside, recomputed on every selection/doc change via a
+// ProseMirror decoration — not a CSS `:hover` rule, so it stays lit while
+// you're working inside the cell (typing, arrow-key navigation) regardless
+// of where the mouse happens to be, and clears entirely once the selection
+// leaves the table.
+const cellFocusPluginKey = new PluginKey('cellFocusHighlight');
+
+const CellFocusHighlight = Extension.create({
+  name: 'cellFocusHighlight',
+  addProseMirrorPlugins() {
+    return [
+      new Plugin({
+        key: cellFocusPluginKey,
+        state: {
+          init: () => DecorationSet.empty,
+          apply(tr, old) {
+            if (!tr.docChanged && !tr.selectionSet) return old;
+            const $pos = tr.selection.$from;
+            let cellDepth = -1;
+            for (let d = $pos.depth; d > 0; d -= 1) {
+              const role = $pos.node(d).type.spec.tableRole;
+              if (role === 'cell' || role === 'header_cell') {
+                cellDepth = d;
+                break;
+              }
+            }
+            if (cellDepth === -1) return DecorationSet.empty;
+            const from = $pos.before(cellDepth);
+            const to = $pos.after(cellDepth);
+            return DecorationSet.create(tr.doc, [Decoration.node(from, to, { class: 'is-cell-focused' })]);
+          },
+        },
+        props: {
+          decorations(state) {
+            return this.getState(state);
+          },
+        },
+      }),
+    ];
+  },
+});
 
 /**
  * @component RichTextEditor
@@ -410,6 +541,7 @@ export default function RichTextEditor({ value, onChange, placeholder, mediaLibr
       TableHeader,
       TableCell,
       TextAlign.configure({ types: ['heading', 'paragraph'] }),
+      CellFocusHighlight,
     ],
     content: value || '',
     editorProps: {
@@ -628,6 +760,10 @@ export default function RichTextEditor({ value, onChange, placeholder, mediaLibr
         </ToolbarButton>
       </div>
       <EditorContent editor={editor} />
+      {/* Right-click-on-a-cell menu — see TableContextMenu's own doc
+          comment for why this is a separate entry point from the toolbar's
+          Table dropdown rather than folded into it. */}
+      <TableContextMenu editor={editor} />
       {/*
         Tiptap's table extensions ship zero default styling — an inserted
         table is real content (`insertTable` definitely lands in the doc),
@@ -648,11 +784,21 @@ export default function RichTextEditor({ value, onChange, placeholder, mediaLibr
           padding: 6px 10px;
           vertical-align: top;
           position: relative;
+          transition: background-color 0.1s ease, box-shadow 0.1s ease;
         }
         .rich-text-editor-content th {
           background: #F9FAFB;
           font-weight: 600;
           text-align: left;
+        }
+        /* Notion-style: the cell the cursor/selection is currently inside,
+           via the CellFocusHighlight ProseMirror decoration (see that
+           extension's own doc comment) — not :hover. Stays lit while
+           you're actually working in the cell, not just passing the mouse
+           over it, and clears once the selection leaves the table. */
+        .rich-text-editor-content .is-cell-focused {
+          background-color: rgba(0, 107, 255, 0.06);
+          box-shadow: inset 0 0 0 1.5px #006BFF;
         }
         /* @tailwindcss/typography's default link color is near-black (it
            reuses the body text color), not brand blue — override so an

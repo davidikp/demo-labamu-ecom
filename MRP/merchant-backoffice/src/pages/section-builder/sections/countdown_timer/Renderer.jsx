@@ -27,7 +27,7 @@ function CountdownTimerRenderer({ data, blocks = [], theme, mediaLibrary, onEdit
   if (parts.expired && data.action_when_expired === 'hide') return null;
 
   return (
-    <section className="px-6 text-center">
+    <section className="relative px-6 text-center">
       <BlockStream
         sectionType="countdown_timer"
         blocks={blocks}
