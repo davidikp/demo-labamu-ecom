@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { ArrowLeft } from 'lucide-react';
 import Canvas from '../section-builder/ui/Canvas';
 import { loadDraft } from '../section-builder/state/storage';
+import { createFreshState } from '../section-builder/state/useSectionBuilder';
 
 // TODO: replace with the real active store id once multi-store routing
 // exists — matches the hardcoded id used across online-store/*.
@@ -21,7 +22,11 @@ export default function PagePreview() {
   const navigate = useNavigate();
   const { pageId } = useParams();
 
-  const draft = useMemo(() => loadDraft(STORE_ID), []);
+  // Falls back to the same default draft (default theme + system pages like
+  // "home") PagesManagement.jsx/PageEditor.jsx use when nothing's been saved
+  // to localStorage yet — otherwise a fresh browser/deploy with no draft
+  // ever persisted would 404 on every page, including the system ones.
+  const draft = useMemo(() => loadDraft(STORE_ID) ?? createFreshState(STORE_ID), []);
   const page = useMemo(() => draft?.pages?.find((p) => p.id === pageId) ?? null, [draft, pageId]);
 
   const handleBack = () => navigate(`/online-store/pages/${pageId}`);
