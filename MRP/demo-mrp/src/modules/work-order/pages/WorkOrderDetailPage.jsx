@@ -35,6 +35,7 @@ import {
   fieldStyle,
 } from "../../purchase-order/styles/purchaseOrderInputStyles.js";
 import { WorkOrderEditDrawer } from "../components/WorkOrderEditDrawer.jsx";
+import { AdditionalOutputEditDrawer } from "../components/AdditionalOutputEditDrawer.jsx";
 
 export let activityLogsCache = {};
 export let costingLogsCache = {};
@@ -559,6 +560,7 @@ export const WorkOrderDetailPage = ({ onNavigate, isSidebarCollapsed, initialDat
   // outputs don't factor into routing progress math.
   const ROUTING_QTY = mainQty;
   const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
+  const [isAdditionalOutputEditOpen, setIsAdditionalOutputEditOpen] = useState(false);
 
   const [activeTab, setActiveTab] = useState("details");
   const [activityLogs, setActivityLogs] = useState(() => {
@@ -1724,10 +1726,6 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
       setCostingStatus("Ready to Finalize");
     }
   }, [actualCogsMode, allStagesCompleted, hasOngoingMaterialRequest, costingStatus]);
-
-  // Whether this WO ever had any material request activity — drives which
-  // completion-confirmation copy shows (see handleOpenFinalCompleteModal).
-  const hasNoRecordedMaterialUsage = requestHistory.length === 0;
 
   // Step 1 for Stock Build: opens the form modal (Quantity/Cost/Storage/etc).
   // Product/Customer Order work orders skip straight to the final confirm
@@ -4259,7 +4257,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
         width="720px"
       >
         <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-          {shortageMaterials.length > 0 && woStatus !== "completed" ? (
+          {shortageMaterials.length > 0 && woStatus !== "completed" && costingStatus !== "Ready to Finalize" ? (
             <div
               style={{
                 display: "flex",
@@ -4579,14 +4577,6 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
             >
               {targetType === "Material" ? "Target Material" : "Target Product"}
             </span>
-            <span
-              style={{
-                fontSize: "var(--text-title-3)",
-                color: "var(--neutral-on-surface-secondary)",
-              }}
-            >
-              Total Output: {TOTAL_QTY}
-            </span>
           </div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: "16px" }}>
             <div
@@ -4659,77 +4649,6 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                 {mainQty} unit
               </span>
             </div>
-
-            {(outputs || [])
-              .filter((o) => !o.isMain)
-              .map((o, idx) => (
-                <div
-                  key={o.materialId || idx}
-                  style={{
-                    flex: "1 1 260px",
-                    minWidth: "220px",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    gap: "16px",
-                    padding: "16px",
-                    borderRadius: "16px",
-                    border: "1px solid var(--neutral-line-separator-1)",
-                    background: "var(--neutral-surface-primary)",
-                  }}
-                >
-                  <div style={{ display: "flex", alignItems: "center", gap: "16px", minWidth: 0 }}>
-                    <div
-                      style={{
-                        width: "56px",
-                        height: "56px",
-                        borderRadius: "12px",
-                        border: "1px solid var(--neutral-line-separator-1)",
-                        background: "var(--neutral-surface-primary)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        flexShrink: 0,
-                      }}
-                    >
-                      <Box size={24} color="var(--neutral-on-surface-tertiary)" />
-                    </div>
-                    <div style={{ display: "flex", flexDirection: "column", gap: "6px", minWidth: 0 }}>
-                      <span
-                        style={{
-                          fontSize: "16px",
-                          lineHeight: "22px",
-                          fontWeight: "var(--font-weight-bold)",
-                          color: "var(--neutral-on-surface-primary)",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        {o.name}
-                      </span>
-                      <span
-                        style={{
-                          fontSize: "var(--text-title-3)",
-                          color: "var(--neutral-on-surface-secondary)",
-                        }}
-                      >
-                        {o.sku || "-"}
-                      </span>
-                    </div>
-                  </div>
-                  <span
-                    style={{
-                      fontSize: "var(--text-title-1)",
-                      fontWeight: "var(--font-weight-bold)",
-                      color: "var(--neutral-on-surface-primary)",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {o.qty} {o.unit || "unit"}
-                  </span>
-                </div>
-              ))}
           </div>
         </Card>
 
@@ -4791,7 +4710,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                 </span>
               </span>
             </div>
-            {woStatus !== "not_started" && !isCancelled ? (
+            {woStatus !== "not_started" && !isCancelled && costingStatus !== "Ready to Finalize" ? (
               <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                 {hasSubmittedRequest && woStatus !== "completed" ? (
                   <Button
@@ -6167,17 +6086,48 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
 
         {activeTab === "additional_output" && fulfillmentType === "StockBuild" && (() => {
           const additionalOutputRows = outputs.filter((o) => !o.isMain);
+          const mainOutputRow = outputs.find((o) => o.isMain);
           return (
-            <Card style={{ gap: "16px" }}>
-              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                <span style={{ fontSize: "var(--text-title-2)", fontWeight: "var(--font-weight-bold)" }}>
-                  Additional Output
-                </span>
-                <span style={{ fontSize: "var(--text-title-3)", color: "var(--neutral-on-surface-secondary)" }}>
-                  Secondary outputs co-produced by this work order, alongside the main output.
-                </span>
+            <DetailCard>
+              <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "12px" }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                  <span style={{ fontSize: "var(--text-title-2)", fontWeight: "var(--font-weight-bold)" }}>
+                    Additional Output
+                  </span>
+                  <span style={{ fontSize: "var(--text-title-3)", color: "var(--neutral-on-surface-secondary)" }}>
+                    Secondary outputs co-produced by this work order, alongside the main output.
+                  </span>
+                </div>
+                {woStatus !== "completed" ? (
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={() => setIsAdditionalOutputEditOpen(true)}
+                  >
+                    Edit Additional Output
+                  </Button>
+                ) : null}
               </div>
 
+              {additionalOutputRows.length === 0 ? (
+                <div
+                  style={{
+                    padding: "24px",
+                    textAlign: "center",
+                    color: "var(--neutral-on-surface-tertiary)",
+                    fontSize: "var(--text-title-3)",
+                    background: "var(--neutral-surface-primary)",
+                    border: "1.5px dashed var(--neutral-line-separator-1)",
+                    borderRadius: "16px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    minHeight: "80px",
+                  }}
+                >
+                  No additional output added yet.
+                </div>
+              ) : (
               <div style={{ overflowX: "auto" }}>
                 <style>{`.wo-additional-output-table table td { height: auto; vertical-align: middle; padding-top: 12px; padding-bottom: 12px; }`}</style>
                 <div className="wo-additional-output-table">
@@ -6185,7 +6135,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                     columns={[
                       {
                         key: "image",
-                        header: "",
+                        header: "Image",
                         width: 64,
                         render: (_v, row) => {
                           const material = MOCK_MATERIALS_DATA.find((m) => m.id === row.materialId);
@@ -6242,8 +6192,9 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                         header: "Produced Qty",
                         width: 140,
                         render: (_v, row) => {
-                          // Not tracked until the Stock Build is confirmed — after
-                          // that, the confirmed row's qty is the produced amount.
+                          // Not known until the Work Order is actually Completed —
+                          // until then, show "-" rather than implying 0 was produced.
+                          if (woStatus !== "completed") return <span>-</span>;
                           const confirmedRow = confirmedStockBuild?.rows?.find(
                             (r) => r.materialId === row.materialId
                           );
@@ -6259,7 +6210,21 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
                   />
                 </div>
               </div>
-            </Card>
+              )}
+
+              <AdditionalOutputEditDrawer
+                isOpen={isAdditionalOutputEditOpen}
+                onClose={() => setIsAdditionalOutputEditOpen(false)}
+                mainOutputMaterialId={mainOutputRow?.materialId}
+                additionalOutputs={additionalOutputRows}
+                onSave={(newAdditionalOutputs) => {
+                  setOutputs((prev) => [
+                    ...prev.filter((o) => o.isMain),
+                    ...newAdditionalOutputs,
+                  ]);
+                }}
+              />
+            </DetailCard>
           );
         })()}
 
@@ -7358,10 +7323,12 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
         onClose={() => setIsFinalCompleteModalOpen(false)}
         title="Complete Work Order?"
         description={
-          hasNoRecordedMaterialUsage
-            ? "This work order has no recorded material usage. Do you want to proceed with completion?"
-            : "This action can't be undone. Actual COGS will be calculated from received materials."
+          actualCogsMode === "enabled"
+            ? "Completing this step will send the Work Order for Actual COGS review. The Work Order will be completed after the assigned user confirms the costing."
+            : "Actual COGS will be automatically confirmed without review, and the Work Order will be completed."
         }
+        hideFooterDivider
+        footerPaddingTop={24}
         footer={
           <>
             <Button
@@ -7378,7 +7345,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
               style={{ width: "100%" }}
               onClick={handleFinalComplete}
             >
-              Complete
+              Yes, Complete
             </Button>
           </>
         }
@@ -7388,7 +7355,9 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
         isOpen={isConfirmCostingModalOpen}
         onClose={() => setIsConfirmCostingModalOpen(false)}
         title="Confirm Costing?"
-        description="This action can't be undone. Actual COGS will become read-only once costing is confirmed."
+        description="Actual COGS will become read-only once costing is confirmed."
+        hideFooterDivider
+        footerPaddingTop={24}
         footer={
           <>
             <Button
@@ -7405,7 +7374,7 @@ const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState(false);
               style={{ width: "100%" }}
               onClick={handleConfirmCosting}
             >
-              Confirm
+              Yes, Confirm
             </Button>
           </>
         }

@@ -330,7 +330,8 @@ export const WorkOrderSettingsPage = ({
                   color: "var(--neutral-on-surface-secondary)",
                 }}
               >
-                Choose what method you want to use for every Work Order.
+                Choose how materials are issued for every Work Order. This
+                method applies once the Work Order is ready to process.
               </span>
             </div>
             <div
@@ -378,7 +379,7 @@ export const WorkOrderSettingsPage = ({
                 }}
               >
                 Require an authorized user to review and confirm Actual COGS
-                before the Work Order can be completed.
+                after all routing stages are confirmed as complete.
               </span>
             </div>
             <ToggleSwitch

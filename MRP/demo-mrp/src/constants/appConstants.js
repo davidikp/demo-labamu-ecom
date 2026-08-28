@@ -14,6 +14,31 @@ export const COUNTRY_CODE_OPTIONS = [
   { code: "+63", label: "Philippines", flag: "🇵🇭" },
 ];
 
+// Full country list for the Customer "Country" field (distinct from
+// COUNTRY_CODE_OPTIONS above, which is a short phone-prefix list).
+export const COUNTRY_OPTIONS = [
+  { value: "Indonesia", label: "Indonesia", flag: "🇮🇩" },
+  { value: "United States", label: "United States", flag: "🇺🇸" },
+  { value: "Singapore", label: "Singapore", flag: "🇸🇬" },
+  { value: "Malaysia", label: "Malaysia", flag: "🇲🇾" },
+  { value: "Australia", label: "Australia", flag: "🇦🇺" },
+  { value: "United Kingdom", label: "United Kingdom", flag: "🇬🇧" },
+  { value: "Japan", label: "Japan", flag: "🇯🇵" },
+  { value: "South Korea", label: "South Korea", flag: "🇰🇷" },
+  { value: "China", label: "China", flag: "🇨🇳" },
+  { value: "India", label: "India", flag: "🇮🇳" },
+  { value: "Thailand", label: "Thailand", flag: "🇹🇭" },
+  { value: "Vietnam", label: "Vietnam", flag: "🇻🇳" },
+  { value: "Philippines", label: "Philippines", flag: "🇵🇭" },
+  { value: "Germany", label: "Germany", flag: "🇩🇪" },
+  { value: "France", label: "France", flag: "🇫🇷" },
+  { value: "Netherlands", label: "Netherlands", flag: "🇳🇱" },
+  { value: "United Arab Emirates", label: "United Arab Emirates", flag: "🇦🇪" },
+  { value: "Canada", label: "Canada", flag: "🇨🇦" },
+  { value: "New Zealand", label: "New Zealand", flag: "🇳🇿" },
+  { value: "Hong Kong", label: "Hong Kong", flag: "🇭🇰" },
+];
+
 export const LANGUAGE_OPTIONS = [
   { id: "en", shortLabel: "EN", label: "English", flag: "🇺🇸" },
   { id: "id", shortLabel: "ID", label: "Bahasa Indonesia", flag: "🇮🇩" },

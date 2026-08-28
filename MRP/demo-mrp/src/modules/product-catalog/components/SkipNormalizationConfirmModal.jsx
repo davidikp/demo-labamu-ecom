@@ -6,7 +6,7 @@ export const SkipNormalizationConfirmModal = ({ isOpen, onClose, onConfirm }) =>
   <GeneralModal
     isOpen={isOpen}
     onClose={onClose}
-    title="Skip normalization?"
+    title="Skip AI Normalization"
     description="The remaining data won’t be normalized by AI. Those rows will need your attention later in the Review step."
     width="560px"
     hideFooterDivider

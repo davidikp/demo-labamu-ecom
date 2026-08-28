@@ -9,7 +9,7 @@ import { Button } from "../../../components/common/Button.jsx";
 // and rely on MaterialUploadNotifier to fire the in-app/email notification
 // once the status transition happens — regardless of whether this screen is
 // still mounted.
-export const BackgroundProcessingScreen = ({ title, message, onBackToList, buttonLabel = "Back to Bulk Upload List", secondaryActionLabel, onSecondaryAction }) => (
+export const BackgroundProcessingScreen = ({ title, message, onBackToList, buttonLabel = "Back to Bulk Upload List", secondaryActionLabel, onSecondaryAction, icon: Icon = CloudUploadIcon }) => (
   <div
     style={{
       display: "flex",
@@ -33,7 +33,7 @@ export const BackgroundProcessingScreen = ({ title, message, onBackToList, butto
         position: "relative",
       }}
     >
-      <CloudUploadIcon size={32} color="var(--feature-brand-primary)" />
+      <Icon size={32} color="var(--feature-brand-primary)" />
       <div
         style={{
           position: "absolute",

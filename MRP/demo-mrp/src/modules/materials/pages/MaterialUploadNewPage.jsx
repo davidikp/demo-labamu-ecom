@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { ChevronLeft, CheckIcon } from "../../../components/icons/Icons.jsx";
+import { ChevronLeft, CheckIcon, ListViewIcon } from "../../../components/icons/Icons.jsx";
 import { Button } from "../../../components/common/Button.jsx";
 import { UploadStep, analyzeFile } from "../components/upload-steps/UploadStep.jsx";
 import { MappingStep } from "../components/upload-steps/MappingStep.jsx";
@@ -128,6 +128,10 @@ export const MaterialUploadNewPage = ({ onNavigate, showSnackbar, initialData, i
   const [showNoDataConfirm, setShowNoDataConfirm] = useState(false);
   const [showInputDataConfirm, setShowInputDataConfirm] = useState(false);
   const [showSkipConfirm, setShowSkipConfirm] = useState(false);
+  // True for the brief window between confirming "Skip AI Normalization" and
+  // the skip actually finishing — swaps the interstitial's copy/icon so it
+  // reads as "preparing without AI" instead of "being normalized".
+  const [isSkippingNormalization, setIsSkippingNormalization] = useState(false);
   const [showTemplateSuggestion, setShowTemplateSuggestion] = useState(false);
   // "error" (analysis itself failed) vs "empty" (file read fine but had no
   // rows) — drives which copy/buttons UseTemplateSuggestionModal shows.
@@ -303,8 +307,15 @@ export const MaterialUploadNewPage = ({ onNavigate, showSnackbar, initialData, i
     const pending = pendingNormalizationRef.current;
     if (!pending) return;
     clearTimeout(normalizeTimeoutRef.current);
-    finishNormalization(pending.recordId, pending.rows, pending.mapping, { forceSkip: true, advanceLocalStep: true });
     setShowSkipConfirm(false);
+    // Swap the interstitial to the "preparing without AI" copy for a beat
+    // before actually finishing — an instant jump to Review would make the
+    // skip feel like nothing happened.
+    setIsSkippingNormalization(true);
+    setTimeout(() => {
+      finishNormalization(pending.recordId, pending.rows, pending.mapping, { forceSkip: true, advanceLocalStep: true });
+      setIsSkippingNormalization(false);
+    }, 1200);
   };
 
   const handleNormalizeAndReview = () => {
@@ -576,12 +587,17 @@ export const MaterialUploadNewPage = ({ onNavigate, showSnackbar, initialData, i
         )}
         {step === "mapping-processing" && (
           <BackgroundProcessingScreen
-            title="Your file is being normalized"
-            message="AI is normalizing and validating your data to prepare it for review. You can leave this page and we’ll email you when it’s ready."
+            title={isSkippingNormalization ? "Preparing your data for review" : "Your file is being normalized"}
+            message={
+              isSkippingNormalization
+                ? "We’re preparing your data for review without AI normalization. You can leave this page and we’ll email you when it’s ready."
+                : "AI is normalizing and validating your data to prepare it for review. You can leave this page and we’ll email you when it’s ready."
+            }
             buttonLabel="Back to Bulk Upload"
             onBackToList={() => onNavigate("materials_bulk-upload-list")}
-            secondaryActionLabel="Skip Process"
-            onSecondaryAction={() => setShowSkipConfirm(true)}
+            secondaryActionLabel={isSkippingNormalization ? undefined : "Skip AI Normalization"}
+            onSecondaryAction={isSkippingNormalization ? undefined : () => setShowSkipConfirm(true)}
+            icon={isSkippingNormalization ? ListViewIcon : undefined}
           />
         )}
         {step === "processing" && (

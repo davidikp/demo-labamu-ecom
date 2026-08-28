@@ -36,6 +36,10 @@ import { NotificationPreferencesPage } from "./modules/notification/pages/Notifi
 import { MaterialsListPage } from "./modules/materials/pages/MaterialsListPage.jsx";
 import { MaterialDetailPage } from "./modules/materials/pages/MaterialDetailPage.jsx";
 import { MaterialManagePage } from "./modules/materials/pages/MaterialManagePage.jsx";
+import { CustomerListPage } from "./modules/customer/pages/CustomerListPage.jsx";
+import { CustomerManagePage } from "./modules/customer/pages/CustomerManagePage.jsx";
+import { CustomerCreatePage } from "./modules/customer/pages/CustomerCreatePage.jsx";
+import { CustomerDetailPage } from "./modules/customer/pages/CustomerDetailPage.jsx";
 import { MaterialUploadListPage } from "./modules/materials/pages/MaterialUploadListPage.jsx";
 import { MaterialUploadNewPage } from "./modules/materials/pages/MaterialUploadNewPage.jsx";
 import { ProductCatalogPage } from "./modules/product-catalog/pages/ProductCatalogPage.jsx";
@@ -1023,6 +1027,32 @@ const ModuleRenderer = ({
         />
       );
     }
+  }
+  if (activeModule === "customers") {
+    if (viewState.view === "manage" || viewState.view === "settings") {
+      return <CustomerManagePage onNavigate={onNavigate} showSnackbar={showPoSnackbar} t={t} />;
+    }
+    if (viewState.view === "create") {
+      return (
+        <CustomerCreatePage
+          onNavigate={onNavigate}
+          showSnackbar={showPoSnackbar}
+          t={t}
+          initialData={viewState.data}
+        />
+      );
+    }
+    if (viewState.view === "detail") {
+      return (
+        <CustomerDetailPage
+          customer={viewState.data}
+          onNavigate={onNavigate}
+          showSnackbar={showPoSnackbar}
+          t={t}
+        />
+      );
+    }
+    return <CustomerListPage onNavigate={onNavigate} showSnackbar={showPoSnackbar} t={t} />;
   }
   if (activeModule === "product_catalog") {
     if (viewState.view === "manage") {

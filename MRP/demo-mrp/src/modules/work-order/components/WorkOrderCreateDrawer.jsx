@@ -4,7 +4,6 @@ import { AddIcon, ChevronDownIcon, CloseIcon, DeleteIcon } from "../../../compon
 import { Button } from "../../../components/common/Button.jsx";
 import { IconButton } from "../../../components/common/IconButton.jsx";
 import { DropdownSelect } from "../../../components/common/DropdownSelect.jsx";
-import { StatusBadge } from "../../../components/common/StatusBadge.jsx";
 import { FormField, InputField } from "../../../components/index.js";
 import { ToggleSwitch } from "../../../components/common/ToggleSwitch.jsx";
 import { Table } from "../../../ce-ui";
@@ -109,7 +108,7 @@ export const MaterialComboBox = ({ value, searchText, options, onSelect, onSearc
           placeholder={placeholder}
           style={{
             width: "100%",
-            height: "46px",
+            height: "48px",
             padding: "0 40px 0 16px",
             borderRadius: "8px",
             border: `1px solid ${
@@ -452,8 +451,6 @@ export const WorkOrderCreateDrawer = ({ isOpen, onClose, onCreated }) => {
             showCounter
           />
 
-          <div style={{ borderTop: "1px solid var(--neutral-line-separator-1)" }} />
-
           <div style={{
             display: "flex",
             alignItems: "flex-start",
@@ -465,7 +462,7 @@ export const WorkOrderCreateDrawer = ({ isOpen, onClose, onCreated }) => {
           }}>
             <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
               <span style={{ fontSize: "14px", fontWeight: "600", color: "var(--neutral-on-surface-primary)" }}>
-                Enable Multiple Output
+                Enable Additional Output
               </span>
               <span style={{ fontSize: "12px", color: "var(--neutral-on-surface-secondary)", lineHeight: "18px" }}>
                 Activate this feature to add more than one output to this work order.
@@ -478,7 +475,11 @@ export const WorkOrderCreateDrawer = ({ isOpen, onClose, onCreated }) => {
                   setFormData((prev) => ({
                     ...prev,
                     enableMultipleOutput: val,
-                    additionalOutputs: val ? prev.additionalOutputs : [],
+                    additionalOutputs: val
+                      ? prev.additionalOutputs.length
+                        ? prev.additionalOutputs
+                        : [{ id: nextOutputRowId(), materialId: "", materialSearchText: "", quantity: "" }]
+                      : [],
                   }))
                 }
               />
@@ -487,12 +488,8 @@ export const WorkOrderCreateDrawer = ({ isOpen, onClose, onCreated }) => {
 
           {formData.enableMultipleOutput && (
           <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-            <span style={{ fontSize: "var(--text-subtitle-1)", fontWeight: "var(--font-weight-bold)" }}>
-              List of Work Order Output
-            </span>
-
             <style>{`
-              .wo-output-table table td { height: auto; vertical-align: middle; padding-top: 12px; padding-bottom: 12px; }
+              .wo-output-table table td { height: auto; vertical-align: top; padding-top: 12px; padding-bottom: 12px; }
               .wo-output-table div[class*="min-h-[60px]"] { display: none; }
             `}</style>
             <div className="wo-output-table">
@@ -500,93 +497,60 @@ export const WorkOrderCreateDrawer = ({ isOpen, onClose, onCreated }) => {
                 columns={[
                   {
                     key: "output",
-                    header: "Output",
+                    header: "Additional Output",
                     width: 280,
-                    render: (_value, row) =>
-                      row.isMain ? (
-                        <div
-                          style={{
-                            height: "46px",
-                            display: "flex",
-                            alignItems: "center",
-                            padding: "0 16px",
-                            borderRadius: "8px",
-                            border: "1px solid var(--neutral-line-separator-1)",
-                            background: "var(--neutral-surface-grey-lighter)",
-                            color: "var(--neutral-on-surface-tertiary)",
-                            fontSize: "var(--text-subtitle-1)",
-                            boxSizing: "border-box",
-                          }}
-                        >
-                          {formData.materialSearchText || "Select a main output first"}
-                        </div>
-                      ) : (
-                        <div>
-                          <MaterialComboBox
-                            value={row.materialId}
-                            searchText={row.materialSearchText}
-                            options={allMaterialOptions.filter(
-                              (opt) =>
-                                opt.id === row.materialId ||
-                                (opt.id !== formData.materialId &&
-                                  !formData.additionalOutputs.some(
-                                    (other) => other.id !== row.id && other.materialId === opt.id
-                                  ))
-                            )}
-                            hasError={!!errors[`additionalOutputMaterial_${row.id}`]}
-                            placeholder="Search material name"
-                            onSearchChange={(text) =>
-                              updateOutputRow(row.id, { materialSearchText: text, materialId: "" })
-                            }
-                            onSelect={(opt) =>
-                              updateOutputRow(row.id, { materialId: opt.id, materialSearchText: opt.name })
-                            }
-                          />
-                          {errors[`additionalOutputMaterial_${row.id}`] ? (
-                            <span style={{ fontSize: "11px", color: "var(--status-red-primary)" }}>
-                              {errors[`additionalOutputMaterial_${row.id}`]}
-                            </span>
-                          ) : null}
-                        </div>
-                      ),
+                    render: (_value, row) => (
+                      <div>
+                        <MaterialComboBox
+                          value={row.materialId}
+                          searchText={row.materialSearchText}
+                          options={allMaterialOptions.filter(
+                            (opt) =>
+                              opt.id === row.materialId ||
+                              (opt.id !== formData.materialId &&
+                                !formData.additionalOutputs.some(
+                                  (other) => other.id !== row.id && other.materialId === opt.id
+                                ))
+                          )}
+                          hasError={!!errors[`additionalOutputMaterial_${row.id}`]}
+                          placeholder="Search material name"
+                          onSearchChange={(text) =>
+                            updateOutputRow(row.id, { materialSearchText: text, materialId: "" })
+                          }
+                          onSelect={(opt) =>
+                            updateOutputRow(row.id, { materialId: opt.id, materialSearchText: opt.name })
+                          }
+                        />
+                        {errors[`additionalOutputMaterial_${row.id}`] ? (
+                          <span style={{ fontSize: "11px", color: "var(--status-red-primary)" }}>
+                            {errors[`additionalOutputMaterial_${row.id}`]}
+                          </span>
+                        ) : null}
+                      </div>
+                    ),
                   },
                   {
                     key: "quantity",
                     header: "Quantity",
                     width: 220,
                     render: (_value, row) => {
-                      if (row.isMain) {
-                        return (
-                          <div
-                            style={{
-                              height: "46px",
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "space-between",
-                              padding: "0 16px",
-                              borderRadius: "8px",
-                              border: "1px solid var(--neutral-line-separator-1)",
-                              background: "var(--neutral-surface-grey-lighter)",
-                              color: "var(--neutral-on-surface-tertiary)",
-                              fontSize: "var(--text-subtitle-1)",
-                              boxSizing: "border-box",
-                            }}
-                          >
-                            <span>{formData.quantity || "-"}</span>
-                            {mainMaterialUnit ? <span>{mainMaterialUnit}</span> : null}
-                          </div>
-                        );
-                      }
                       const rowMaterial = MOCK_MATERIALS_DATA.find((m) => m.id === row.materialId);
                       return (
-                        <InputField
-                          type="number"
-                          value={row.quantity}
-                          onChange={(e) => updateOutputRow(row.id, { quantity: e.target.value })}
-                          placeholder="Enter quantity"
-                          errorState={!!errors[`additionalOutputQty_${row.id}`]}
-                          suffix={rowMaterial?.unit || ""}
-                        />
+                        <div>
+                          <InputField
+                            type="number"
+                            value={row.quantity}
+                            onChange={(e) => updateOutputRow(row.id, { quantity: e.target.value })}
+                            placeholder="Enter quantity"
+                            errorState={!!errors[`additionalOutputQty_${row.id}`]}
+                            suffix={rowMaterial?.unit || ""}
+                          />
+                          {errors[`additionalOutputQty_${row.id}`] ? (
+                            <span style={{ fontSize: "11px", color: "var(--status-red-primary)" }}>
+                              {errors[`additionalOutputQty_${row.id}`]}
+                            </span>
+                          ) : null}
+                        </div>
                       );
                     },
                   },
@@ -594,28 +558,21 @@ export const WorkOrderCreateDrawer = ({ isOpen, onClose, onCreated }) => {
                     key: "actions",
                     header: "",
                     align: "center",
-                    width: 140,
-                    render: (_value, row) =>
-                      row.isMain ? (
-                        <div style={{ display: "flex", justifyContent: "center" }}>
-                          <StatusBadge variant="blue-light">Main Output</StatusBadge>
-                        </div>
-                      ) : (
-                        <div style={{ display: "flex", justifyContent: "center" }}>
-                          <Button
-                            variant="outlined"
-                            size="small"
-                            onClick={() => removeOutputRow(row.id)}
-                            style={{ borderColor: "var(--status-red-primary)" }}
-                          >
-                            <DeleteIcon size={16} color="var(--status-red-primary)" />
-                          </Button>
-                        </div>
-                      ),
+                    width: 64,
+                    render: (_value, row) => (
+                      <div style={{ display: "flex", justifyContent: "center", marginTop: "8px" }}>
+                        <IconButton
+                          icon={DeleteIcon}
+                          variant="danger"
+                          size="small"
+                          onClick={() => removeOutputRow(row.id)}
+                        />
+                      </div>
+                    ),
                   },
                 ]}
-                data={[{ id: "main-output", isMain: true }, ...formData.additionalOutputs]}
-                totalRows={1 + formData.additionalOutputs.length}
+                data={formData.additionalOutputs}
+                totalRows={formData.additionalOutputs.length}
                 showPagination={false}
                 footerTotal=""
                 className="!h-auto"
