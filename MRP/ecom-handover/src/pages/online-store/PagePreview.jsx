@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ArrowLeft } from 'lucide-react';
 import Canvas from '../section-builder/ui/Canvas';
-import { loadDraft } from '../section-builder/state/storage';
+import { loadDraft, loadPendingPreview } from '../section-builder/state/storage';
 import { createFreshState } from '../section-builder/state/useSectionBuilder';
 
 // TODO: replace with the real active store id once multi-store routing
@@ -27,7 +27,21 @@ export default function PagePreview() {
   // to localStorage yet — otherwise a fresh browser/deploy with no draft
   // ever persisted would 404 on every page, including the system ones.
   const draft = useMemo(() => loadDraft(STORE_ID) ?? createFreshState(STORE_ID), []);
-  const page = useMemo(() => draft?.pages?.find((p) => p.id === pageId) ?? null, [draft, pageId]);
+  // PageEditor.jsx's Preview button hands off the CURRENT, possibly-unsaved
+  // form state here (see storage.js's savePendingPreview) so Preview
+  // reflects what's on screen right now instead of only what's already been
+  // saved to the draft. One-shot: only used when it's for THIS page id
+  // (guards against a stale/unrelated handoff from a previous preview), and
+  // consumed via loadPendingPreview so a plain reload of this tab falls back
+  // to the real persisted draft rather than replaying it forever.
+  const pendingPreview = useMemo(() => {
+    const pending = loadPendingPreview(STORE_ID);
+    return pending && pending.id === pageId ? pending : null;
+  }, [pageId]);
+  const page = useMemo(
+    () => pendingPreview ?? draft?.pages?.find((p) => p.id === pageId) ?? null,
+    [pendingPreview, draft, pageId]
+  );
 
   const handleBack = () => navigate(`/online-store/pages/${pageId}`);
 

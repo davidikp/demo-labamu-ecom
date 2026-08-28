@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { ArrowLeft, Sparkles } from 'lucide-react';
 import { RadioButton, Dropdown, MainBtn, Popup, DateTimeField } from '../../ce-ui';
 import { useSnackbar } from '../../contexts/SnackbarContext';
-import { loadDraft } from '../section-builder/state/storage';
+import { loadDraft, savePendingPreview } from '../section-builder/state/storage';
 import { createFreshState } from '../section-builder/state/useSectionBuilder';
 import { runDraftAction } from '../section-builder/state/runDraftAction';
 import { ACTIONS } from '../section-builder/state/builderReducer';
@@ -394,28 +394,49 @@ export default function PageEditor() {
     navigate('/online-store/pages');
   };
 
+  // Builds the page Preview should render from the CURRENT form state —
+  // same field derivation persistPage() uses for its ADD_PAGE/UPDATE_PAGE
+  // patch, just not dispatched/saved. Lets Preview show in-progress edits
+  // immediately instead of requiring a Save first (PagePreview.jsx reads
+  // this via the one-shot pending-preview handoff, falling back to the real
+  // persisted draft otherwise).
+  const buildPreviewPage = (previewId) => {
+    const visibility = form.visibilityMode === 'hidden' ? 'hidden' : 'visible';
+    const visibleFrom = form.visibilityMode === 'schedule' ? form.visibleFrom : null;
+    const seo = { metaTitle: form.metaTitle, metaDescription: form.metaDescription };
+    const base = existingPage ?? blankPage();
+    const slug = existingPage
+      ? `/${slugify(form.urlHandle) || slugify(form.name) || previewId}`
+      : `/${slugify(form.name) || previewId}`;
+    return {
+      ...base,
+      id: previewId,
+      name: form.name.trim() || t('sectionBuilder:onlineStore.pageEditor.addNewPageTitle', 'Add New Page'),
+      type: base.type ?? 'custom',
+      slug,
+      content: form.content,
+      template: form.template,
+      seo,
+      visibility,
+      visibleFrom,
+      sections: syncSectionsWithContent(base.sections, previewId, form),
+    };
+  };
+
   const handlePreview = () => {
-    if (!pageId) return;
+    // Add New Page has no persisted id yet — mint a transient one just for
+    // this preview tab (never dispatched to the draft) rather than forcing
+    // a Save first.
+    const previewId = pageId ?? createPageId(form.name || 'untitled-page');
+    savePendingPreview(STORE_ID, buildPreviewPage(previewId));
     // No `noopener`/`noreferrer` here on purpose: this app's route guard
     // (App.jsx's ProtectedRoute) checks `sessionStorage`, which the browser
     // only clones into a same-origin tab opened via window.open() when it
     // keeps the opener relationship. With noopener set, the new tab got a
     // blank sessionStorage and bounced straight to /login instead of
-    // showing the preview. This link is our own internal route, not
-    // third-party content, so there's no tab-nabbing risk being traded away.
-    window.open(`/online-store/pages/${pageId}/preview`, '_blank');
-  };
-
-  // Add New Page has no pageId yet — handlePreview above early-returns
-  // without one, since the preview route needs a real, persisted page to
-  // read. So the Preview button in create mode saves first (same as "Edit
-  // in Editor"'s handleSaveThenEditInEditor), then opens the preview for
-  // the page it just created. persistPage() itself already surfaces any
-  // validation failure (e.g. empty title) as an inline field error, so a
-  // null return here just means "don't navigate anywhere."
-  const handleSaveThenPreview = () => {
-    const id = persistPage();
-    if (id) window.open(`/online-store/pages/${id}/preview`, '_blank');
+    // showing the preview (same reason the pending-preview handoff above
+    // reaches that tab at all — see storage.js's savePendingPreview doc).
+    window.open(`/online-store/pages/${previewId}/preview`, '_blank');
   };
 
   const [confirmUnsavedEditor, setConfirmUnsavedEditor] = useState(false);
@@ -784,26 +805,16 @@ export default function PageEditor() {
               onClick={openDuplicateModal}
             />
           )}
-          {!isCreate && pageId && (
-            <MainBtn
-              variant="secondary"
-              size="lg"
-              label={t('sectionBuilder:onlineStore.pageEditor.preview', 'Preview')}
-              onClick={handlePreview}
-            />
-          )}
-          {/* Add New Page (no pageId yet) — Preview saves the page first,
-              then opens it, instead of only being available once you've
-              already saved once via the primary Save button. */}
-          {isCreate && !pageId && (
-            <MainBtn
-              variant="secondary"
-              size="lg"
-              label={t('sectionBuilder:onlineStore.pageEditor.preview', 'Preview')}
-              onClick={handleSaveThenPreview}
-              disabled={isSaving}
-            />
-          )}
+          {/* Available in both create and edit mode, and doesn't require a
+              Save first — handlePreview hands the CURRENT (possibly
+              unsaved) form state to the preview tab directly, minting a
+              transient id for Add New Page rather than persisting one. */}
+          <MainBtn
+            variant="secondary"
+            size="lg"
+            label={t('sectionBuilder:onlineStore.pageEditor.preview', 'Preview')}
+            onClick={handlePreview}
+          />
           {!isCreate && pageId && (
             <MainBtn
               variant="secondary"
