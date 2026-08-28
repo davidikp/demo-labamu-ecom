@@ -167,7 +167,7 @@ export default function App() {
             </BuilderErrorBoundary>
           } />
           {/* Deep link from Online Store > Pages into a specific page —
-              same as Site Builder, this is disabled behind Coming Soon. */}
+              same as Website Builder, this is disabled behind Coming Soon. */}
           <Route path="/section-builder/:storeId/pages/:pageId" element={
             <BuilderErrorBoundary>
               <ProtectedRoute>

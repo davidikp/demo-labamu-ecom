@@ -1,7 +1,7 @@
 import { useLocation } from 'react-router-dom';
 
 const TITLES = {
-  '/online-store/theme': 'Site Builder',
+  '/online-store/theme': 'Website Builder',
   '/online-store/preferences': 'Preferences',
   '/orders': 'Orders',
   '/catalog/package': 'Package',
@@ -20,7 +20,7 @@ export default function ComingSoon() {
   // /section-builder/:storeId(/pages/:pageId) is dynamic (real ids in the
   // path), so it can't be an exact TITLES key like the static routes below.
   const title = location.pathname.startsWith('/section-builder/')
-    ? 'Site Builder'
+    ? 'Website Builder'
     : TITLES[location.pathname] || 'Coming Soon';
 
   return (
