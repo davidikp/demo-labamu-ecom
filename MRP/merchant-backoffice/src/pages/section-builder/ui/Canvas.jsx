@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useRef } from 'react';
+import { memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { labelForType } from '../sections/registry';
 import { SECTION_DEFINITIONS } from '../sections/index';
@@ -6,8 +6,7 @@ import { Plus, ArrowUp, ArrowDown, Copy, Trash2 } from 'lucide-react';
 import { MAX_SECTIONS_PER_PAGE } from '../state/builderReducer';
 import { parseBlockSelection, isAtBlockMax, createBlockCtx } from '../sections/blockHelpers';
 import SectionShell from './SectionShell';
-import { applyThemeToElement } from '../themes/applyTheme';
-import { BREAKPOINTS } from '../themes/breakpoints';
+import PageFrame from './PageFrame';
 
 const RenderedEntity = memo(function RenderedEntity({ entity, theme, mediaLibrary, onEdit, blockCtx, isMobile, breakpoint, onNavigate, currentPath }) {
   const { t } = useTranslation();
@@ -234,43 +233,11 @@ export default function Canvas({
 }) {
   const { t } = useTranslation();
   const isMobile = viewport === 'mobile';
-  // `fit` has no fixed device width — it stretches to the canvas panel
-  // itself (see themes/breakpoints.js), same as the existing `maxWidth:
-  // '100%'` clamp already does for narrower panels.
-  const width = BREAKPOINTS[viewport]?.width ?? '100%';
   const atCap = sections.length >= MAX_SECTIONS_PER_PAGE;
   const canInsert = !readOnly && !!onRequestAddSection && !atCap;
-  const pageFrameRef = useRef(null);
-
-  // Phase 4 — storefront theme layer (opt-in, separate from the existing
-  // flat-preset `theme.colors`/`theme.typography` system). Only applies
-  // `--theme-*` custom properties when a storefront theme has been
-  // explicitly selected; storefrontThemeId defaults to null so existing
-  // drafts/stores see zero visual change here.
-  useEffect(() => {
-    if (!theme?.storefrontThemeId) return;
-    try {
-      applyThemeToElement(pageFrameRef.current, theme.storefrontThemeId, theme.storefrontThemeMode || 'light');
-    } catch (err) {
-      console.error('Canvas: failed to apply storefront theme', {
-        themeId: theme.storefrontThemeId,
-        mode: theme.storefrontThemeMode,
-        err,
-      });
-    }
-  }, [theme?.storefrontThemeId, theme?.storefrontThemeMode]);
 
   return (
-    <div className="min-w-[480px] flex-1 overflow-auto bg-gray-50 p-6" onClick={onDeselect}>
-      <div
-        ref={pageFrameRef}
-        onClick={(e) => e.stopPropagation()}
-        className={
-          'mx-auto bg-white ' +
-          (isMobile ? 'rounded-2xl border border-gray-300 shadow-sm' : 'shadow-sm')
-        }
-        style={{ width, maxWidth: '100%' }}
-      >
+    <PageFrame viewport={viewport} theme={theme} onDeselect={onDeselect}>
         <GlobalBlock
           entity={header}
           selected={selectedId === 'header'}
@@ -302,7 +269,19 @@ export default function Canvas({
           )
         ) : readOnly ? (
           sections.map((section) => (
-            <RenderedEntity key={section.id} entity={section} theme={theme} mediaLibrary={mediaLibrary} isMobile={isMobile} breakpoint={viewport} />
+            <RenderedEntity
+              key={section.id}
+              entity={section}
+              theme={theme}
+              mediaLibrary={mediaLibrary}
+              isMobile={isMobile}
+              breakpoint={viewport}
+              // Product-card navigation (catalog_list) is read-only-preview-
+              // only, same rule as header/footer nav links above — inert in
+              // the interactive builder.
+              onNavigate={onNavigate}
+              currentPath={currentPath}
+            />
           ))
         ) : (
           sections.map((section, index) => (
@@ -342,7 +321,6 @@ export default function Canvas({
           breakpoint={viewport}
           onNavigate={onNavigate}
         />
-      </div>
-    </div>
+    </PageFrame>
   );
 }

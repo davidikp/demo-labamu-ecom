@@ -384,6 +384,18 @@
       "addressPlaceholder": "Tambahkan alamat Anda…",
       "phonePlaceholder": "Tambahkan nomor telepon…",
       "storeHoursPlaceholder": "Tambahkan jam buka…"
+    },
+    "quoteRequestForm": {
+      "fileTooLarge": "\"{{name}}\" berukuran lebih dari 5MB dan tidak ditambahkan.",
+      "submitError": "Gagal mengirim permintaan. Silakan coba lagi.",
+      "submitSuccess": "Permintaan Anda telah dikirim — kami akan segera menghubungi Anda.",
+      "submitting": "Mengirim…",
+      "cancel": "Batal",
+      "addProduct": "Tambah",
+      "selectProduct": "Pilih produk…",
+      "removeItem": "Hapus",
+      "removeFile": "Hapus file",
+      "uploadFiles": "Klik untuk mengunggah file"
     }
   },
   "templates": {

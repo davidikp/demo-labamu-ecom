@@ -54,9 +54,31 @@ export const schema = {
     itemSchema: {
       code: { type: 'text', label: 'Code', maxLength: 4, default: 'EN' },
       label: { type: 'text', label: 'Label', maxLength: 40, default: '' },
+      // ISO 3166-1 alpha-2 country code for the flag icon shown in the pill/
+      // dropdown (e.g. 'us', 'id') — optional, falls back to a globe icon
+      // when unset so every existing `languages` entry without this field
+      // keeps rendering exactly as before.
+      flag: { type: 'text', label: 'Flag country code (e.g. us, id)', maxLength: 2, default: '' },
     },
   },
   show_border: { type: 'boolean', label: 'Show bottom border', default: false, group: 'layout' },
+  // Nav link text color independent of `color_scheme`'s section text color —
+  // some templates (golden Houzez reference) always render nav links in the
+  // brand/accent color rather than the section's plain text color, even
+  // though the header background itself uses `color_scheme: 'background'`.
+  // 'text' (default) keeps every existing header's plain-text nav exactly as
+  // before.
+  nav_color: {
+    type: 'select',
+    label: 'Nav link color',
+    default: 'text',
+    group: 'color',
+    options: [
+      { value: 'text', label: 'Section text color' },
+      { value: 'primary', label: "Theme's primary color" },
+      { value: 'accent', label: "Theme's accent color" },
+    ],
+  },
   ...SECTION_CHROME_FIELDS_NO_PADDING,
   color_scheme: { ...SECTION_CHROME_FIELDS_NO_PADDING.color_scheme, default: 'primary' },
 };

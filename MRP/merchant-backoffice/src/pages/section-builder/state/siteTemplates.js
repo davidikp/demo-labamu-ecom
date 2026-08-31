@@ -5,6 +5,9 @@ import { blockDef } from '../sections/blocks/registry';
 import { defaultTheme, createDefaultGlobals } from './defaultTheme';
 import { defaultProductItems } from '../sections/featured_products/schema';
 import { HOUZEZ_HERO_RECIPE } from '../sections/shared/heroRecipes';
+import { HOUZEZ_FORM_RECIPE } from '../sections/shared/formRecipes';
+import { HOUZEZ_NAV_RECIPE } from '../sections/shared/navRecipes';
+import { HOUZEZ_HIGH_RISE_PRODUCTS, HOUZEZ_SAFETY_PRODUCTS, HOUZEZ_PRODUCTS } from '../mocks/houzezProducts';
 
 /**
  * @module section-builder/state/siteTemplates
@@ -79,6 +82,11 @@ export const SITE_TEMPLATES = [
         background: '#ffffff', surface: '#f5f2ef', primary: '#1a1a1a', primary_text: '#ffffff',
         accent: '#b08968', accent_text: '#ffffff', text_primary: '#1a1a1a', text_secondary: '#6b6b6b', border: '#e5e0da',
       },
+      // Visual-only Product Detail option chips (Size) — presentation only,
+      // never affects price/stock/id (see sections/shared/
+      // productOptionsConfig.js). Houzez's construction catalog has no such
+      // config, so its PDP renders no option selector at all.
+      pdpOptions: { groups: [{ id: 'size', label: 'Size', values: ['S', 'M', 'L', 'XL'] }] },
     },
     // Editorial, minimal identity — logo left, nav inline (Renderer.jsx's
     // default layout), plain-text logo.
@@ -475,42 +483,96 @@ export const SITE_TEMPLATES = [
       typography: { heading_font: 'Lato', body_font: 'Lato', heading_size: 'medium', body_size: 'medium', letter_spacing: 'normal', heading_transform: 'none' },
       colors: {
         // surface matches HouzezPreview.jsx's category-icon-circle background
-        // (#EDF3F0) exactly; rating matches its 5-star review color (#FACC15)
-        // — both read verbatim from the golden reference, not the Figma export.
+        // (#EDF3F0) exactly; rating matches its 5-star review color (#FACC15);
+        // text_secondary matches #4B5563, used consistently throughout the
+        // golden reference as its secondary/supporting-text color (Hero
+        // subtitle, Testimonials quote, form labels, Contact/Map/RFQ
+        // subtitles, footer contact info, product titles) — all read
+        // verbatim from the golden reference, not the Figma export.
         background: '#ffffff', surface: '#edf3f0', primary: '#16894b', primary_text: '#ffffff',
-        accent: '#16894b', accent_text: '#ffffff', text_primary: '#1b1916', text_secondary: '#767573', border: '#f3f4f6',
+        accent: '#16894b', accent_text: '#ffffff', text_primary: '#1b1916', text_secondary: '#4b5563', border: '#f3f4f6',
         rating: '#facc15',
       },
       // Layout tokens matched to HouzezPreview.jsx (golden reference):
       // maxWidth 1280px + `calc(100% - 80px)` (40px gutter each side desktop,
       // stepping down to 16px on mobile), 12px card radius (product/review
-      // cards), and a soft card shadow (product-card hover / dropdown shadow
-      // family) instead of the schema's flat default. See
-      // shared/themedLayout.js for the concrete px/CSS values these resolve to.
-      layout: { container_width: '1280', container_gutter: 'spacious', card_corners: 12, card_shadow: 'subtle' },
+      // cards), a soft card shadow (product-card hover / dropdown shadow
+      // family), and 4px image corner radius (the Location map's own
+      // radius — set explicitly rather than relying on map_embed's fallback,
+      // same reasoning as map_height below) instead of the schema's flat
+      // defaults. See shared/themedLayout.js for the concrete px/CSS values
+      // these resolve to.
+      layout: { container_width: '1280', container_gutter: 'spacious', card_corners: 12, card_shadow: 'subtle', image_corners: 4 },
+      // Houzez's ordinary button standard — reused verbatim by Contact,
+      // RFQ, and Rating's submit buttons in the golden reference (all three
+      // share this exact padding/radius/weight; the Appointment CTA is a
+      // deliberately distinct one-off, handled by heroRecipe.ctaButton's
+      // override instead of this — font_size here has no effect on it).
+      // Full field set (not just the 5 that differ from the default) —
+      // `applySiteTemplate`'s seed path clones this object and shallow-
+      // replaces `state.theme.buttons` with it wholesale (unlike the
+      // preview path's defensive per-group merge in defaultPreviewDataFor
+      // below), so a partial object here would silently drop
+      // letter_spacing/text_transform/border_width/hover_effect for a real
+      // "apply this template" pick, not just the gallery preview.
+      buttons: {
+        corner_radius: 8, padding_horizontal: 28, padding_vertical: 14, font_weight: '600', font_size: 15,
+        letter_spacing: 'normal', text_transform: 'none', border_width: 0, hover_effect: 'darken',
+      },
       // Internal visual recipe for hero_banner's 'split_panel' layout and
       // 'theme' overlay — golden-reference exact measurements/gradient
       // stops/hero typography. Not part of theme-settings-schema.json, so
       // it never appears in the merchant-facing Theme panel. See
       // sections/shared/heroRecipes.js.
       heroRecipe: HOUZEZ_HERO_RECIPE,
+      // Internal visual recipe for rating_form's 'inline' layout — see
+      // sections/shared/formRecipes.js.
+      formRecipe: HOUZEZ_FORM_RECIPE,
+      // Internal visual recipe for Header's nav link weight (inactive 500 /
+      // active 700, not the schema default 400/700) — see
+      // sections/shared/navRecipes.js.
+      navRecipe: HOUZEZ_NAV_RECIPE,
+      // Houzez's own storefront product catalog (construction/safety
+      // goods) — resolved by storefront features that need "the current
+      // template's products" (currently RFQ's product picker) instead of
+      // the generic demo clothing catalog. Same data as the two
+      // featured_products sections above (mocks/houzezProducts.js), not a
+      // duplicate list. See sections/shared/productSource.js.
+      productCatalog: HOUZEZ_PRODUCTS,
     },
     header: {
       layout_variant: 'inline',
-      logo_text: 'Houzez',
+      // Explicitly empty, deliberately — same reasoning as footer's logo
+      // (houzez-logo.png is already the full icon+wordmark lockup, not a
+      // small icon needing a separate text label beside it). Must be an
+      // explicit '' rather than just omitting the key: unlike footer's
+      // schema (logo_text default ''), header/schema.js's own default is
+      // the non-empty 'My Store' fallback, which would otherwise leak
+      // through and re-trigger the icon+text branch with the wrong text.
+      logo_text: '',
       logo_image: image('houzez-logo'),
       show_border: true,
+      // header/schema.js's own default is color_scheme: 'primary' (a solid
+      // background fill), but the golden reference's header is white with
+      // green used only for the logo/active-nav text, not as a bar fill —
+      // explicit override, not a shared-schema default change.
+      color_scheme: 'background',
+      // Golden reference's nav links are always green (theme primary),
+      // active bold / inactive regular — not the section's plain text color.
+      nav_color: 'primary',
       show_language_switcher: true,
-      // The reference prototype's language pill offers English/Indonesian.
+      // The reference prototype's language pill offers English/Indonesian
+      // with real flag icons (flagcdn 'us'/'id' — see schema.js's `flag`
+      // field and Renderer.jsx's renderFlag).
       languages: [
-        { id: 'houzez-lang-en', code: 'EN', label: 'English' },
-        { id: 'houzez-lang-id', code: 'ID', label: 'Bahasa Indonesia' },
+        { id: 'houzez-lang-en', code: 'EN', label: 'English', flag: 'us' },
+        { id: 'houzez-lang-id', code: 'ID', label: 'Bahasa Indonesia', flag: 'id' },
       ],
       show_search_icon: false,
-      // enableCheckout defaults to false in the reference prototype's own
-      // BASE_CONFIG (catalog/RFQ-first, not cart-first) — no cart icon by
-      // default to match.
-      show_cart_icon: false,
+      // Reference screenshot shows a cart/bag icon in the action cluster —
+      // corrects the earlier assumption (drawn from the prototype's
+      // BASE_CONFIG.enableCheckout default) that Houzez hides it.
+      show_cart_icon: true,
       // Reference nav (Home + 6 feature anchors) collapses into the "⋯"
       // overflow dropdown beyond 5 — matches the prototype's own overflow
       // behavior exactly (see HouzezPreview.jsx's displayedNav/overflowNav).
@@ -518,6 +580,12 @@ export const SITE_TEMPLATES = [
       nav_links: [
         { id: 'houzez-nav-home', label: 'Home', url: '/' },
         { id: 'houzez-nav-shop', label: 'Shop', url: '/shop' },
+        // Editorial Collection List — added so a newly-seeded Houzez site
+        // actually exposes the Collection system page in nav (see the new
+        // 'houzez-collection-list' page entry below). Placed right after
+        // Shop, within `nav_overflow_after`'s first-5-visible window, so it
+        // shows directly rather than collapsing into the "⋯" overflow menu.
+        { id: 'houzez-nav-collection', label: 'Collection', url: '/collection' },
         { id: 'houzez-nav-appointment', label: 'Appointment', url: '/appointment' },
         { id: 'houzez-nav-reviews', label: 'Reviews', url: '/reviews' },
         { id: 'houzez-nav-contact', label: 'Contact', url: '/contact' },
@@ -527,9 +595,20 @@ export const SITE_TEMPLATES = [
     },
     footer: {
       layout_variant: 'columns',
-      logo_text: 'Houzez',
+      // No `logo_text` here, deliberately — `houzez-logo.png` is already the
+      // full icon+wordmark lockup (matches Header's own logo asset), not a
+      // small icon needing a separate text label beside it. Setting
+      // logo_text too would (and did) render a redundant second "Houzez"
+      // next to a badly-cropped 24x24 square of the lockup image — see
+      // footer/Renderer.jsx's renderLogoRow.
       logo_image: image('houzez-logo'),
       show_border: true,
+      // footer/schema.js's own default is color_scheme: 'primary' (a solid
+      // fill) — golden reference's footer is a plain white background.
+      color_scheme: 'background',
+      // Golden reference's 3-column footer is ~1.5fr:2fr:1fr
+      // (contact:category:social), not equal thirds — see footer/schema.js.
+      column_ratio: 'balanced',
       social_links: [
         { id: 'houzez-social-x', platform: 'x', url: '#' },
         { id: 'houzez-social-instagram', platform: 'instagram', url: '#' },
@@ -545,6 +624,10 @@ export const SITE_TEMPLATES = [
         {
           id: 'houzez-footer-category',
           heading: 'Category',
+          // Golden reference splits its 8 category links into two
+          // side-by-side 4-item groups, not one long list — see
+          // footer/schema.js's link_columns[].links_layout.
+          links_layout: '2-column',
           links: [
             { id: 'houzez-footer-category-house', label: 'House Construction', url: '/shop' },
             { id: 'houzez-footer-category-glass', label: 'Glass Pane', url: '/shop' },
@@ -557,8 +640,17 @@ export const SITE_TEMPLATES = [
           ],
         },
       ],
-      copyright_text: '©2026 Houzez. All rights reserved.',
+      // Expected Figma/reference Footer explicitly shows a copyright row —
+      // overrides the earlier "golden has no copyright row" assumption
+      // (that was drawn from HouzezPreview.jsx's own markup, which the
+      // Figma reference takes priority over per this task). Exact text/year
+      // as specified by the reference, not the current year.
+      copyright_text: '©2024 PT Houzez. All rights reserved.',
       show_social_icons: true,
+      // Titled "Follow Us" social column (not a bottom bar) — see
+      // footer/schema.js's social_heading field.
+      social_heading: 'Follow Us',
+      show_copyright: true,
     },
     media: media('houzez', [
       { key: 'logo', filename: 'assets/houzez-logo.png', width: 125, height: 45 },
@@ -606,11 +698,26 @@ export const SITE_TEMPLATES = [
         sections: [
           // 'split_panel' matches the golden reference's framed two-panel
           // hero (content | image, blended into the theme surface color) —
-          // see hero_banner/schema.js's layout_variant.
+          // see hero_banner/schema.js's layout_variant. The expected Figma
+          // reference shows a 3-dot carousel with prev/next arrows — the
+          // carousel controls (HeroArrow/HeroDots, Renderer.jsx) are already
+          // a generic capability, only gated on `extra_slides` having
+          // entries. Houzez has no distinct second/third hero photo asset,
+          // so — same convention Xinear's own hero already uses just below
+          // — these extra slots reuse the one real banner image rather than
+          // inventing new imagery, just to reproduce the carousel behavior
+          // faithfully.
           defaultSection(
             'houzez-home-hero',
             'hero_banner',
-            { background_image: image('houzez-banner'), layout_variant: 'split_panel', text_alignment: 'left', content_position: 'center' },
+            {
+              background_image: image('houzez-banner'),
+              extra_slides: [
+                { id: 'houzez-hero-slide-2', image: image('houzez-banner') },
+                { id: 'houzez-hero-slide-3', image: image('houzez-banner') },
+              ],
+              layout_variant: 'split_panel', text_alignment: 'left', content_position: 'center',
+            },
             [
               block('heading', { text: 'Create your ideal home with us' }),
               block('subheading', { text: 'Everything you need to build your home, we provide.' }),
@@ -634,52 +741,65 @@ export const SITE_TEMPLATES = [
           // Matches the golden-reference ProductGroup: 6-column desktop grid,
           // horizontal-scroll-snap row on mobile (see featured_products'
           // columns_desktop/mobile_layout options).
+          // Product content now lives once in mocks/houzezProducts.js — also
+          // the source `theme.productCatalog` resolves for RFQ's product
+          // picker (see sections/shared/productSource.js) — instead of a
+          // second hand-maintained copy of the same 12 products here.
           defaultSection('houzez-home-highrise', 'featured_products', {
             heading: 'High-Rise Needs', columns_desktop: '6', mobile_layout: 'horizontal_scroll',
-            products: [
-              { id: 'houzez-prod-ladder', source: 'custom', title: 'KRISBOW Ladder Rolling Multi PRLRM1108 1.1m 4...', image: image('houzez-prod-ladder'), price: 'Rp 4.200.000' },
-              { id: 'houzez-prod-level-kit', source: 'custom', title: 'DEWALT Builders Level Kit DW090PK 1set', image: image('houzez-prod-level-kit'), price: 'Rp 16.000.000' },
-              { id: 'houzez-prod-scaffold-metal', source: 'custom', title: 'METALTECH Portable Scaffold 6-11/64 ft.L Steel...', image: image('houzez-prod-scaffold-metal'), price: 'Rp 13.885.000' },
-              { id: 'houzez-prod-scaffold-tower', source: 'custom', title: 'WERNER Scaffold Tower 75 H, 41D335', image: image('houzez-prod-scaffold-tower'), price: 'Rp 13.885.000' },
-              { id: 'houzez-prod-rammer', source: 'custom', title: 'Hyundai Tamping Rammers HDCR 88H 1pc', image: image('houzez-prod-rammer'), price: 'Rp 23.330.000' },
-              { id: 'houzez-prod-ladder-steel', source: 'custom', title: 'Cotterman Rolling Steel Ladder - 450-Lb. Capacit...', image: image('houzez-prod-ladder-steel'), price: 'Rp 53.196.000' },
-            ],
+            products: HOUZEZ_HIGH_RISE_PRODUCTS,
           }),
           defaultSection('houzez-home-safety', 'featured_products', {
             heading: 'Safety Tools', columns_desktop: '6', mobile_layout: 'horizontal_scroll',
-            products: [
-              { id: 'houzez-prod-helmet', source: 'custom', title: 'Safety Helmet Construction Helmet Darl...', image: image('houzez-prod-helmet'), price: 'Rp 723.000' },
-              { id: 'houzez-prod-harness', source: 'custom', title: 'Safety Full Body Harness Five Point Construction D...', image: image('houzez-prod-harness'), price: 'Rp 166.000' },
-              { id: 'houzez-prod-gloves', source: 'custom', title: '48-22-8951 CUT 5 Dipped Safety Gloves Size M - 00...', image: image('houzez-prod-gloves'), price: 'Rp 185.000' },
-              { id: 'houzez-prod-lifeline', source: 'custom', title: 'Rebel Self Retracting Lifeline - Stainless Cable...', image: image('houzez-prod-lifeline'), price: 'Rp 3.023.000' },
-              { id: 'houzez-prod-helmet-2', source: 'custom', title: 'Safety Helmet Construction Helmet Darl...', image: image('houzez-prod-helmet-2'), price: 'Rp 2.100.000' },
-              { id: 'houzez-prod-gloves-heavy', source: 'custom', title: 'SARUNG TANGAN SAFETY KONG HEAVY DUTY HIGH...', image: image('houzez-prod-gloves-heavy'), price: 'Rp 225.000' },
-            ],
+            products: HOUZEZ_SAFETY_PRODUCTS,
           }),
-          // A plain 'background' hero_banner with a 'theme' overlay — the
-          // golden reference's green gradient wash is just a themed overlay
-          // choice, not a reason for a bespoke Appointment section type.
-          // color_scheme: 'primary' gives white heading/subhead text (theme
-          // primary_text) without hardcoding a color here; the button's
-          // 'inverted' style gives the white-pill/green-text CTA the same way.
+          // A plain 'background' hero_banner with a 'dark' overlay — the
+          // expected reference shows the photo plainly visible under a flat
+          // dark scrim with centered white text and a solid green CTA, not
+          // golden HouzezPreview.jsx's own left-aligned green gradient wash
+          // (the reference takes priority over the old implementation on
+          // this point). color_scheme: 'primary' gives white heading/
+          // subhead text (theme primary_text) without hardcoding a color
+          // here; the button's default 'filled' style (no `style` override)
+          // resolves to theme primary bg / primary_text — a solid green
+          // pill with white text, matching the reference.
           defaultSection(
             'houzez-home-appointment',
             'hero_banner',
             {
               background_image: image('houzez-appointment'), min_height: 400,
-              overlay_style: 'theme', overlay_opacity: 95,
-              color_scheme: 'primary', text_alignment: 'left', content_position: 'center',
+              overlay_style: 'dark', overlay_opacity: 45,
+              // color_scheme: 'primary' gives white heading/subhead text,
+              // but SECTION_CHROME_FIELDS' own padding_top/padding_bottom
+              // default (48px) would otherwise reveal that scheme's green
+              // background as a solid bar above/below the full-bleed photo
+              // — the reference shows the photo running edge-to-edge with
+              // no visible gap.
+              color_scheme: 'primary', text_alignment: 'center', content_position: 'center',
+              padding_top: 0, padding_bottom: 0,
             },
             [
               block('heading', { text: 'Book an Appointment!' }),
-              block('subheading', { text: 'Let’s meet and discuss further on your construction needs' }),
-              block('button', { label: 'Book Now', url: '/appointment', style: 'inverted' }),
+              block('subheading', { text: 'Let\u2019s meet and discuss further on your construction needs' }),
+              block('button', { label: 'Book Now', url: '/appointment' }),
             ],
           ),
           defaultSection(
             'houzez-home-testimonials',
             'testimonials',
-            { heading: 'What They Say', columns_desktop: '3' },
+            {
+              heading: 'What They Say', columns_desktop: '3',
+              // heading_size 'display' reproduces the golden reference's
+              // 28px/800/32px-margin section heading exactly (see
+              // shared/headingSize.js); card_hierarchy 'name_first' matches
+              // its bold-name-above-quote card order.
+              heading_size: 'display', card_hierarchy: 'name_first',
+              // 80px desktop / 40px mobile section padding, matching
+              // HouzezPreview.jsx's `padding: isMobile ? '40px 16px 40px
+              // 16px' : '80px 0 40px 0'` (bottom padding is 40px either way,
+              // so only padding_top needs to differ by breakpoint).
+              padding_top: { $res: true, mobile: 40, desktop: 80 },
+            },
             [
               block('quote', {
                 quote: 'Worked with Houzez on all my property. Never once I were disappointed because they are bomb',
@@ -701,14 +821,23 @@ export const SITE_TEMPLATES = [
           defaultSection('houzez-home-rating', 'rating_form', {
             heading: 'Leave us your thoughts on how do you like our service',
             name_field_label: 'Name', message_field_label: 'Review', button_label: 'Give Rating',
+            layout: 'inline',
           }),
+          // 'split' layout + image matches the golden reference's
+          // form-beside-showroom-photo composition (see contact_form's
+          // schema.js). The golden reference's salutation dropdown is only
+          // shown when a merchant-config toggle (`requiredFields.salutation`,
+          // not modeled in this app) is on — reproduced here as a normal,
+          // always-visible 'select' form_field instead of building that
+          // conditional-visibility system for one section.
           defaultSection(
             'houzez-home-contact',
             'contact_form',
-            { reply_to_email: '' },
+            { reply_to_email: '', layout: 'split', image: image('houzez-contact') },
             [
               block('heading', { text: 'Contact Us' }),
               block('text', { content: 'Contact us For further business inquiries or collaborations' }),
+              block('form_field', { label: 'Salutation', field_type: 'select', options: 'Mr.\nMrs.\nMs.\nDr.', placeholder: 'Select salutation' }),
               block('form_field', { label: 'Name', field_type: 'text', required: true }),
               block('form_field', { label: 'Email', field_type: 'email', required: true }),
               block('form_field', { label: 'Phone Number', field_type: 'tel', required: false }),
@@ -718,21 +847,67 @@ export const SITE_TEMPLATES = [
           defaultSection(
             'houzez-home-map',
             'map_embed',
-            { address: 'Alam Sutera, Jl. Jalur Sutera Boulevard No.45, Kunciran, Kec. Pinang, Kota Tangerang, Banten 15320' },
+            {
+              address: 'Alam Sutera, Jl. Jalur Sutera Boulevard No.45, Kunciran, Kec. Pinang, Kota Tangerang, Banten 15320',
+              // 360px matches the golden reference's map height exactly
+              // (map skin itself stays the Google iframe — an explicit,
+              // accepted product decision, not a gap). map_position 'left'
+              // and heading_style 'prominent' reproduce its map-first
+              // column order and 32px/800 heading treatment.
+              map_height: 360, map_position: 'left', heading_style: 'prominent',
+            },
             [block('heading', { text: 'Visit Our Showroom!' }), block('text', { content: 'Come see our great craftmanship here.' })],
           ),
-          // 'detailed' layout — a static preview of the real design's
-          // structured RFQ request (customer info, product line items,
-          // attachments, notes). Visual only for now, like every other form
-          // section — a working modal (open/close, real add/remove line
-          // items, real submission) is a follow-up once there's a backend
-          // module to store submitted RFQs against.
+          // presentation: 'modal_trigger' — reproduces the golden reference's
+          // CTA-opens-a-dialog RFQ experience: this section renders only the
+          // button in-flow, and the full structured request (customer info,
+          // product line items via a nested Add-Product dialog, attachments,
+          // notes) opens in a dialog on click — real add/remove/validate/
+          // submit behavior via services/rfqService.js's existing submitRfq,
+          // see quote_request_form/Renderer.jsx's RfqModalFlow.
+          // Reference shows the RFQ CTA as a full-bleed construction photo
+          // with centered white heading/subtext and just the button — no
+          // visible form fields (already true of `modal_trigger`). Uses the
+          // 'rfq' media asset registered above, previously unused (no field
+          // to attach it to before `background_image` existed).
           defaultSection('houzez-home-quote', 'quote_request_form', {
             heading: 'Request a Quote',
             subtext: 'Need an estimation of cost of you build? Drop us your request and we’ll reach you with a quote.',
             button_label: 'Request a Quote',
-            layout: 'detailed',
+            presentation: 'modal_trigger',
+            background_image: image('houzez-rfq'),
+            min_height: 400,
           }),
+        ],
+      },
+      // Editorial Collection List/Detail — Houzez, like every other site
+      // template, only hand-authors `home`; Shop/Product Detail reach it
+      // purely via mergeRequiredSystemPages (see APPLY_SITE_TEMPLATE_SEED in
+      // builderReducer.js and ThemePreview.jsx), which only ever merges
+      // REQUIRED_SYSTEM_TYPES ('shop'/'product') — Collection intentionally
+      // stays optional (not in that list, see defaultTheme.js), so it is
+      // NEVER auto-added to a template's own page roster. Without an
+      // explicit entry here, a newly-seeded Houzez site (and the Theme
+      // Gallery's read-only "See preview") would never expose `/collection`
+      // at all — these two entries are what make Collection reachable for
+      // Houzez specifically, matching the approved product decision that it
+      // exists by default on new Houzez sites. Same page shape/ids
+      // `defaultTheme.js`'s `createDefaultPages()` uses, so both sources
+      // stay interchangeable to `pageFillsSystemType`/`matchStorefrontPage`.
+      {
+        id: 'houzez-collection-list', name: 'Collection', type: 'system', systemType: 'editorial_collection_list', slug: '/collection', seo: {}, hiddenFromNav: false,
+        sections: [
+          // 'editorial-collection-list-grid' matches
+          // EDITORIAL_COLLECTION_LIST_CORE_SECTION_ID (editorial_collection_list/schema.js).
+          defaultSection('editorial-collection-list-grid', 'editorial_collection_list', {}),
+        ],
+      },
+      {
+        id: 'houzez-collection-detail', name: 'Collection Detail', type: 'system', systemType: 'editorial_collection_detail', slug: '/collection/:slug', seo: {}, hiddenFromNav: true,
+        sections: [
+          // 'editorial-collection-detail-story' matches
+          // EDITORIAL_COLLECTION_DETAIL_CORE_SECTION_ID (editorial_collection_detail/schema.js).
+          defaultSection('editorial-collection-detail-story', 'editorial_collection_detail', {}),
         ],
       },
     ],

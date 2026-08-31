@@ -6,10 +6,11 @@ import ConfirmDialog from '../section-builder/ui/ConfirmDialog';
 import { Popup } from '../../ce-ui';
 import { SITE_TEMPLATES, defaultPreviewDataFor, siteTemplateById } from '../section-builder/state/siteTemplates';
 import {
-  loadDraft, saveDraft,
+  loadDraft, saveDraft, clearDraft,
   loadPublishedTheme, savePublishedTheme, loadDraftThemes, saveDraftThemes,
 } from '../section-builder/state/storage';
 import { applySiteTemplate } from '../section-builder/state/siteTemplateApply';
+import { createFreshState } from '../section-builder/state/useSectionBuilder';
 import { inferActiveTemplateId, isDefaultTheme } from '../section-builder/state/inferActiveTemplate';
 import { THEME_ROSTER } from '../section-builder/themes/themeRoster';
 import { getUniqueName } from '../section-builder/state/nameUtils';
@@ -223,6 +224,26 @@ export default function ThemeGallery() {
   }, [publishedTheme?.templateId, publishedTheme?.name, activeTemplateId, draft]);
 
   function draftPreviewElement(draftThemeRecord) {
+    // Each draft theme now has its own persisted builder content, keyed by
+    // draftThemeRecord.id (see handleDiscoverAdd) — prefer that real, live
+    // content so the card reflects whatever the merchant has actually edited
+    // in this draft's own section-builder URL, not just an illustrative
+    // stand-in. Falls back to the old illustrative-preview behavior for
+    // draft records that predate this (no content saved under their id yet).
+    const liveDraft = loadDraft(draftThemeRecord.id);
+    if (liveDraft) {
+      const activePage = liveDraft.pages.find((p) => p.id === liveDraft.activePageId) ?? liveDraft.pages[0];
+      return (
+        <FillWidthPreviewCanvas
+          header={liveDraft.header}
+          footer={liveDraft.footer}
+          sections={activePage?.sections ?? []}
+          theme={liveDraft.theme}
+          mediaLibrary={liveDraft.mediaLibrary}
+          aspectRatio="aspect-[16/10]"
+        />
+      );
+    }
     const template = SITE_TEMPLATES.find((tpl) => tpl.id === draftThemeRecord.templateId);
     if (template) return <FillWidthPreviewCanvas {...defaultPreviewDataFor(template)} aspectRatio="aspect-[16/10]" />;
     const rosterItem = THEME_ROSTER.find((item) => item.id === draftThemeRecord.templateId);
@@ -255,6 +276,15 @@ export default function ThemeGallery() {
 
   function handleOpen() {
     navigate(`/section-builder/${STORE_ID}`);
+  }
+
+  // Each draft theme is its own storeId namespace (see handleDiscoverAdd),
+  // so "Edit" on a draft row must open that draft's own section-builder URL
+  // rather than the shared STORE_ID route the published-theme card uses —
+  // otherwise every draft (and the published theme) all edit the exact same
+  // content under the same URL.
+  function handleDraftOpen(draftThemeRecord) {
+    navigate(`/section-builder/${draftThemeRecord.id}`);
   }
 
   function handleSeePreview(template) {
@@ -306,13 +336,22 @@ export default function ThemeGallery() {
 
   function handleDraftDuplicate(draftThemeRecord) {
     const uniqueName = getUniqueName(draftThemes.map((d) => d.name), draftThemeRecord.name);
-    const copy = { ...draftThemeRecord, id: `draft-${Date.now()}`, name: uniqueName, addedAt: Date.now(), lastSavedAt: Date.now() };
+    const newId = `draft-${Date.now()}`;
+    // Copy the source draft's real builder content into the new draft's own
+    // namespace too, not just the bookkeeping row, so the duplicate opens
+    // with the same content instead of an empty/default site.
+    const sourceContent = loadDraft(draftThemeRecord.id);
+    if (sourceContent) saveDraft(newId, sourceContent);
+    const copy = { ...draftThemeRecord, id: newId, name: uniqueName, addedAt: Date.now(), lastSavedAt: Date.now() };
     const nextList = [...draftThemes, copy];
     setDraftThemes(nextList);
     saveDraftThemes(STORE_ID, nextList);
   }
 
   function handleDraftDeleteConfirm() {
+    // Clean up the draft's own persisted builder content along with its
+    // bookkeeping row, so deleted drafts don't linger in localStorage.
+    clearDraft(deleteConfirmTheme.id);
     const nextList = draftThemes.filter((d) => d.id !== deleteConfirmTheme.id);
     setDraftThemes(nextList);
     saveDraftThemes(STORE_ID, nextList);
@@ -348,41 +387,48 @@ export default function ThemeGallery() {
 
     setAddingDiscoverId(item.id);
     setTimeout(() => {
-      // Xinear is a real SITE_TEMPLATES entry now — apply it the same way
-      // the auto-seed-on-first-visit path does, which actually reseeds
-      // theme/pages/header/footer/media (mode: 'seed' — the "start fresh
-      // with this theme" contract), rather than the skin-only
-      // storefrontThemeId write used for roster items with no real
-      // template content behind them.
-      const xinearTemplate = item.id === 'xinear' ? siteTemplateById('xinear') : null;
-      if (xinearTemplate) {
-        applySiteTemplate(STORE_ID, xinearTemplate, 'seed');
+      // Every draft theme gets its own section-builder storeId namespace
+      // (storage.js keys everything off storeId), so each one opens at its
+      // own /section-builder/:storeId URL with its own content, instead of
+      // every draft (and the published theme) all reading/writing the same
+      // shared STORE_ID draft.
+      const newDraftId = `draft-${Date.now()}`;
+
+      // Any roster item backed by a real SITE_TEMPLATES entry (Xinear,
+      // Houzez, ...) is applied the same way the auto-seed-on-first-visit
+      // path does, which actually seeds theme/pages/header/footer/media
+      // (mode: 'seed' — the "start fresh with this theme" contract) and
+      // sets activeTemplateId so the builder loads the correct content,
+      // rather than the skin-only storefrontThemeId write used for roster
+      // items with no real template content behind them.
+      const matchedTemplate = siteTemplateById(item.id);
+      if (matchedTemplate) {
+        applySiteTemplate(newDraftId, matchedTemplate, 'seed');
       } else {
         // Skin-only fallback for roster items that are still just a
         // themes/registry.js color-token definition (no SITE_TEMPLATES
-        // entry backing them yet): write storefrontThemeId/
-        // storefrontThemeMode onto the live draft so Canvas.jsx's effect
-        // (see ui/Canvas.jsx) skins the storefront preview/renderer with
-        // this theme, without touching page/section content.
-        const liveDraft = loadDraft(STORE_ID);
-        if (liveDraft) {
-          const nextDraft = {
-            ...liveDraft,
-            theme: {
-              ...liveDraft.theme,
-              storefrontThemeId: item.id,
-              storefrontThemeMode: liveDraft.theme?.storefrontThemeMode || 'light',
-            },
-          };
-          saveDraft(STORE_ID, nextDraft);
-        }
+        // entry backing them yet): start from a fresh default builder state
+        // (nothing exists yet under this new draft's own id) and write
+        // storefrontThemeId/storefrontThemeMode onto it so Canvas.jsx's
+        // effect (see ui/Canvas.jsx) skins the storefront preview/renderer
+        // with this theme, without fabricating page/section content.
+        const fresh = createFreshState(newDraftId);
+        const seeded = {
+          ...fresh,
+          theme: {
+            ...fresh.theme,
+            storefrontThemeId: item.id,
+            storefrontThemeMode: fresh.theme?.storefrontThemeMode || 'light',
+          },
+        };
+        saveDraft(newDraftId, seeded);
       }
 
-      // Bookkeeping record for the "Draft themes" list UX — unchanged from
-      // before other than keying off `item.id` (roster entries have no
-      // `templateId`/`previewImageUrl` fields).
+      // Bookkeeping record for the "Draft themes" list UX — its `id` doubles
+      // as the section-builder storeId namespace seeded above, so the row's
+      // "Edit" link (handleDraftOpen) and its persisted content always agree.
       const newDraft = {
-        id: `draft-${Date.now()}`,
+        id: newDraftId,
         templateId: item.id,
         name: getUniqueName(draftThemes.map((d) => d.name), item.name),
         previewImageUrl: null,
@@ -587,7 +633,7 @@ export default function ThemeGallery() {
                   isRenaming={renamingId === d.id}
                   isPublishing={false}
                   onPublish={() => setPublishConfirmTheme(d)}
-                  onEdit={handleOpen}
+                  onEdit={() => handleDraftOpen(d)}
                   onPreview={() => handleDraftPreview(d)}
                   onRenameStart={() => setRenamingId(d.id)}
                   onRenameSubmit={(newName) => handleDraftRenameSubmit(d, newName)}

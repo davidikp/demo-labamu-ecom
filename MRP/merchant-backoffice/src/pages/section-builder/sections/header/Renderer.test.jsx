@@ -91,3 +91,67 @@ describe('HeaderRenderer — layout_variant', () => {
     }
   });
 });
+
+describe('HeaderRenderer — nav_color', () => {
+  const THEME = { colors: { primary: '#16894b', accent: '#0000ff', text_primary: '#1b1916' } };
+
+  it('defaults to no color override (backward compatible — inherits the section text color)', () => {
+    const { getByText } = render(<HeaderRenderer data={{ nav_links: NAV_LINKS }} theme={THEME} />);
+    expect(getByText('Home').style.color).toBe('');
+  });
+
+  it('"primary" colors nav links with theme.colors.primary', () => {
+    const { getByText } = render(<HeaderRenderer data={{ nav_links: NAV_LINKS, nav_color: 'primary' }} theme={THEME} />);
+    expect(getByText('Home').style.color).toBe('rgb(22, 137, 75)');
+    expect(getByText('About').style.color).toBe('rgb(22, 137, 75)');
+  });
+
+  it('"accent" colors nav links with theme.colors.accent', () => {
+    const { getByText } = render(<HeaderRenderer data={{ nav_links: NAV_LINKS, nav_color: 'accent' }} theme={THEME} />);
+    expect(getByText('Home').style.color).toBe('rgb(0, 0, 255)');
+  });
+});
+
+describe('HeaderRenderer — logo rendering', () => {
+  const MEDIA_LIBRARY = [{ id: 'media-logo', url: '/logo.png' }];
+  const LOGO_IMAGE_REF = { mediaId: 'media-logo' };
+
+  it('image-only (logo_text explicitly empty): renders at 42px height with no duplicate text label', () => {
+    const { container, queryByText } = render(
+      <HeaderRenderer data={{ logo_image: LOGO_IMAGE_REF, logo_text: '' }} mediaLibrary={MEDIA_LIBRARY} />
+    );
+    const img = container.querySelector('img[alt]');
+    expect(img.className).toBe('h-[42px] w-auto object-contain');
+    // Only the schema's non-empty default ('My Store') would show up here —
+    // confirms it does not leak through when logo_text is explicitly ''.
+    expect(queryByText('My Store')).toBeNull();
+  });
+
+  it('image + logo_text (existing convention): keeps the small icon + separate text label unchanged', () => {
+    const { container, getByText } = render(
+      <HeaderRenderer data={{ logo_image: LOGO_IMAGE_REF, logo_text: 'Acme' }} mediaLibrary={MEDIA_LIBRARY} />
+    );
+    const img = container.querySelector('img');
+    expect(img.className).toBe('h-6 w-6');
+    expect(getByText('Acme')).toBeTruthy();
+  });
+});
+
+describe('HeaderRenderer — language switcher flag', () => {
+  it('falls back to a globe icon when a language has no `flag` (backward compatible)', () => {
+    const { container } = render(
+      <HeaderRenderer data={{ show_language_switcher: true, languages: [{ id: 'l1', code: 'EN', label: 'English' }] }} />
+    );
+    expect(container.querySelector('img[alt=""]')).toBeNull();
+    expect(container.querySelector('svg')).toBeTruthy();
+  });
+
+  it('renders a real flag image (flagcdn) when a language sets `flag`', () => {
+    const { container } = render(
+      <HeaderRenderer data={{ show_language_switcher: true, languages: [{ id: 'l1', code: 'EN', label: 'English', flag: 'us' }] }} />
+    );
+    const flagImg = container.querySelector('img[src*="flagcdn.com"]');
+    expect(flagImg).toBeTruthy();
+    expect(flagImg.src).toContain('/us.png');
+  });
+});

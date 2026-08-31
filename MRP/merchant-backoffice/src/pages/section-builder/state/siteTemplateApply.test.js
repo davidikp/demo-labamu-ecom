@@ -26,7 +26,9 @@ describe('applySiteTemplate', () => {
     const next = applySiteTemplate(storeId, fnb);
     expect(next.activeTemplateId).toBe('fnb');
     expect(next.theme.colors).toEqual(fnb.theme.colors);
-    expect(next.pages.map((p) => p.id)).toEqual(fnb.pages.map((p) => p.id));
+    // Plus Shop + Product Detail, merged in automatically since fnb's own
+    // template scaffold doesn't define them (mergeRequiredSystemPages).
+    expect(next.pages.map((p) => p.id)).toEqual([...fnb.pages.map((p) => p.id), 'shop', 'product']);
     expect(memory.get(storeId)).toBe(next);
   });
 
@@ -55,7 +57,9 @@ describe('applySiteTemplate', () => {
     expect(next.theme.colors).toEqual(clothing.theme.colors);
     expect(next.theme.typography).toEqual(clothing.theme.typography);
     // Page structure and the custom edit survive the switch untouched.
-    expect(next.pages.map((p) => p.id)).toEqual(fnb.pages.map((p) => p.id));
+    // Plus Shop + Product Detail, merged in automatically since fnb's own
+    // template scaffold doesn't define them (mergeRequiredSystemPages).
+    expect(next.pages.map((p) => p.id)).toEqual([...fnb.pages.map((p) => p.id), 'shop', 'product']);
     expect(next.pages[0].sections[0].data.overlay_opacity).toBe(42);
   });
 
@@ -68,7 +72,7 @@ describe('applySiteTemplate', () => {
   it('seeds from a fresh state when the store has no prior draft', () => {
     const next = applySiteTemplate('brand-new-store', clothing);
     expect(next.activeTemplateId).toBe('clothing');
-    expect(next.pages.map((p) => p.id)).toEqual(clothing.pages.map((p) => p.id));
+    expect(next.pages.map((p) => p.id)).toEqual([...clothing.pages.map((p) => p.id), 'shop', 'product']);
     // Sanity check against what a fresh, template-less state would look like.
     const fresh = createFreshState('brand-new-store');
     expect(fresh.activeTemplateId).toBeNull();

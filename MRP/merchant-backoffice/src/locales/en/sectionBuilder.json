@@ -386,6 +386,18 @@
       "addressPlaceholder": "Add your address…",
       "phonePlaceholder": "Add a phone number…",
       "storeHoursPlaceholder": "Add store hours…"
+    },
+    "quoteRequestForm": {
+      "fileTooLarge": "\"{{name}}\" is over 5MB and was not added.",
+      "submitError": "Failed to submit request. Please try again.",
+      "submitSuccess": "Your request has been submitted — we’ll be in touch soon.",
+      "submitting": "Submitting…",
+      "cancel": "Cancel",
+      "addProduct": "Add",
+      "selectProduct": "Select a product…",
+      "removeItem": "Remove",
+      "removeFile": "Remove file",
+      "uploadFiles": "Click to upload files"
     }
   },
   "templates": {

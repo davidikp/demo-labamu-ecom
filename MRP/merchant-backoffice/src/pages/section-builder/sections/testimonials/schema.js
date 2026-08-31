@@ -10,6 +10,15 @@ export const schema = {
     type: 'select', label: 'Columns on desktop', default: '3', group: 'layout',
     options: [{ value: '2', label: '2' }, { value: '3', label: '3' }],
   },
+  // A genuine content-hierarchy choice, not a low-level style knob: which
+  // matters more at a glance, the review or who wrote it. Default preserves
+  // the original card exactly (quote first, name small/subdued below it);
+  // 'name_first' puts the reviewer name above the quote and gives it the
+  // prominent treatment a testimonial-led design (e.g. Houzez) wants.
+  card_hierarchy: {
+    type: 'select', label: 'Card content order', default: 'quote_first', group: 'layout',
+    options: [{ value: 'quote_first', label: 'Quote, then reviewer name' }, { value: 'name_first', label: 'Reviewer name, then quote' }],
+  },
   ...SECTION_CHROME_FIELDS,
   color_scheme: { ...SECTION_CHROME_FIELDS.color_scheme, default: 'surface' },
   padding_top: { ...SECTION_CHROME_FIELDS.padding_top, default: 40 },

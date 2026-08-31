@@ -18,8 +18,32 @@
  * confirmed separately per US-9.4) — see TRANSIENT_ACTION_TYPES there.
  */
 
+import { mergeRequiredSystemPages, requiredSystemPages, REQUIRED_SYSTEM_TYPES } from './defaultTheme';
+import { SHOP_CORE_SECTION_ID } from '../sections/catalog_list/schema';
+import { PRODUCT_CORE_SECTION_ID } from '../sections/product_detail/schema';
+import { EDITORIAL_COLLECTION_LIST_CORE_SECTION_ID } from '../sections/editorial_collection_list/schema';
+import { EDITORIAL_COLLECTION_DETAIL_CORE_SECTION_ID } from '../sections/editorial_collection_detail/schema';
+
 export const MAX_SECTIONS_PER_PAGE = 20;
 export const SECTION_WARNING_THRESHOLD = 18;
+
+/** Section ids that must not be removable via REMOVE_SECTION, per system
+ * page kind — the section-level analogue of REQUIRED_SYSTEM_TYPES' page-
+ * level guard: the Shop page's `sections` array is an ordinary reorderable
+ * list, so without this a merchant could delete its only catalog section
+ * and leave Shop blank. Keyed by `systemType`, not page id, matching how
+ * `pageFillsSystemType` (defaultTheme.js) already treats those two as
+ * interchangeable. */
+const REQUIRED_SECTION_ID_BY_SYSTEM_TYPE = {
+  shop: SHOP_CORE_SECTION_ID,
+  product: PRODUCT_CORE_SECTION_ID,
+  // Guarded the same way even though neither page is in REQUIRED_SYSTEM_TYPES
+  // (both stay optional/removable pages, per US Collection feature) — this
+  // map only protects the *section* from being emptied out while its page
+  // still exists, independent of whether the page itself is required.
+  editorial_collection_list: EDITORIAL_COLLECTION_LIST_CORE_SECTION_ID,
+  editorial_collection_detail: EDITORIAL_COLLECTION_DETAIL_CORE_SECTION_ID,
+};
 
 export const ACTIONS = {
   SET_ACTIVE_PAGE: 'SET_ACTIVE_PAGE',
@@ -169,6 +193,9 @@ export function builderReducer(state, action) {
 
     case ACTIONS.REMOVE_SECTION: {
       const { pageId, sectionId } = action;
+      const page = state.pages.find((p) => p.id === pageId);
+      const requiredId = page?.type === 'system' ? REQUIRED_SECTION_ID_BY_SYSTEM_TYPE[page.systemType] : null;
+      if (requiredId && requiredId === sectionId) return state;
       return {
         ...state,
         pages: updatePage(state.pages, pageId, (page) => ({
@@ -380,13 +407,18 @@ export function builderReducer(state, action) {
       // generates the page roster + globals + media library from the
       // template's scaffold. Only used when state.activeTemplateId is still
       // null — see siteTemplates.js for the seed-vs-reskin contract.
+      // mergeRequiredSystemPages guarantees Shop + Product Detail exist even
+      // for templates (siteTemplates.js) that don't define them themselves —
+      // it never duplicates a page a template *does* already define (e.g. a
+      // future template with its own 'shop'-id or systemType:'shop' page).
       const { templateId, theme, pages, header, footer, media } = action;
+      const mergedPages = mergeRequiredSystemPages(pages, requiredSystemPages());
       return {
         ...state,
         activeTemplateId: templateId,
         theme: { ...state.theme, ...theme },
-        pages,
-        activePageId: pages[0]?.id ?? null,
+        pages: mergedPages,
+        activePageId: pages[0]?.id ?? mergedPages[0]?.id ?? null,
         header,
         footer,
         mediaLibrary: media ?? [],
@@ -455,6 +487,15 @@ export function builderReducer(state, action) {
       };
 
     case ACTIONS.DELETE_PAGE: {
+      // Integrity guard: required system pages (Shop, Product Detail — see
+      // REQUIRED_SYSTEM_TYPES in defaultTheme.js) can't be deleted through
+      // this path. PagesPanel.jsx's UI already hides the delete affordance
+      // for any `type: 'system'` page, so this is a defensive backstop, not
+      // the primary guard.
+      const target = state.pages.find((p) => p.id === action.pageId);
+      if (target && target.type === 'system' && REQUIRED_SYSTEM_TYPES.includes(target.systemType)) {
+        return state;
+      }
       const pages = state.pages.filter((p) => p.id !== action.pageId);
       const activePageId = state.activePageId === action.pageId ? pages[0]?.id ?? null : state.activePageId;
       return { ...state, pages, activePageId };
@@ -534,9 +575,16 @@ export function builderReducer(state, action) {
     }
 
     case ACTIONS.BULK_DELETE_PAGES: {
+      // Same integrity guard as DELETE_PAGE — required system pages are
+      // silently excluded from the bulk-delete set rather than blocking the
+      // whole operation.
       const ids = new Set(action.pageIds);
-      const pages = state.pages.filter((p) => !ids.has(p.id));
-      const activePageId = ids.has(state.activePageId) ? pages[0]?.id ?? null : state.activePageId;
+      const pages = state.pages.filter((p) => {
+        if (!ids.has(p.id)) return true;
+        return p.type === 'system' && REQUIRED_SYSTEM_TYPES.includes(p.systemType);
+      });
+      const remainingIds = new Set(pages.map((p) => p.id));
+      const activePageId = remainingIds.has(state.activePageId) ? state.activePageId : pages[0]?.id ?? null;
       return { ...state, pages, activePageId };
     }
 

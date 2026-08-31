@@ -46,38 +46,49 @@ function SplitPanelHero({ blocks, theme, mediaLibrary, blockCtx, activeImage, is
 
   return (
     <div className="px-6 py-6">
+      {/* Outer wrapper matches the card's own box exactly (same maxWidth/
+          height) but has no overflow-hidden, so the prev/next arrows —
+          positioned straddling its left/right edge — float fully visible
+          above the card instead of being clipped by it. Only the inner card
+          clips the image/blend layer, which do need to respect the rounded
+          corners. */}
       <div
-        className="relative mx-auto flex items-center overflow-hidden"
-        style={{ background: surface, maxWidth: '1280px', height: `${height}px`, borderRadius: `${radius}px` }}
+        className="relative mx-auto"
+        style={{ maxWidth: '1280px', height: `${height}px` }}
         onMouseEnter={() => setIsPaused(true)}
         onMouseLeave={() => setIsPaused(false)}
       >
-        <div className="relative z-[3] flex flex-col justify-center" style={{ flex: `0 0 ${contentWidth}`, maxWidth: contentWidth, padding: contentPadding }}>
-          <BlockStream
-            sectionType="hero_banner"
-            blocks={blocks}
-            theme={theme}
-            mediaLibrary={mediaLibrary}
-            blockCtx={blockCtx}
-            className="flex flex-col items-start gap-3 text-left"
-            isMobile={isMobile}
-            context="hero"
-          />
+        <div
+          className="relative flex h-full w-full items-center overflow-hidden"
+          style={{ background: surface, borderRadius: `${radius}px` }}
+        >
+          <div className="relative z-[3] flex flex-col justify-center" style={{ flex: `0 0 ${contentWidth}`, maxWidth: contentWidth, padding: contentPadding }}>
+            <BlockStream
+              sectionType="hero_banner"
+              blocks={blocks}
+              theme={theme}
+              mediaLibrary={mediaLibrary}
+              blockCtx={blockCtx}
+              className="flex flex-col items-start gap-3 text-left"
+              isMobile={isMobile}
+              context="hero"
+            />
+          </div>
+          {activeImage && (
+            <>
+              <div
+                className="absolute inset-y-0 right-0 bg-cover bg-center"
+                style={{ width: imageWidth, backgroundImage: `url(${activeImage.url})`, borderTopRightRadius: radius, borderBottomRightRadius: radius }}
+              />
+              {/* Blends the image panel's right edge into the surface color —
+                  same technique as the golden reference's card background. */}
+              <div
+                className="pointer-events-none absolute inset-0"
+                style={{ borderRadius: radius, background: buildLinearGradient('to right', surface, blendStops) }}
+              />
+            </>
+          )}
         </div>
-        {activeImage && (
-          <>
-            <div
-              className="absolute inset-y-0 right-0 bg-cover bg-center"
-              style={{ width: imageWidth, backgroundImage: `url(${activeImage.url})`, borderTopRightRadius: radius, borderBottomRightRadius: radius }}
-            />
-            {/* Blends the image panel's right edge into the surface color —
-                same technique as the golden reference's card background. */}
-            <div
-              className="pointer-events-none absolute inset-0"
-              style={{ borderRadius: radius, background: buildLinearGradient('to right', surface, blendStops) }}
-            />
-          </>
-        )}
         {isCarousel && !mobile && (
           <>
             <div className="absolute left-0 top-1/2 z-10 -translate-x-1/2 -translate-y-1/2">
@@ -148,18 +159,40 @@ function HeroBannerRenderer({ data, blocks = [], theme, mediaLibrary, blockCtx, 
     );
   }
 
+  // A 'background'-layout hero with a themed overlay is, semantically, a
+  // branded CTA banner (the overlay_style: 'theme' field's own stated
+  // purpose — see schema.js) — the golden-reference Appointment section is
+  // exactly this combination, not a bespoke section type. That's the only
+  // signal that opts a hero_banner instance into 'hero_cta' typography /
+  // recipe-driven background position; an ordinary background hero
+  // (overlay_style !== 'theme') never passes a context and renders exactly
+  // as before.
+  const isCtaBanner = data.overlay_style === 'theme';
+  const heroRecipe = resolveHeroRecipe(theme);
+  const bgPositionRecipe = heroRecipe.backgroundPosition;
+  const backgroundPosition = (mobile ? bgPositionRecipe?.mobile : bgPositionRecipe?.desktop) ?? 'center';
+  // Falls back to 'cover' (DEFAULT_HERO_RECIPE) for every theme that doesn't
+  // set its own recipe — a plain 'cover' background hero renders byte-
+  // identical to before. Houzez's recipe zooms further than 'cover' to
+  // fully crop a mockup-style background image's own baked-in content off
+  // the visible edge — see heroRecipes.js's comment.
+  const bgSizeRecipe = heroRecipe.backgroundSize;
+  const backgroundSize = (mobile ? bgSizeRecipe?.mobile : bgSizeRecipe?.desktop) ?? 'cover';
+
   return (
     <section
-      className="relative flex justify-center overflow-hidden bg-cover bg-center px-6"
+      className="relative flex justify-center overflow-hidden px-6"
       style={{
         backgroundImage: activeImage ? `url(${activeImage.url})` : undefined,
+        backgroundPosition,
+        backgroundSize,
         minHeight: `${data.min_height ?? 500}px`,
       }}
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
     >
       {activeImage && <BackgroundOverlay data={data} theme={theme} mobile={mobile} />}
-      <div className={`relative z-10 flex max-w-lg flex-col ${position}`}>
+      <div className={`relative z-10 flex ${isCtaBanner ? 'max-w-3xl' : 'max-w-lg'} flex-col ${position}`}>
         <BlockStream
           sectionType="hero_banner"
           blocks={blocks}
@@ -167,6 +200,8 @@ function HeroBannerRenderer({ data, blocks = [], theme, mediaLibrary, blockCtx, 
           mediaLibrary={mediaLibrary}
           blockCtx={blockCtx}
           className={`flex flex-col gap-4 ${align}`}
+          isMobile={isMobile}
+          context={isCtaBanner ? 'hero_cta' : undefined}
         />
       </div>
       {isCarousel && (

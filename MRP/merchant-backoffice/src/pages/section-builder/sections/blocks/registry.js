@@ -265,10 +265,18 @@ export const BLOCK_TYPES = {
           { value: 'email', label: 'Email' },
           { value: 'tel', label: 'Phone' },
           { value: 'textarea', label: 'Long text' },
+          { value: 'select', label: 'Dropdown' },
         ],
       },
       required: { type: 'boolean', label: 'Required', default: false, group: 'content' },
       placeholder: { type: 'text', label: 'Placeholder', maxLength: 100, default: '', group: 'content' },
+      // Same "one per line" convention as MenuColumnBlock's `links` field —
+      // a simple bounded list, not a repeater, for a dropdown's option
+      // labels (e.g. a salutation field: "Mr.\nMrs.\nMs.\nDr.").
+      options: {
+        type: 'textarea', label: 'Dropdown options (one per line)', default: '', group: 'content',
+        dependsOn: { field: 'field_type', equals: 'select' },
+      },
     },
   },
   nav_link: {
