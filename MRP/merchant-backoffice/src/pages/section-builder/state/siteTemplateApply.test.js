@@ -39,10 +39,10 @@ describe('applySiteTemplate', () => {
     expect(next.header.data.layout_variant).toBe(fnb.header.layout_variant);
     expect(next.header.data.logo_text).toBe(fnb.header.logo_text);
     expect(next.footer.data.tagline).toBe(fnb.footer.tagline);
-    // Fields the template doesn't override (e.g. nav_links, auto-derived
+    // Menus the template doesn't override (e.g. Main menu, auto-derived
     // from the page roster by createDefaultGlobals) still come through.
-    expect(next.header.data.nav_links).toBeTruthy();
-    expect(next.header.data.nav_links.length).toBeGreaterThan(0);
+    expect(next.menus['main-menu'].items).toBeTruthy();
+    expect(next.menus['main-menu'].items.length).toBeGreaterThan(0);
   });
 
   it('reskins colors/typography only when switching an already-seeded site, leaving pages/customizations untouched', () => {

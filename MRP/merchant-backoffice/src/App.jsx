@@ -55,6 +55,8 @@ const PageEditor = React.lazy(() => import('./pages/online-store/PageEditor'));
 const ThemePreview = React.lazy(() => import('./pages/online-store/ThemePreview'));
 const PagePreview = React.lazy(() => import('./pages/online-store/PagePreview'));
 const StorePreferences = React.lazy(() => import('./pages/online-store/StorePreferences'));
+const FilesManagement = React.lazy(() => import('./pages/online-store/FilesManagement'));
+const MenusManagement = React.lazy(() => import('./pages/online-store/MenusManagement'));
 
 // Simple mock auth context — replace with real auth later
 function isAuthenticated() {
@@ -98,6 +100,8 @@ export default function App() {
             <Route path="/online-store/pages/new" element={<PageEditor />} />
             <Route path="/online-store/pages/:pageId" element={<PageEditor />} />
             <Route path="/online-store/preferences" element={<StorePreferences />} />
+            <Route path="/content/files" element={<FilesManagement />} />
+            <Route path="/content/menus" element={<MenusManagement />} />
             <Route path="/catalog" element={<CatalogProducts />} />
             <Route path="/catalog/bulk-edit" element={<BulkEditCatalog />} />
             <Route path="/catalog/package/bulk-edit" element={<BulkEditCatalog />} />

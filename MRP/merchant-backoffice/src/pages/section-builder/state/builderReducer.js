@@ -88,9 +88,24 @@ export const ACTIONS = {
   DESELECT: 'DESELECT',
   ADD_MEDIA_ITEM: 'ADD_MEDIA_ITEM',
   REMOVE_MEDIA_ITEM: 'REMOVE_MEDIA_ITEM',
+  DELETE_MEDIA_ITEM: 'DELETE_MEDIA_ITEM',
+  BULK_DELETE_MEDIA_ITEMS: 'BULK_DELETE_MEDIA_ITEMS',
+  // Content > Menus (US-Content.1) — a menu's `items` array (each
+  // `{ id, label, url }`) is always replaced wholesale rather than mutated
+  // item-by-item, matching how repeater-style fields elsewhere in this
+  // reducer (e.g. UPDATE_SECTION_DATA/UPDATE_BLOCK_DATA) are committed as a
+  // single settled edit from the editing UI rather than one action per
+  // keystroke/reorder.
+  UPDATE_MENU_ITEMS: 'UPDATE_MENU_ITEMS',
+  // Adds a brand-new entry to `state.menus`, starting with `items: []` — the
+  // Content > Menus "Create menu" action (MenusManagement.jsx). Kept
+  // separate from UPDATE_MENU_ITEMS (which only ever replaces an existing
+  // menu's items) rather than overloading it, since this also has to invent
+  // a stable id/name pair for a menu that doesn't exist yet.
+  CREATE_MENU: 'CREATE_MENU',
 };
 
-export function createInitialState({ storeId, pages, theme, header, footer, activeTemplateId = null }) {
+export function createInitialState({ storeId, pages, theme, header, footer, activeTemplateId = null, menus }) {
   return {
     storeId,
     pages,
@@ -110,6 +125,16 @@ export function createInitialState({ storeId, pages, theme, header, footer, acti
     activeTemplateId,
     selection: { id: null },
     mediaLibrary: [],
+    // Content > Menus (US-Content.1) — two default menus every store starts
+    // with, mirroring Shopify's "Main menu"/"Footer menu" pair. Header/
+    // footer sections reference one of these by id (see their schema's
+    // `nav_menu_ref` field) rather than storing nav links inline. `menus`
+    // lets a caller (e.g. createDefaultGlobals's page-roster-derived nav)
+    // seed real starting items instead of always starting empty.
+    menus: menus ?? {
+      'main-menu': { id: 'main-menu', name: 'Main menu', items: [] },
+      'footer-menu': { id: 'footer-menu', name: 'Footer menu', items: [] },
+    },
   };
 }
 
@@ -411,7 +436,7 @@ export function builderReducer(state, action) {
       // for templates (siteTemplates.js) that don't define them themselves —
       // it never duplicates a page a template *does* already define (e.g. a
       // future template with its own 'shop'-id or systemType:'shop' page).
-      const { templateId, theme, pages, header, footer, media } = action;
+      const { templateId, theme, pages, header, footer, media, menus } = action;
       const mergedPages = mergeRequiredSystemPages(pages, requiredSystemPages());
       return {
         ...state,
@@ -422,6 +447,10 @@ export function builderReducer(state, action) {
         header,
         footer,
         mediaLibrary: media ?? [],
+        // Optional — callers that don't seed nav menus (e.g. existing tests
+        // constructing this action by hand) leave `state.menus` untouched
+        // rather than clobbering it with nothing.
+        menus: menus ?? state.menus,
         selection: { id: null },
       };
     }
@@ -596,6 +625,39 @@ export function builderReducer(state, action) {
       // to nothing at render time — see ui/fields/imageValue.js — so there's
       // no section data to clean up here (US-9.4).
       return { ...state, mediaLibrary: state.mediaLibrary.filter((m) => m.id !== action.id) };
+
+    // Single-item delete for the Content > Files screen — same "no cleanup
+    // needed" rationale as REMOVE_MEDIA_ITEM above (kept as a distinct
+    // action, rather than reusing REMOVE_MEDIA_ITEM, to match this reducer's
+    // existing single/bulk pairing convention, e.g. DELETE_PAGE vs.
+    // BULK_DELETE_PAGES).
+    case ACTIONS.DELETE_MEDIA_ITEM:
+      return { ...state, mediaLibrary: state.mediaLibrary.filter((m) => m.id !== action.id) };
+
+    case ACTIONS.BULK_DELETE_MEDIA_ITEMS: {
+      const ids = new Set(action.ids);
+      return { ...state, mediaLibrary: state.mediaLibrary.filter((m) => !ids.has(m.id)) };
+    }
+
+    // Replaces a menu's full `items` array — see ACTIONS.UPDATE_MENU_ITEMS
+    // above for why this is whole-array rather than per-item.
+    case ACTIONS.UPDATE_MENU_ITEMS: {
+      const { menuId, items } = action;
+      const menu = state.menus?.[menuId];
+      if (!menu) return state;
+      return { ...state, menus: { ...state.menus, [menuId]: { ...menu, items } } };
+    }
+
+    // Adds a new menu with the given `id`/`name` and empty `items` — a no-op
+    // if `id` already exists (the caller, MenusManagement.jsx, is expected
+    // to generate a unique slug against the current `state.menus` keys, the
+    // same "stable id" convention MenuEditorPopup's items already use via
+    // `crypto.randomUUID()`, just slug-based here for a human-readable id).
+    case ACTIONS.CREATE_MENU: {
+      const { id, name } = action;
+      if (state.menus?.[id]) return state;
+      return { ...state, menus: { ...state.menus, [id]: { id, name, items: [] } } };
+    }
 
     case ACTIONS.SELECT:
       return { ...state, selection: { id: action.id } };

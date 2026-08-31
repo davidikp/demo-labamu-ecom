@@ -206,6 +206,11 @@ export default function PageEditor() {
   const [simulateSaveError, setSimulateSaveError] = useState(false);
   const [simulateLoadError, setSimulateLoadError] = useState(false);
   const [simulateNotFound, setSimulateNotFound] = useState(false);
+  // Shared with GenerateTextModal (both the Title field's and the Rich Text
+  // Editor's "Generate text" dialogs) so their AI-simulation toggles surface
+  // in this same Simulate panel instead of a separate floating button.
+  const [simulateGenFail, setSimulateGenFail] = useState(false);
+  const [simulateUnavailable, setSimulateUnavailable] = useState(false);
 
   // Edit Search Engine Listing — only meaningful once a handle already
   // exists to redirect *from* (a brand-new page has no prior URL yet).
@@ -482,6 +487,18 @@ export default function PageEditor() {
       checked: simulateNotFound,
       onChange: setSimulateNotFound,
     },
+    {
+      type: 'checkbox',
+      label: t('sectionBuilder:onlineStore.pageEditor.simulateGenerateFailed', 'Simulate generation failed'),
+      checked: simulateGenFail,
+      onChange: setSimulateGenFail,
+    },
+    {
+      type: 'checkbox',
+      label: t('sectionBuilder:onlineStore.pageEditor.simulateAiUnavailable', 'Simulate AI unavailable'),
+      checked: simulateUnavailable,
+      onChange: setSimulateUnavailable,
+    },
   ];
 
   // Retries the (simulated) load — re-reads the draft from local storage.
@@ -618,6 +635,8 @@ export default function PageEditor() {
                 onChange={(html) => patchForm({ content: html })}
                 mediaLibrary={draft.mediaLibrary}
                 onUploadMedia={handleUploadMedia}
+                simulateGenFail={simulateGenFail}
+                simulateUnavailable={simulateUnavailable}
               />
             </div>
 
@@ -831,9 +850,9 @@ export default function PageEditor() {
         title={t('sectionBuilder:onlineStore.pageEditor.deleteConfirmTitle', 'Delete this page?')}
         description={t(
           'sectionBuilder:onlineStore.pageEditor.deleteConfirmDescription',
-          'This can’t be undone.'
+          'This page and its content will be permanently deleted.'
         )}
-        confirmLabel={t('sectionBuilder:onlineStore.pageEditor.delete', 'Delete page')}
+        confirmLabel={t('sectionBuilder:onlineStore.pageEditor.delete', 'Yes, Delete')}
         danger
         onConfirm={handleDelete}
         onCancel={() => setConfirmDelete(false)}
@@ -897,6 +916,8 @@ export default function PageEditor() {
         mode="title"
         onApply={(text) => patchForm({ name: text })}
         onClose={() => setGenerateTitleOpen(false)}
+        simulateGenFail={simulateGenFail}
+        simulateUnavailable={simulateUnavailable}
       />
 
       <Popup
@@ -909,9 +930,8 @@ export default function PageEditor() {
         )}
         platform="desktop"
         primaryAction={{
-          label: t('sectionBuilder:onlineStore.pageEditor.discardChangesConfirm', 'Discard changes'),
+          label: t('sectionBuilder:onlineStore.pageEditor.discardChangesConfirm', 'Yes, Discard'),
           onClick: handleConfirmDiscard,
-          destructive: true,
         }}
         secondaryAction={{
           label: t('sectionBuilder:onlineStore.pageEditor.keepEditing', 'Keep editing'),

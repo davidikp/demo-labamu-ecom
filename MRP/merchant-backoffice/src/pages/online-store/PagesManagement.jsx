@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { MoreHorizontal, Trash2 } from 'lucide-react';
+import { MoreHorizontal, Trash2, Plus } from 'lucide-react';
 import { Table, StatusBadge, MainBtn, Popup, DateTimeField } from '../../ce-ui';
 import { loadDraft } from '../section-builder/state/storage';
 import { createFreshState } from '../section-builder/state/useSectionBuilder';
@@ -279,6 +279,7 @@ export default function PagesManagement() {
     {
       key: 'updatedAt',
       header: t('sectionBuilder:onlineStore.pages.columnUpdated', 'Updated'),
+      width: 128,
       render: (value) => (value ? formatRelativeTime(value) : '—'),
     },
   ];
@@ -379,7 +380,8 @@ export default function PagesManagement() {
           <MainBtn
             variant="primary"
             size="sm"
-            label={t('sectionBuilder:onlineStore.pages.addPage', 'Add page')}
+            leftIcon={<Plus size={16} />}
+            label={t('sectionBuilder:onlineStore.pages.addPage', 'New Page')}
             onClick={() => navigate('/online-store/pages/new')}
           />
         </div>

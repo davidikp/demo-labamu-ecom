@@ -8,7 +8,7 @@ import { parseBlockSelection, isAtBlockMax, createBlockCtx } from '../sections/b
 import SectionShell from './SectionShell';
 import PageFrame from './PageFrame';
 
-const RenderedEntity = memo(function RenderedEntity({ entity, theme, mediaLibrary, onEdit, blockCtx, isMobile, breakpoint, onNavigate, currentPath }) {
+const RenderedEntity = memo(function RenderedEntity({ entity, theme, mediaLibrary, onEdit, blockCtx, isMobile, breakpoint, onNavigate, currentPath, menus }) {
   const { t } = useTranslation();
   const Renderer = SECTION_DEFINITIONS[entity.type]?.Renderer;
   if (!Renderer) {
@@ -31,12 +31,17 @@ const RenderedEntity = memo(function RenderedEntity({ entity, theme, mediaLibrar
         breakpoint={breakpoint}
         onNavigate={onNavigate}
         currentPath={currentPath}
+        // Content > Menus (US-Content.1) — `state.menus`, only meaningful to
+        // header/footer's Renderer (see their schema's `nav_menu_ref`); every
+        // other section's Renderer simply ignores this unknown prop, same as
+        // `breakpoint` above.
+        menus={menus}
       />
     </SectionShell>
   );
 });
 
-const GlobalBlock = memo(function GlobalBlock({ entity, selected, onSelect, onInlineEdit, theme, mediaLibrary, readOnly, isMobile, breakpoint, onNavigate, currentPath }) {
+const GlobalBlock = memo(function GlobalBlock({ entity, selected, onSelect, onInlineEdit, theme, mediaLibrary, readOnly, isMobile, breakpoint, onNavigate, currentPath, menus }) {
   const { t } = useTranslation();
   const handleEdit = useCallback(
     (key, value) => onInlineEdit?.(entity.type, key, value),
@@ -78,6 +83,7 @@ const GlobalBlock = memo(function GlobalBlock({ entity, selected, onSelect, onIn
         // away from what they're editing.
         onNavigate={readOnly ? onNavigate : undefined}
         currentPath={currentPath}
+        menus={menus}
       />
     </div>
   );
@@ -230,6 +236,7 @@ export default function Canvas({
   readOnly = false,
   onNavigate,
   currentPath,
+  menus,
 }) {
   const { t } = useTranslation();
   const isMobile = viewport === 'mobile';
@@ -250,6 +257,7 @@ export default function Canvas({
           breakpoint={viewport}
           onNavigate={onNavigate}
           currentPath={currentPath}
+          menus={menus}
         />
 
         {sections.length === 0 ? (
@@ -320,6 +328,7 @@ export default function Canvas({
           isMobile={isMobile}
           breakpoint={viewport}
           onNavigate={onNavigate}
+          menus={menus}
         />
     </PageFrame>
   );

@@ -14,7 +14,8 @@ const THEME = {
   ],
 };
 
-const HEADER = { type: 'header', data: { nav_links: [{ id: 'h', label: 'Shop Now', url: '/shop' }] } };
+const HEADER = { type: 'header', data: {} };
+const MENUS = { 'main-menu': { items: [{ id: 'h', label: 'Shop Now', url: '/shop' }] } };
 const FOOTER = { type: 'footer', data: { copyright_text: 'Copyright PDP Co.' } };
 const PAGE = { slug: '/products/safety-helmet', sections: [{ type: 'product_detail', data: {} }] };
 
@@ -26,6 +27,7 @@ function renderPDP(props = {}) {
         header={HEADER}
         footer={FOOTER}
         mediaLibrary={[]}
+        menus={MENUS}
         page={PAGE}
         handle="safety-helmet"
         isMobile={false}
@@ -80,6 +82,7 @@ describe('ProductDetailPage vs Canvas — identical frame markup', () => {
         sections={[]}
         theme={THEME}
         mediaLibrary={[]}
+        menus={MENUS}
         selectedId={null}
         readOnly
       />

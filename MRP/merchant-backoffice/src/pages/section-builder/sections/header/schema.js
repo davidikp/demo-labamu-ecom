@@ -19,19 +19,17 @@ export const schema = {
       { value: 'centered-nav', label: 'Centered — logo left, nav centered, actions right' },
     ],
   },
-  nav_links: {
-    type: 'repeater',
-    label: 'Nav links',
-    maxItems: 8,
+  // Content > Menus (US-Content.1) — the header's nav now reads its items
+  // from the shared `state.menus['main-menu']` (see builderReducer.js),
+  // instead of storing its own inline `nav_links` repeater. This field is a
+  // read-only reference + deep link into Content > Menus, not an inline
+  // editor (matches Shopify's own header panel) — see
+  // ui/fields/MenuReferenceField.jsx.
+  nav_menu_ref: {
+    type: 'menu_reference',
+    label: 'Navigation',
     group: 'content',
-    // New items default their URL to whichever page is active in the
-    // builder when "Add item" is clicked, rather than always defaulting to
-    // "/" — see RepeaterField.jsx.
-    autofillUrlFromActivePage: true,
-    itemSchema: {
-      label: { type: 'text', label: 'Label', maxLength: 100, default: '' },
-      url: { type: 'text', label: 'URL', default: '/' },
-    },
+    menuId: 'main-menu',
   },
   sticky: { type: 'boolean', label: 'Sticky on scroll', default: true, group: 'layout' },
   show_cart_icon: { type: 'boolean', label: 'Show cart icon', default: true, group: 'layout' },

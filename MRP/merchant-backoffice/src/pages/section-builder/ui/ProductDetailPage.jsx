@@ -25,7 +25,7 @@ import SectionShell from './SectionShell';
  * section — so this page never diverges visually from how the identical
  * header/footer data renders on Home/Shop in the same preview route.
  */
-export default function ProductDetailPage({ theme, header, footer, mediaLibrary, page, handle, isMobile, breakpoint, onNavigate, onBackToShop }) {
+export default function ProductDetailPage({ theme, header, footer, mediaLibrary, page, handle, isMobile, breakpoint, onNavigate, onBackToShop, menus }) {
   const product = resolveStorefrontProductByHandle(theme, handle, mediaLibrary);
   const sectionData = page?.sections?.find((s) => s.type === 'product_detail')?.data ?? {};
 
@@ -33,7 +33,7 @@ export default function ProductDetailPage({ theme, header, footer, mediaLibrary,
     <PageFrame viewport={breakpoint} theme={theme}>
       {header && !header.hidden && (
         <SectionShell data={header.data ?? {}} theme={theme} breakpoint={breakpoint}>
-          <HeaderRenderer data={header.data ?? {}} theme={theme} mediaLibrary={mediaLibrary} isMobile={isMobile} onNavigate={onNavigate} currentPath={page?.slug} />
+          <HeaderRenderer data={header.data ?? {}} theme={theme} mediaLibrary={mediaLibrary} isMobile={isMobile} onNavigate={onNavigate} currentPath={page?.slug} menus={menus} />
         </SectionShell>
       )}
       <div className="py-8">

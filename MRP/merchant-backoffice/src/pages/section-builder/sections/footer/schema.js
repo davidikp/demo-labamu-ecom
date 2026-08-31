@@ -13,6 +13,18 @@ export const schema = {
       { value: 'minimal-bar', label: 'Minimal — a single slim copyright row' },
     ],
   },
+  // Content > Menus (US-Content.1) — a reference + deep link to the shared
+  // "Footer menu" (`state.menus['footer-menu']`, see builderReducer.js),
+  // matching header/schema.js's `nav_menu_ref`. The footer's own rendered
+  // content today comes from `link_columns` below, not a flat nav list —
+  // this field exists so a merchant can still discover/manage the Footer
+  // menu from here, ready for a future footer layout that renders it.
+  nav_menu_ref: {
+    type: 'menu_reference',
+    label: 'Navigation',
+    group: 'content',
+    menuId: 'footer-menu',
+  },
   tagline: { type: 'textarea', label: 'Tagline', maxLength: 400, group: 'content' },
   // Logo row (icon + wordmark) shown above the rest of the footer content
   // when either is set — footer had neither field before, so this is

@@ -14,7 +14,7 @@ describe('HeaderRenderer — nav visibility vs. the builder viewport toggle', ()
   // zoomed, etc.) host window — there's no mobile hamburger menu yet, so nav
   // should stay visible everywhere except the explicit Mobile toggle.
   it('shows nav links when isMobile is explicitly false (builder desktop toggle)', () => {
-    const { container } = render(<HeaderRenderer data={{ nav_links: NAV_LINKS }} isMobile={false} />);
+    const { container } = render(<HeaderRenderer data={{}} menus={{ 'main-menu': { items: NAV_LINKS } }} isMobile={false} />);
     const nav = container.querySelector('nav');
     expect(nav.className).not.toContain('hidden');
     expect(nav.textContent).toContain('Home');
@@ -22,13 +22,13 @@ describe('HeaderRenderer — nav visibility vs. the builder viewport toggle', ()
   });
 
   it('hides nav links when isMobile is explicitly true (builder mobile toggle)', () => {
-    const { container } = render(<HeaderRenderer data={{ nav_links: NAV_LINKS }} isMobile />);
+    const { container } = render(<HeaderRenderer data={{}} menus={{ 'main-menu': { items: NAV_LINKS } }} isMobile />);
     const nav = container.querySelector('nav');
     expect(nav.className).toBe('hidden');
   });
 
   it('shows nav links when isMobile is not passed at all (real storefront/live preview)', () => {
-    const { container } = render(<HeaderRenderer data={{ nav_links: NAV_LINKS }} />);
+    const { container } = render(<HeaderRenderer data={{}} menus={{ 'main-menu': { items: NAV_LINKS } }} />);
     const nav = container.querySelector('nav');
     expect(nav.className).not.toContain('hidden');
     expect(nav.textContent).toContain('Home');
@@ -38,14 +38,14 @@ describe('HeaderRenderer — nav visibility vs. the builder viewport toggle', ()
 
 describe('HeaderRenderer — nav link clicking', () => {
   it('renders links as plain text (no onNavigate) inside the interactive builder, so clicks bubble to select the header', () => {
-    const { container } = render(<HeaderRenderer data={{ nav_links: NAV_LINKS }} isMobile={false} />);
+    const { container } = render(<HeaderRenderer data={{}} menus={{ 'main-menu': { items: NAV_LINKS } }} isMobile={false} />);
     expect(container.querySelectorAll('nav a')).toHaveLength(0);
     expect(container.querySelectorAll('nav span')).toHaveLength(2);
   });
 
   it('renders links as clickable anchors and calls onNavigate with the link URL, without a real page navigation', () => {
     const onNavigate = vi.fn();
-    const { getByText } = render(<HeaderRenderer data={{ nav_links: NAV_LINKS }} onNavigate={onNavigate} />);
+    const { getByText } = render(<HeaderRenderer data={{}} menus={{ 'main-menu': { items: NAV_LINKS } }} onNavigate={onNavigate} />);
     const aboutLink = getByText('About');
     expect(aboutLink.tagName).toBe('A');
     const event = fireEvent.click(aboutLink);
@@ -57,14 +57,14 @@ describe('HeaderRenderer — nav link clicking', () => {
 
 describe('HeaderRenderer — layout_variant', () => {
   it('defaults to the inline layout when layout_variant is absent (backward compatible)', () => {
-    const { container } = render(<HeaderRenderer data={{ nav_links: NAV_LINKS, logo_text: 'Acme' }} />);
+    const { container } = render(<HeaderRenderer data={{ logo_text: 'Acme' }} menus={{ 'main-menu': { items: NAV_LINKS } }} />);
     expect(container.querySelector('header').className).toContain('justify-between');
     expect(container.querySelectorAll('nav')).toHaveLength(1);
   });
 
   it('centered-split splits nav links across two <nav>s flanking the logo, all links still present', () => {
     const { container, getByText } = render(
-      <HeaderRenderer data={{ nav_links: NAV_LINKS, logo_text: 'Acme', layout_variant: 'centered-split' }} />
+      <HeaderRenderer data={{ logo_text: 'Acme', layout_variant: 'centered-split' }} menus={{ 'main-menu': { items: NAV_LINKS } }} />
     );
     expect(container.querySelectorAll('nav')).toHaveLength(2);
     expect(getByText('Acme')).toBeTruthy();
@@ -74,7 +74,7 @@ describe('HeaderRenderer — layout_variant', () => {
 
   it('stacked-bold renders a single nav bar plus a separate bold logo row', () => {
     const { container, getByText } = render(
-      <HeaderRenderer data={{ nav_links: NAV_LINKS, logo_text: 'Acme', layout_variant: 'stacked-bold' }} />
+      <HeaderRenderer data={{ logo_text: 'Acme', layout_variant: 'stacked-bold' }} menus={{ 'main-menu': { items: NAV_LINKS } }} />
     );
     expect(container.querySelectorAll('nav')).toHaveLength(1);
     const logo = getByText('Acme');
@@ -84,7 +84,7 @@ describe('HeaderRenderer — layout_variant', () => {
   it('hides nav in every variant when isMobile is true', () => {
     for (const layout_variant of ['inline', 'centered-split', 'stacked-bold']) {
       const { container, unmount } = render(
-        <HeaderRenderer data={{ nav_links: NAV_LINKS, layout_variant }} isMobile />
+        <HeaderRenderer data={{ layout_variant }} menus={{ 'main-menu': { items: NAV_LINKS } }} isMobile />
       );
       container.querySelectorAll('nav').forEach((nav) => expect(nav.className).toBe('hidden'));
       unmount();
@@ -96,18 +96,18 @@ describe('HeaderRenderer — nav_color', () => {
   const THEME = { colors: { primary: '#16894b', accent: '#0000ff', text_primary: '#1b1916' } };
 
   it('defaults to no color override (backward compatible — inherits the section text color)', () => {
-    const { getByText } = render(<HeaderRenderer data={{ nav_links: NAV_LINKS }} theme={THEME} />);
+    const { getByText } = render(<HeaderRenderer data={{}} menus={{ 'main-menu': { items: NAV_LINKS } }} theme={THEME} />);
     expect(getByText('Home').style.color).toBe('');
   });
 
   it('"primary" colors nav links with theme.colors.primary', () => {
-    const { getByText } = render(<HeaderRenderer data={{ nav_links: NAV_LINKS, nav_color: 'primary' }} theme={THEME} />);
+    const { getByText } = render(<HeaderRenderer data={{ nav_color: 'primary' }} menus={{ 'main-menu': { items: NAV_LINKS } }} theme={THEME} />);
     expect(getByText('Home').style.color).toBe('rgb(22, 137, 75)');
     expect(getByText('About').style.color).toBe('rgb(22, 137, 75)');
   });
 
   it('"accent" colors nav links with theme.colors.accent', () => {
-    const { getByText } = render(<HeaderRenderer data={{ nav_links: NAV_LINKS, nav_color: 'accent' }} theme={THEME} />);
+    const { getByText } = render(<HeaderRenderer data={{ nav_color: 'accent' }} menus={{ 'main-menu': { items: NAV_LINKS } }} theme={THEME} />);
     expect(getByText('Home').style.color).toBe('rgb(0, 0, 255)');
   });
 });

@@ -31,6 +31,7 @@ export default function SettingsPanel({
   removeLabel,
   activePage,
   viewport,
+  menus,
 }) {
   const { t } = useTranslation();
   if (!entity) {
@@ -89,6 +90,7 @@ export default function SettingsPanel({
                     onOpenLibrary={onOpenLibrary}
                     activePage={activePage}
                     viewport={viewport}
+                    menus={menus}
                   />
                   {field.contrastCheck && (
                     <ContrastBadge

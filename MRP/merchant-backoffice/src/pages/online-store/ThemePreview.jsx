@@ -123,6 +123,7 @@ export default function ThemePreview() {
             header={previewData.header}
             footer={previewData.footer}
             mediaLibrary={previewData.mediaLibrary ?? []}
+            menus={previewData.menus}
             page={activePage}
             handle={productHandle}
             isMobile={viewport === 'mobile'}
@@ -136,6 +137,7 @@ export default function ThemePreview() {
             header={previewData.header}
             footer={previewData.footer}
             mediaLibrary={previewData.mediaLibrary ?? []}
+            menus={previewData.menus}
             page={activePage}
             slug={editorialCollectionSlug}
             isMobile={viewport === 'mobile'}
@@ -151,6 +153,7 @@ export default function ThemePreview() {
             sections={sections}
             theme={previewData.theme}
             mediaLibrary={previewData.mediaLibrary ?? []}
+            menus={previewData.menus}
             selectedId={null}
             readOnly
             onNavigate={handleNavigate}

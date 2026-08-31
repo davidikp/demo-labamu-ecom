@@ -75,16 +75,17 @@ describe('SITE_TEMPLATES — Houzez Collection integration', () => {
     expect(detail.hiddenFromNav).toBe(true);
   });
 
-  it("exposes Collection in Houzez's header nav pointing at /collection", () => {
-    const collectionLink = houzez.header.nav_links.find((l) => l.url === '/collection');
+  it("exposes Collection in Houzez's Main menu pointing at /collection", () => {
+    const collectionLink = houzez.menus['main-menu'].items.find((l) => l.url === '/collection');
     expect(collectionLink).toBeTruthy();
     expect(collectionLink.label).toBe('Collection');
   });
 
   it('places Collection within the first nav_overflow_after entries so it renders visibly, not inside the "⋯" overflow menu', () => {
-    const index = houzez.header.nav_links.findIndex((l) => l.url === '/collection');
+    const items = houzez.menus['main-menu'].items;
+    const index = items.findIndex((l) => l.url === '/collection');
     expect(index).toBeGreaterThanOrEqual(0);
-    expect(index).toBeLessThan(houzez.header.nav_links.length);
+    expect(index).toBeLessThan(items.length);
     expect(index < houzez.header.nav_overflow_after).toBe(true);
   });
 });

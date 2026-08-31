@@ -71,6 +71,7 @@ export default function PagePreview() {
         sections={[]}
         theme={draft.theme}
         mediaLibrary={draft.mediaLibrary ?? []}
+        menus={draft.menus}
         selectedId={null}
         readOnly
       />
@@ -99,6 +100,7 @@ export default function PagePreview() {
         sections={[]}
         theme={draft.theme}
         mediaLibrary={draft.mediaLibrary ?? []}
+        menus={draft.menus}
         selectedId={null}
         readOnly
       />

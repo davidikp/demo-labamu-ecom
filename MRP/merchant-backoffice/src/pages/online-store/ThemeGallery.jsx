@@ -44,7 +44,7 @@ const PREVIEW_SCALE_BIG = 0.42;
 // 100% of whatever box it ends up in, and overflow:hidden crops the scaled
 // content rather than distorting it, since width and height no longer
 // necessarily share one ratio.
-function FillWidthPreviewCanvas({ header, footer, sections, theme, mediaLibrary, aspectRatio }) {
+function FillWidthPreviewCanvas({ header, footer, sections, theme, mediaLibrary, menus, aspectRatio }) {
   const containerRef = useRef(null);
   const [scale, setScale] = useState(PREVIEW_SCALE_BIG);
 
@@ -70,7 +70,7 @@ function FillWidthPreviewCanvas({ header, footer, sections, theme, mediaLibrary,
         style={{ width: CANVAS_DESKTOP_WIDTH, transform: `scale(${scale})`, transformOrigin: 'top left' }}
         className="pointer-events-none"
       >
-        <Canvas viewport="desktop" header={header} footer={footer} sections={sections} theme={theme} mediaLibrary={mediaLibrary ?? []} selectedId={null} readOnly />
+        <Canvas viewport="desktop" header={header} footer={footer} sections={sections} theme={theme} mediaLibrary={mediaLibrary ?? []} menus={menus} selectedId={null} readOnly />
       </div>
     </div>
   );
@@ -185,6 +185,7 @@ export default function ThemeGallery() {
         sections: activePage?.sections ?? [],
         theme: draft.theme,
         mediaLibrary: draft.mediaLibrary,
+        menus: draft.menus,
       };
     }
     // Not active (or nothing applied yet) — illustrative preview built from
@@ -240,6 +241,7 @@ export default function ThemeGallery() {
           sections={activePage?.sections ?? []}
           theme={liveDraft.theme}
           mediaLibrary={liveDraft.mediaLibrary}
+          menus={liveDraft.menus}
           aspectRatio="aspect-[16/10]"
         />
       );

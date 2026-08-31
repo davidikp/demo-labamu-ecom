@@ -4,7 +4,8 @@ import EditorialCollectionDetailPage from './EditorialCollectionDetailPage';
 import Canvas from './Canvas';
 
 const THEME = { colors: { primary: '#111', primary_text: '#fff' }, buttons: {} };
-const HEADER = { type: 'header', data: { nav_links: [{ id: 'h', label: 'Shop Now', url: '/shop' }] } };
+const HEADER = { type: 'header', data: {} };
+const MENUS = { 'main-menu': { items: [{ id: 'h', label: 'Shop Now', url: '/shop' }] } };
 const FOOTER = { type: 'footer', data: { copyright_text: 'Copyright Collection Co.' } };
 const PAGE = { slug: '/collection/:slug', sections: [{ type: 'editorial_collection_detail', data: {} }] };
 
@@ -15,6 +16,7 @@ function renderPage(props = {}) {
       header={HEADER}
       footer={FOOTER}
       mediaLibrary={[]}
+      menus={MENUS}
       page={PAGE}
       slug="forma"
       isMobile={false}
@@ -66,7 +68,7 @@ describe('EditorialCollectionDetailPage vs Canvas — identical frame markup', (
   it('produces the same top-level frame classes as Canvas at the same viewport', () => {
     const { container: pageContainer } = renderPage({ breakpoint: 'tablet', isMobile: false });
     const { container: canvasContainer } = render(
-      <Canvas viewport="tablet" header={HEADER} footer={FOOTER} sections={[]} theme={THEME} mediaLibrary={[]} selectedId={null} readOnly />
+      <Canvas viewport="tablet" header={HEADER} footer={FOOTER} sections={[]} theme={THEME} mediaLibrary={[]} menus={MENUS} selectedId={null} readOnly />
     );
     const pageFrame = pageContainer.querySelector('.mx-auto.bg-white');
     const canvasFrame = canvasContainer.querySelector('.mx-auto.bg-white');

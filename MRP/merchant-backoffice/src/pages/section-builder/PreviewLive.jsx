@@ -120,6 +120,7 @@ export default function PreviewLive() {
               header={draft?.header}
               footer={draft?.footer}
               mediaLibrary={draft?.mediaLibrary ?? []}
+              menus={draft?.menus}
               page={activePage}
               handle={productHandle}
               isMobile={viewport === 'mobile'}
@@ -133,6 +134,7 @@ export default function PreviewLive() {
               header={draft?.header}
               footer={draft?.footer}
               mediaLibrary={draft?.mediaLibrary ?? []}
+              menus={draft?.menus}
               page={activePage}
               slug={editorialCollectionSlug}
               isMobile={viewport === 'mobile'}
@@ -154,6 +156,7 @@ export default function PreviewLive() {
               onDeleteSection={() => {}}
               theme={draft?.theme}
               mediaLibrary={draft?.mediaLibrary ?? []}
+              menus={draft?.menus}
               onNavigate={handleNavigate}
               currentPath={activePage?.slug}
               readOnly

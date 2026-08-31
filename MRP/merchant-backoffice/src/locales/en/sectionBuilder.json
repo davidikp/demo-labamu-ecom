@@ -18,6 +18,39 @@
       "bulkVisibilityPartialSuccess": "Visibility updated for {{successCount}} of {{totalCount}} pages. Please try again for the rest",
       "bulkVisibilitySuccess": "Visibility for {{count}} pages successfully updated",
       "bulkVisibilityFailed": "Failed to update page visibility"
+    },
+    "files": {
+      "heading": "Files",
+      "columnPreview": "Preview",
+      "columnFilename": "Filename",
+      "columnDimensions": "Dimensions",
+      "columnUploaded": "Uploaded",
+      "searchPlaceholder": "Search by filename",
+      "noFiles": "No files yet",
+      "unsupportedFileType": "That file type isn’t supported. Please upload an image.",
+      "fileTooLarge": "That image is too large (max 10MB).",
+      "bulkSelectedCount": "{{count}} selected",
+      "deleteFile": "Delete file",
+      "deleteFiles": "Delete files",
+      "deleteConfirmTitle": "Delete this file?",
+      "deleteConfirmDescription": "This can’t be undone.",
+      "bulkDeleteConfirmTitle": "Delete {{count}} files?"
+    },
+    "menus": {
+      "heading": "Menus",
+      "columnName": "Title",
+      "columnItems": "Items",
+      "itemCount": "{{count}} items",
+      "noMenus": "No menus yet",
+      "editMenuTitle": "Edit {{name}}",
+      "save": "Save",
+      "noItems": "No menu items yet.",
+      "labelPlaceholder": "Label",
+      "urlPlaceholder": "URL",
+      "addItem": "Add menu item",
+      "createMenuTitle": "Create menu",
+      "create": "Create menu",
+      "namePlaceholder": "e.g. Main menu"
     }
   },
   "editor": {
@@ -210,6 +243,9 @@
     },
     "fontPickerField": {
       "sampleText": "My Store — the quick brown fox jumps over the lazy dog"
+    },
+    "menuReference": {
+      "editMenu": "Edit menu"
     },
     "imageField": {
       "unsupportedFileType": "Unsupported file type — use JPG, PNG, WebP, or SVG.",

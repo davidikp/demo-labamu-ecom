@@ -20,7 +20,7 @@ import SectionShell from './SectionShell';
  * has exactly one fixed core section, see
  * EDITORIAL_COLLECTION_DETAIL_CORE_SECTION_ID).
  */
-export default function EditorialCollectionDetailPage({ theme, header, footer, mediaLibrary, page, slug, isMobile, breakpoint, onNavigate, onBackToCollectionList }) {
+export default function EditorialCollectionDetailPage({ theme, header, footer, mediaLibrary, page, slug, isMobile, breakpoint, onNavigate, onBackToCollectionList, menus }) {
   const { t } = useTranslation();
   const collection = resolveEditorialCollectionBySlug(slug);
   const sectionData = page?.sections?.find((s) => s.type === 'editorial_collection_detail')?.data ?? {};
@@ -29,7 +29,7 @@ export default function EditorialCollectionDetailPage({ theme, header, footer, m
     <PageFrame viewport={breakpoint} theme={theme}>
       {header && !header.hidden && (
         <SectionShell data={header.data ?? {}} theme={theme} breakpoint={breakpoint}>
-          <HeaderRenderer data={header.data ?? {}} theme={theme} mediaLibrary={mediaLibrary} isMobile={isMobile} onNavigate={onNavigate} currentPath={page?.slug} />
+          <HeaderRenderer data={header.data ?? {}} theme={theme} mediaLibrary={mediaLibrary} isMobile={isMobile} onNavigate={onNavigate} currentPath={page?.slug} menus={menus} />
         </SectionShell>
       )}
       <div className="py-8">

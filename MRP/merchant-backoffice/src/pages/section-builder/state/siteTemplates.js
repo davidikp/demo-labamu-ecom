@@ -251,24 +251,31 @@ export const SITE_TEMPLATES = [
       show_language_switcher: true,
       show_search_icon: false,
       show_cart_icon: true,
-      // Every repeater item needs a stable, unique `id` — RepeaterField's
-      // React keys AND its dnd-kit `useSortable({id: item.id})` drag
-      // handles both depend on it. Hand-authored template data (unlike
-      // items added via the builder's "Add item" button, which always get
-      // `crypto.randomUUID()`) doesn't get one for free, so it must be set
-      // explicitly here or dragging silently no-ops (every item resolves to
-      // the same `undefined` sortable id).
-      nav_links: [
-        { id: 'xinear-nav-home', label: 'Home', url: '/' },
-        { id: 'xinear-nav-shop', label: 'Shop', url: '/shop' },
-        // "Appoinment" is the actual spelling in the Figma source — kept
-        // verbatim rather than corrected, since this is real source copy.
-        { id: 'xinear-nav-appointment', label: 'Make an Appoinment', url: '/appointment' },
-        { id: 'xinear-nav-reviews', label: 'Reviews', url: '/reviews' },
-        { id: 'xinear-nav-contact', label: 'Contact Us', url: '/contact' },
-        { id: 'xinear-nav-location', label: 'Location', url: '/location' },
-        { id: 'xinear-nav-quote', label: 'Request Quote', url: '/quote' },
-      ],
+    },
+    // Content > Menus (US-Content.1) — the header no longer stores its nav
+    // inline (see header/schema.js's `nav_menu_ref`); a template instead
+    // seeds `menus['main-menu'].items` directly, merged over
+    // createDefaultGlobals' auto-derived defaults the same way
+    // `header`/`footer` above merge over their own schema defaults (see
+    // siteTemplateApply.js and defaultPreviewDataFor below). Every item
+    // needs a stable, unique `id` — MenuEditorPopup's reorder controls (and,
+    // before this change, RepeaterField's dnd-kit drag handles) both depend
+    // on it, and hand-authored template data doesn't get one for free like
+    // an item added via "Add item" (crypto.randomUUID()) does.
+    menus: {
+      'main-menu': {
+        items: [
+          { id: 'xinear-nav-home', label: 'Home', url: '/' },
+          { id: 'xinear-nav-shop', label: 'Shop', url: '/shop' },
+          // "Appoinment" is the actual spelling in the Figma source — kept
+          // verbatim rather than corrected, since this is real source copy.
+          { id: 'xinear-nav-appointment', label: 'Make an Appoinment', url: '/appointment' },
+          { id: 'xinear-nav-reviews', label: 'Reviews', url: '/reviews' },
+          { id: 'xinear-nav-contact', label: 'Contact Us', url: '/contact' },
+          { id: 'xinear-nav-location', label: 'Location', url: '/location' },
+          { id: 'xinear-nav-quote', label: 'Request Quote', url: '/quote' },
+        ],
+      },
     },
     footer: {
       layout_variant: 'columns',
@@ -577,21 +584,27 @@ export const SITE_TEMPLATES = [
       // overflow dropdown beyond 5 — matches the prototype's own overflow
       // behavior exactly (see HouzezPreview.jsx's displayedNav/overflowNav).
       nav_overflow_after: 5,
-      nav_links: [
-        { id: 'houzez-nav-home', label: 'Home', url: '/' },
-        { id: 'houzez-nav-shop', label: 'Shop', url: '/shop' },
-        // Editorial Collection List — added so a newly-seeded Houzez site
-        // actually exposes the Collection system page in nav (see the new
-        // 'houzez-collection-list' page entry below). Placed right after
-        // Shop, within `nav_overflow_after`'s first-5-visible window, so it
-        // shows directly rather than collapsing into the "⋯" overflow menu.
-        { id: 'houzez-nav-collection', label: 'Collection', url: '/collection' },
-        { id: 'houzez-nav-appointment', label: 'Appointment', url: '/appointment' },
-        { id: 'houzez-nav-reviews', label: 'Reviews', url: '/reviews' },
-        { id: 'houzez-nav-contact', label: 'Contact', url: '/contact' },
-        { id: 'houzez-nav-location', label: 'Location', url: '/location' },
-        { id: 'houzez-nav-quote', label: 'Quote', url: '/quote' },
-      ],
+    },
+    // Content > Menus (US-Content.1) — see Xinear's own `menus` block above
+    // for the full rationale (header no longer stores nav inline).
+    menus: {
+      'main-menu': {
+        items: [
+          { id: 'houzez-nav-home', label: 'Home', url: '/' },
+          { id: 'houzez-nav-shop', label: 'Shop', url: '/shop' },
+          // Editorial Collection List — added so a newly-seeded Houzez site
+          // actually exposes the Collection system page in nav (see the new
+          // 'houzez-collection-list' page entry below). Placed right after
+          // Shop, within `nav_overflow_after`'s first-5-visible window, so it
+          // shows directly rather than collapsing into the "⋯" overflow menu.
+          { id: 'houzez-nav-collection', label: 'Collection', url: '/collection' },
+          { id: 'houzez-nav-appointment', label: 'Appointment', url: '/appointment' },
+          { id: 'houzez-nav-reviews', label: 'Reviews', url: '/reviews' },
+          { id: 'houzez-nav-contact', label: 'Contact', url: '/contact' },
+          { id: 'houzez-nav-location', label: 'Location', url: '/location' },
+          { id: 'houzez-nav-quote', label: 'Quote', url: '/quote' },
+        ],
+      },
     },
     footer: {
       layout_variant: 'columns',
@@ -943,5 +956,13 @@ export function defaultPreviewDataFor(template) {
   };
   const header = { ...globals.header, data: { ...globals.header.data, ...template.header } };
   const footer = { ...globals.footer, data: { ...globals.footer.data, ...template.footer } };
-  return { header, footer, sections: template.pages[0]?.sections ?? [], theme, mediaLibrary: template.media };
+  // Content > Menus (US-Content.1) — a template's own `menus` (if any)
+  // overrides createDefaultGlobals' page-roster-derived defaults per menu,
+  // same "template wins, else the generic default" merge header/footer just
+  // used above.
+  const menus = {
+    'main-menu': { ...globals.menus['main-menu'], ...template.menus?.['main-menu'] },
+    'footer-menu': { ...globals.menus['footer-menu'], ...template.menus?.['footer-menu'] },
+  };
+  return { header, footer, menus, sections: template.pages[0]?.sections ?? [], theme, mediaLibrary: template.media };
 }

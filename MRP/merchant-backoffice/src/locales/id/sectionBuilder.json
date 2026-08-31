@@ -18,6 +18,39 @@
       "bulkVisibilityPartialSuccess": "Visibilitas telah diperbarui untuk {{successCount}} dari {{totalCount}} halaman. Silakan coba lagi untuk sisanya",
       "bulkVisibilitySuccess": "Visibilitas untuk {{count}} halaman berhasil diperbarui",
       "bulkVisibilityFailed": "Gagal memperbarui visibilitas halaman"
+    },
+    "files": {
+      "heading": "File",
+      "columnPreview": "Pratinjau",
+      "columnFilename": "Nama File",
+      "columnDimensions": "Dimensi",
+      "columnUploaded": "Diunggah",
+      "searchPlaceholder": "Cari berdasarkan nama file",
+      "noFiles": "Belum Ada File",
+      "unsupportedFileType": "Tipe file ini tidak didukung. Silakan unggah gambar.",
+      "fileTooLarge": "Gambar ini terlalu besar (maks 10MB).",
+      "bulkSelectedCount": "{{count}} dipilih",
+      "deleteFile": "Hapus file",
+      "deleteFiles": "Hapus file",
+      "deleteConfirmTitle": "Hapus file ini?",
+      "deleteConfirmDescription": "Tindakan ini tidak dapat dibatalkan.",
+      "bulkDeleteConfirmTitle": "Hapus {{count}} file?"
+    },
+    "menus": {
+      "heading": "Menu",
+      "columnName": "Judul",
+      "columnItems": "Item",
+      "itemCount": "{{count}} item",
+      "noMenus": "Belum Ada Menu",
+      "editMenuTitle": "Ubah {{name}}",
+      "save": "Simpan",
+      "noItems": "Belum ada item menu.",
+      "labelPlaceholder": "Label",
+      "urlPlaceholder": "URL",
+      "addItem": "Tambah item menu",
+      "createMenuTitle": "Buat menu",
+      "create": "Buat menu",
+      "namePlaceholder": "misalnya Menu utama"
     }
   },
   "editor": {
@@ -208,6 +241,9 @@
     },
     "fontPickerField": {
       "sampleText": "Toko Saya — contoh teks pratinjau font"
+    },
+    "menuReference": {
+      "editMenu": "Ubah menu"
     },
     "imageField": {
       "unsupportedFileType": "Jenis file tidak didukung — gunakan JPG, PNG, WebP, atau SVG.",

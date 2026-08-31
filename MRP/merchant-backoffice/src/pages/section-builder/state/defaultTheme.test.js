@@ -122,9 +122,9 @@ describe('mergeRequiredSystemPages', () => {
 });
 
 describe('createDefaultGlobals', () => {
-  it('pre-fills header nav_links from nav-eligible pages only (Home, Shop, and Editorial Collection List)', () => {
-    const { header } = createDefaultGlobals(createDefaultPages());
-    expect(header.data.nav_links).toEqual([
+  it('pre-fills the Main menu from nav-eligible pages only (Home, Shop, and Editorial Collection List)', () => {
+    const { menus } = createDefaultGlobals(createDefaultPages());
+    expect(menus['main-menu'].items).toEqual([
       { id: 'nav-home', label: 'Home', url: '/' },
       { id: 'nav-shop', label: 'Shop', url: '/shop' },
       { id: 'nav-editorial-collection-list', label: 'Collection', url: '/collection' },
@@ -136,12 +136,17 @@ describe('createDefaultGlobals', () => {
       ...createDefaultPages(),
       { id: 'about', name: 'About', type: 'custom', slug: '/about', sections: [], seo: {}, hiddenFromNav: false },
     ];
-    const { header } = createDefaultGlobals(pages);
-    expect(header.data.nav_links.map((l) => l.url)).toEqual(['/', '/shop', '/collection', '/about']);
+    const { menus } = createDefaultGlobals(pages);
+    expect(menus['main-menu'].items.map((l) => l.url)).toEqual(['/', '/shop', '/collection', '/about']);
   });
 
-  it('leaves nav_links unset when no pages are supplied (backward compatible)', () => {
-    const { header } = createDefaultGlobals();
-    expect(header.data.nav_links).toBeNull();
+  it('leaves the Main menu empty when no pages are supplied (backward compatible)', () => {
+    const { menus } = createDefaultGlobals();
+    expect(menus['main-menu'].items).toEqual([]);
+  });
+
+  it('always seeds an empty Footer menu alongside the Main menu', () => {
+    const { menus } = createDefaultGlobals(createDefaultPages());
+    expect(menus['footer-menu']).toEqual({ id: 'footer-menu', name: 'Footer menu', items: [] });
   });
 });

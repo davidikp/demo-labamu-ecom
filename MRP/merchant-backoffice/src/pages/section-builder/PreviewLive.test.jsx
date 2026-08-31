@@ -29,8 +29,15 @@ function seedDraft(overrides = {}) {
   saveDraft(STORE_ID, {
     activePageId: 'home',
     pages,
-    header: { ...globals.header, nav_links: [{ id: 'nav-shop', label: 'Shop', url: '/shop' }, { id: 'nav-home', label: 'Home', url: '/' }] },
+    header: globals.header,
     footer: globals.footer,
+    // Content > Menus (US-Content.1) — the header's nav now comes from
+    // `state.menus['main-menu']`, not an inline `header.nav_links` (see
+    // header/schema.js's `nav_menu_ref`).
+    menus: {
+      ...globals.menus,
+      'main-menu': { ...globals.menus['main-menu'], items: [{ id: 'nav-shop', label: 'Shop', url: '/shop' }, { id: 'nav-home', label: 'Home', url: '/' }] },
+    },
     theme: defaultTheme,
     mediaLibrary: [],
     ...overrides,

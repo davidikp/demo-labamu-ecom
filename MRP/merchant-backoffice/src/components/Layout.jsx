@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import {
   ExternalLink, Bell, Pencil,
   LayoutDashboard, BookOpen, Store, ShoppingCart, FileText, Calendar,
-  MessageSquare, Truck, Globe, UserCog, ChevronDown, ChevronLeft, ChevronRight, Check,
+  MessageSquare, Truck, Globe, UserCog, ChevronDown, ChevronLeft, ChevronRight, Check, Folder,
 } from 'lucide-react';
 import Button from './ui/Button';
 import labamuMark from '../assets/labamu-mark.svg';
@@ -22,6 +22,13 @@ const MENU_ITEMS = [
       { id: 'catalog', path: '/catalog', labelKey: 'dashboard:sidebar.catalog', label: 'Catalog' },
       { id: 'package', path: '/catalog/package', labelKey: 'dashboard:sidebar.package', label: 'Package' },
       { id: 'modifier', path: '/catalog/modifier', labelKey: 'dashboard:sidebar.modifier', label: 'Modifier' },
+    ],
+  },
+  {
+    id: 'content', icon: Folder, labelKey: 'dashboard:sidebar.content', label: 'Content',
+    children: [
+      { id: 'files', path: '/content/files', labelKey: 'dashboard:sidebar.files', label: 'Files' },
+      { id: 'menus', path: '/content/menus', labelKey: 'dashboard:sidebar.menus', label: 'Menus' },
     ],
   },
   {

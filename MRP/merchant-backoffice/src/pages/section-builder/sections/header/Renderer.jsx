@@ -13,7 +13,7 @@ import { useStorefrontCart } from '../shared/storefrontCartContext';
  * the original single layout exactly, so existing drafts/tests without the
  * field are unaffected.
  */
-function HeaderRenderer({ data, isMobile, onNavigate, theme, mediaLibrary, currentPath }) {
+function HeaderRenderer({ data, isMobile, onNavigate, theme, mediaLibrary, currentPath, menus }) {
   const { t } = useTranslation();
   const [overflowOpen, setOverflowOpen] = useState(false);
   const [langOpen, setLangOpen] = useState(false);
@@ -22,7 +22,17 @@ function HeaderRenderer({ data, isMobile, onNavigate, theme, mediaLibrary, curre
   // above this header (the interactive builder canvas) — see
   // storefrontCart.js — so the badge just never appears there.
   const { count: cartCount } = useStorefrontCart();
-  const links = data.nav_links ?? [
+  // Content > Menus (US-Content.1) — nav items live in the shared
+  // `state.menus`, keyed by whichever menu this header's `nav_menu_ref`
+  // field currently points at (see schema.js's `nav_menu_ref` and
+  // builderReducer.js) — defaults to 'main-menu' for old data that
+  // predates the field, or a section whose `data.nav_menu_ref` was never
+  // set. `menus` being absent entirely (an old call site that hasn't
+  // threaded it through yet, or a draft mid-migration) falls back to the
+  // same two-link placeholder this Renderer has always shown when there
+  // was no real nav data yet.
+  const navMenuId = data.nav_menu_ref?.menuId ?? 'main-menu';
+  const links = menus?.[navMenuId]?.items ?? [
     { id: 'a', label: t('sectionBuilder:sections.header.defaultNavShop'), url: '/collections/all' },
     { id: 'b', label: t('sectionBuilder:sections.header.defaultNavAbout'), url: '/about' },
   ];

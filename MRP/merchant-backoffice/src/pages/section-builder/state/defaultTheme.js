@@ -187,10 +187,11 @@ export function requiredSystemPages() {
   return createDefaultPages().filter((page) => REQUIRED_SYSTEM_TYPES.includes(page.systemType));
 }
 
-/** Nav links auto-derived from a page list — used to pre-fill the header's
- * Nav links field so it isn't empty by default (US follow-up to Epic 5/11).
- * Only pages meant to be top-nav destinations qualify: not hidden-from-nav,
- * and not a parameterized detail-page template (e.g. "/products/:handle"). */
+/** Nav items auto-derived from a page list — used to pre-fill the "Main
+ * menu" (US-Content.1; formerly the header's own inline Nav links field) so
+ * it isn't empty by default (US follow-up to Epic 5/11). Only pages meant to
+ * be top-nav destinations qualify: not hidden-from-nav, and not a
+ * parameterized detail-page template (e.g. "/products/:handle"). */
 function defaultNavLinksFromPages(pages) {
   return pages
     .filter((page) => !page.hiddenFromNav && typeof page.slug === 'string' && !page.slug.includes(':'))
@@ -202,20 +203,20 @@ function defaultNavLinksFromPages(pages) {
  * creation (US-3.6) — never absent, so there's no "add" flow for them,
  * only a hide toggle.
  *
- * `pages`, when supplied, pre-fills the header's Nav links with one entry
- * per nav-eligible page (see defaultNavLinksFromPages) so a fresh site's
- * header isn't left with an empty nav list — merchants can still add,
- * remove, or reorder links afterward exactly as before.
+ * `pages`, when supplied, pre-fills the "Main menu" (`menus['main-menu']`)
+ * with one entry per nav-eligible page (see defaultNavLinksFromPages) so a
+ * fresh site's header isn't left pointing at an empty menu — merchants can
+ * still add, remove, or reorder links afterward via Content > Menus exactly
+ * as before (previously via the header's own Nav links field).
  */
 export function createDefaultGlobals(pages = []) {
   const navLinks = defaultNavLinksFromPages(pages);
   return {
-    header: {
-      id: 'header',
-      type: 'header',
-      hidden: false,
-      data: { ...defaultsForSchema(headerSchema), ...(navLinks.length ? { nav_links: navLinks } : {}) },
-    },
+    header: { id: 'header', type: 'header', hidden: false, data: defaultsForSchema(headerSchema) },
     footer: { id: 'footer', type: 'footer', hidden: false, data: defaultsForSchema(footerSchema) },
+    menus: {
+      'main-menu': { id: 'main-menu', name: 'Main menu', items: navLinks },
+      'footer-menu': { id: 'footer-menu', name: 'Footer menu', items: [] },
+    },
   };
 }
