@@ -3,8 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { MoreHorizontal, Trash2, Plus } from 'lucide-react';
 import { Table, StatusBadge, MainBtn, Popup, DateTimeField } from '../../ce-ui';
-import { loadDraft } from '../section-builder/state/storage';
-import { createFreshState } from '../section-builder/state/useSectionBuilder';
+import { loadOrSeedDemoDraft } from '../section-builder/state/demoBootstrap';
 import { runDraftAction } from '../section-builder/state/runDraftAction';
 import { ACTIONS } from '../section-builder/state/builderReducer';
 import ConfirmDialog from '../section-builder/ui/ConfirmDialog';
@@ -60,7 +59,7 @@ export default function PagesManagement() {
   const { showSnackbar } = useSnackbar();
   const { companyData } = useCompany();
   const storeDomain = storeDomainFor(companyData);
-  const [draft, setDraft] = useState(() => loadDraft(STORE_ID) ?? createFreshState(STORE_ID));
+  const [draft, setDraft] = useState(() => loadOrSeedDemoDraft(STORE_ID));
 
   const [visibilityFilter, setVisibilityFilter] = useState('all');
   const [search, setSearch] = useState('');
@@ -97,7 +96,7 @@ export default function PagesManagement() {
   // Retries the (simulated) load — re-reads the draft from local storage.
   // Doesn't touch `simulateLoadError` itself, so while that toggle is still
   // armed this deliberately keeps landing back on the same error state.
-  const handleReloadPages = () => setDraft(loadDraft(STORE_ID) ?? createFreshState(STORE_ID));
+  const handleReloadPages = () => setDraft(loadOrSeedDemoDraft(STORE_ID));
 
   const pages = useMemo(() => draft.pages ?? [], [draft.pages]);
 

@@ -60,14 +60,18 @@ function block(type, overrides = {}) {
 
 /** Photos are free-license stock (Unsplash License / Pexels License — free
  * for commercial use, no attribution required), downloaded once into
- * public/assets/templates/<id>/ rather than hotlinked. */
+ * public/assets/templates/<id>/ rather than hotlinked. `size` is each
+ * file's real byte size on disk (public/assets/templates/<id>/<filename>),
+ * so Content > Files' File Size column shows real numbers for this seed
+ * data instead of "—". */
 function media(templateId, entries) {
-  return entries.map(({ key, filename, width, height }) => ({
+  return entries.map(({ key, filename, width, height, size }) => ({
     id: `${templateId}-${key}`,
     filename,
     url: `/assets/templates/${templateId}/${filename}`,
     width,
     height,
+    size,
     uploadedAt: '2026-01-01T00:00:00.000Z',
   }));
 }
@@ -95,8 +99,8 @@ export const SITE_TEMPLATES = [
     // minimal identity — no link columns competing for attention.
     footer: { layout_variant: 'centered-tagline', tagline: 'Considered essentials, made to last.' },
     media: media('clothing', [
-      { key: 'hero', filename: 'hero.jpg', width: 1600, height: 1067 },
-      { key: 'secondary', filename: 'secondary.jpg', width: 1200, height: 801 },
+      { key: 'hero', filename: 'hero.jpg', width: 1600, height: 1067, size: 175992 },
+      { key: 'secondary', filename: 'secondary.jpg', width: 1200, height: 801, size: 161855 },
     ]),
     pages: [
       {
@@ -150,8 +154,8 @@ export const SITE_TEMPLATES = [
     // header's energetic, content-rich identity.
     footer: { layout_variant: 'columns', tagline: 'Fresh, seasonal, made with care.' },
     media: media('fnb', [
-      { key: 'hero', filename: 'hero.jpg', width: 1600, height: 1067 },
-      { key: 'secondary', filename: 'secondary.jpg', width: 1200, height: 800 },
+      { key: 'hero', filename: 'hero.jpg', width: 1600, height: 1067, size: 401738 },
+      { key: 'secondary', filename: 'secondary.jpg', width: 1200, height: 800, size: 158713 },
     ]),
     pages: [
       {
@@ -198,8 +202,8 @@ export const SITE_TEMPLATES = [
     // centered-split header's symmetric, no-frills identity.
     footer: { layout_variant: 'minimal-bar', tagline: 'Precision manufacturing, built to spec.' },
     media: media('manufacture', [
-      { key: 'hero', filename: 'hero.jpg', width: 1600, height: 1067 },
-      { key: 'secondary', filename: 'secondary.jpg', width: 1200, height: 817 },
+      { key: 'hero', filename: 'hero.jpg', width: 1600, height: 1067, size: 319913 },
+      { key: 'secondary', filename: 'secondary.jpg', width: 1200, height: 817, size: 271251 },
     ]),
     pages: [
       {
@@ -319,19 +323,19 @@ export const SITE_TEMPLATES = [
       // logo-mark.svg's real intrinsic size, per its own viewBox/width/
       // height attributes (28x28) — the abstract "X" glyph next to the
       // "Xinear" wordmark in both header and footer.
-      { key: 'logo', filename: 'logo-mark.svg', width: 28, height: 28 },
-      { key: 'hero', filename: 'hero-banner.png', width: 1440, height: 620 },
-      { key: 'appointment', filename: 'appointment-banner.png', width: 1440, height: 331 },
-      { key: 'quote', filename: 'quote-banner.png', width: 1440, height: 524 },
+      { key: 'logo', filename: 'logo-mark.svg', width: 28, height: 28, size: 885 },
+      { key: 'hero', filename: 'hero-banner.png', width: 1440, height: 620, size: 557480 },
+      { key: 'appointment', filename: 'appointment-banner.png', width: 1440, height: 331, size: 749102 },
+      { key: 'quote', filename: 'quote-banner.png', width: 1440, height: 524, size: 1150671 },
       // contact-us.png: a real Figma asset, but contact_form has no image
       // field to attach it to — registered here for completeness/future use
       // only (see contact_form section below).
-      { key: 'contact', filename: 'contact-us.png', width: 520, height: 520 },
+      { key: 'contact', filename: 'contact-us.png', width: 520, height: 520, size: 236927 },
       // store-map.png: a real Figma asset, but map_embed's Renderer always
       // draws a fixed gray placeholder box (no image field exists) — this
       // asset currently has nowhere to render. Registered for completeness/
       // future use only (see map_embed section below).
-      { key: 'map', filename: 'store-map.png', width: 810, height: 320 },
+      { key: 'map', filename: 'store-map.png', width: 810, height: 320, size: 98961 },
     ]),
     pages: [
       {
@@ -666,44 +670,44 @@ export const SITE_TEMPLATES = [
       show_copyright: true,
     },
     media: media('houzez', [
-      { key: 'logo', filename: 'assets/houzez-logo.png', width: 125, height: 45 },
-      { key: 'banner', filename: 'assets/houzez-banner.png', width: 640, height: 419 },
-      { key: 'appointment', filename: 'assets/houzez-appointment.png', width: 1440, height: 331 },
-      { key: 'contact', filename: 'assets/houzez-contact.png', width: 520, height: 520 },
+      { key: 'logo', filename: 'assets/houzez-logo.png', width: 125, height: 45, size: 1653 },
+      { key: 'banner', filename: 'assets/houzez-banner.png', width: 640, height: 419, size: 208945 },
+      { key: 'appointment', filename: 'assets/houzez-appointment.png', width: 1440, height: 331, size: 580716 },
+      { key: 'contact', filename: 'assets/houzez-contact.png', width: 520, height: 520, size: 590190 },
       // A real Figma/prototype asset, registered for completeness — like
       // Xinear's store-map.png, map_embed's Renderer always draws a Google
       // Maps iframe (or gray placeholder) and has no image field to attach
       // this to, so it currently has nowhere to render.
-      { key: 'map', filename: 'assets/houzez-map.png', width: 730, height: 320 },
+      { key: 'map', filename: 'assets/houzez-map.png', width: 730, height: 320, size: 111998 },
       // Same story as 'map' — a real asset with no home in
       // quote_request_form's current fixed-field schema (no image field).
       // Will have somewhere to go once quote_request_form grows an RFQ
       // hero/background per the RFQ-modal upgrade plan.
-      { key: 'rfq', filename: 'assets/houzez-rfq.png', width: 1920, height: 1080 },
+      { key: 'rfq', filename: 'assets/houzez-rfq.png', width: 1920, height: 1080, size: 3352138 },
       // 8 category icons for the icon-circle Categories strip (category_grid).
-      { key: 'cat-house', filename: 'catalog-categories/house-construction.png', width: 40, height: 40 },
-      { key: 'cat-glass', filename: 'catalog-categories/glass-pane.png', width: 40, height: 40 },
-      { key: 'cat-safety', filename: 'catalog-categories/safety-tools.png', width: 40, height: 40 },
-      { key: 'cat-foundation', filename: 'catalog-categories/foundation.png', width: 40, height: 40 },
-      { key: 'cat-paints', filename: 'catalog-categories/paints-and-flooring.png', width: 40, height: 40 },
-      { key: 'cat-roofing', filename: 'catalog-categories/roofing.png', width: 40, height: 40 },
-      { key: 'cat-doors', filename: 'catalog-categories/doors-and-windows.png', width: 40, height: 40 },
-      { key: 'cat-excavation', filename: 'catalog-categories/excavation.png', width: 40, height: 40 },
+      { key: 'cat-house', filename: 'catalog-categories/house-construction.png', width: 40, height: 40, size: 903 },
+      { key: 'cat-glass', filename: 'catalog-categories/glass-pane.png', width: 40, height: 40, size: 910 },
+      { key: 'cat-safety', filename: 'catalog-categories/safety-tools.png', width: 40, height: 40, size: 855 },
+      { key: 'cat-foundation', filename: 'catalog-categories/foundation.png', width: 40, height: 40, size: 890 },
+      { key: 'cat-paints', filename: 'catalog-categories/paints-and-flooring.png', width: 40, height: 40, size: 1126 },
+      { key: 'cat-roofing', filename: 'catalog-categories/roofing.png', width: 40, height: 40, size: 1184 },
+      { key: 'cat-doors', filename: 'catalog-categories/doors-and-windows.png', width: 40, height: 40, size: 1259 },
+      { key: 'cat-excavation', filename: 'catalog-categories/excavation.png', width: 40, height: 40, size: 768 },
       // 12 product photos for the two "Product Group" carousels (High-Rise
       // Needs / Safety Tools), real names/prices from the reference
       // prototype's en/website.json template_houzez.products namespace.
-      { key: 'prod-ladder', filename: 'catalog/image-2.png', width: 200, height: 200 },
-      { key: 'prod-level-kit', filename: 'catalog/image-3.png', width: 200, height: 200 },
-      { key: 'prod-scaffold-metal', filename: 'catalog/image-4.png', width: 200, height: 200 },
-      { key: 'prod-scaffold-tower', filename: 'catalog/image-5.png', width: 200, height: 200 },
-      { key: 'prod-rammer', filename: 'catalog/image-6.png', width: 200, height: 200 },
-      { key: 'prod-ladder-steel', filename: 'catalog/image-7.png', width: 200, height: 200 },
-      { key: 'prod-helmet', filename: 'catalog/image-8.png', width: 200, height: 200 },
-      { key: 'prod-harness', filename: 'catalog/image-9.png', width: 200, height: 200 },
-      { key: 'prod-gloves', filename: 'catalog/image-10.png', width: 200, height: 200 },
-      { key: 'prod-lifeline', filename: 'catalog/image-11.png', width: 200, height: 200 },
-      { key: 'prod-helmet-2', filename: 'catalog/image-12.png', width: 200, height: 200 },
-      { key: 'prod-gloves-heavy', filename: 'catalog/image-13.png', width: 200, height: 200 },
+      { key: 'prod-ladder', filename: 'catalog/image-2.png', width: 200, height: 200, size: 27768 },
+      { key: 'prod-level-kit', filename: 'catalog/image-3.png', width: 200, height: 200, size: 27071 },
+      { key: 'prod-scaffold-metal', filename: 'catalog/image-4.png', width: 200, height: 200, size: 40858 },
+      { key: 'prod-scaffold-tower', filename: 'catalog/image-5.png', width: 200, height: 200, size: 43942 },
+      { key: 'prod-rammer', filename: 'catalog/image-6.png', width: 200, height: 200, size: 48714 },
+      { key: 'prod-ladder-steel', filename: 'catalog/image-7.png', width: 200, height: 200, size: 47222 },
+      { key: 'prod-helmet', filename: 'catalog/image-8.png', width: 200, height: 200, size: 25285 },
+      { key: 'prod-harness', filename: 'catalog/image-9.png', width: 200, height: 200, size: 68887 },
+      { key: 'prod-gloves', filename: 'catalog/image-10.png', width: 200, height: 200, size: 52652 },
+      { key: 'prod-lifeline', filename: 'catalog/image-11.png', width: 200, height: 200, size: 48452 },
+      { key: 'prod-helmet-2', filename: 'catalog/image-12.png', width: 200, height: 200, size: 66046 },
+      { key: 'prod-gloves-heavy', filename: 'catalog/image-13.png', width: 200, height: 200, size: 69100 },
     ]),
     pages: [
       {

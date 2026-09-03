@@ -90,6 +90,7 @@ export const ACTIONS = {
   REMOVE_MEDIA_ITEM: 'REMOVE_MEDIA_ITEM',
   DELETE_MEDIA_ITEM: 'DELETE_MEDIA_ITEM',
   BULK_DELETE_MEDIA_ITEMS: 'BULK_DELETE_MEDIA_ITEMS',
+  RENAME_MEDIA_ITEM: 'RENAME_MEDIA_ITEM',
   // Content > Menus (US-Content.1) — a menu's `items` array (each
   // `{ id, label, url }`) is always replaced wholesale rather than mutated
   // item-by-item, matching how repeater-style fields elsewhere in this
@@ -659,6 +660,16 @@ export function builderReducer(state, action) {
       const ids = new Set(action.ids);
       return { ...state, mediaLibrary: state.mediaLibrary.filter((m) => !ids.has(m.id)) };
     }
+
+    // Content > Files' row-level "Edit" action — renames the item in place,
+    // same filter-and-map-by-id style as the delete cases above.
+    case ACTIONS.RENAME_MEDIA_ITEM:
+      return {
+        ...state,
+        mediaLibrary: state.mediaLibrary.map((m) =>
+          m.id === action.id ? { ...m, filename: action.filename } : m
+        ),
+      };
 
     // Replaces a menu's full `items` array — see ACTIONS.UPDATE_MENU_ITEMS
     // above for why this is whole-array rather than per-item.

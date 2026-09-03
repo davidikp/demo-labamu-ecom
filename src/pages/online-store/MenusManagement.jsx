@@ -11,15 +11,15 @@ import {
 } from '@dnd-kit/core';
 import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, arrayMove, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Trash2, Plus, GripVertical } from 'lucide-react';
-import { Table, MainBtn, TextField, Popup } from '../../ce-ui';
-import { loadDraft } from '../section-builder/state/storage';
-import { createFreshState } from '../section-builder/state/useSectionBuilder';
+import { Trash2, Plus, GripVertical, Pencil } from 'lucide-react';
+import { Table, MainBtn, TextField, Popup, IconBtn, Tooltip } from '../../ce-ui';
+import { loadOrSeedDemoDraft } from '../section-builder/state/demoBootstrap';
 import { runDraftAction } from '../section-builder/state/runDraftAction';
 import { ACTIONS, PROTECTED_MENU_IDS } from '../section-builder/state/builderReducer';
 import { slugify } from '../section-builder/sections/pageHelpers';
 import PageLinkCombobox from '../section-builder/ui/fields/PageLinkCombobox';
 import ConfirmDialog from '../section-builder/ui/ConfirmDialog';
+import { useSnackbar } from '../../contexts/SnackbarContext';
 
 // TODO: replace with the real active store id once multi-store routing
 // exists — matches the hardcoded id used by Layout.jsx's builder entry and
@@ -33,43 +33,58 @@ const STORE_ID = 'demo';
  * RepeaterField.jsx/SectionListItem.jsx (this codebase's only existing
  * drag-reorder mechanism) rather than a bespoke DnD implementation.
  */
-function MenuItemRow({ item, pages, onChange, onRemove }) {
+function MenuItemRow({ item, pages, error, onChange, onRemove }) {
   const { t } = useTranslation();
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id });
+  const requiredText = t('sectionBuilder:onlineStore.menus.itemFieldRequired', 'Field cannot be empty');
 
   return (
     <div
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 }}
-      className="flex h-[49px] items-center gap-2 border-b border-lb-line-1 bg-lb-surface px-4 last:rounded-b-lg last:border-b-0"
+      // `min-h` (not a fixed `h-[49px]`) + `items-start` — a row grows to fit
+      // its inline error text (below) instead of clipping it; the drag
+      // handle/delete button get a small top margin so they still align
+      // with the fields' first line once the row is no longer a fixed
+      // single-line height.
+      className="flex min-h-[49px] items-start gap-2 border-b border-lb-line-1 bg-lb-surface px-4 py-2 last:border-b-0"
     >
       <span
         aria-label={t('sectionBuilder:fields.repeaterField.dragToReorder', 'Drag to reorder')}
-        className="w-5 shrink-0 cursor-grab touch-none text-lb-on-surface-3 hover:text-lb-on-surface"
+        className="mt-1.5 w-5 shrink-0 cursor-grab touch-none text-lb-on-surface-3 hover:text-lb-on-surface"
         {...attributes}
         {...listeners}
       >
         <GripVertical size={16} />
       </span>
-      <input
-        type="text"
-        value={item.label}
-        onChange={(e) => onChange({ label: e.target.value })}
-        placeholder={t('sectionBuilder:onlineStore.menus.labelPlaceholder', 'e.g. About us')}
-        className="w-1/2 rounded-md border border-gray-200 px-2 py-1.5 text-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
-      />
-      <PageLinkCombobox
-        value={item.url}
-        onChange={(url) => onChange({ url })}
-        pages={pages}
-        placeholder={t('sectionBuilder:onlineStore.menus.linkSearchPlaceholder', 'Search or paste link')}
-        className="w-1/2"
-      />
+      <div className="flex w-1/2 flex-col gap-1">
+        <input
+          type="text"
+          value={item.label}
+          onChange={(e) => onChange({ label: e.target.value })}
+          placeholder={t('sectionBuilder:onlineStore.menus.labelPlaceholder', 'e.g. About us')}
+          className={`w-full rounded-md border px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-blue-500/30 ${
+            error?.label ? 'border-red-400 focus:border-red-400' : 'border-gray-200 focus:border-blue-400'
+          }`}
+        />
+        {error?.label && <p className="text-xs text-red-600">{requiredText}</p>}
+      </div>
+      <div className="flex w-1/2 flex-col gap-1">
+        <PageLinkCombobox
+          value={item.url}
+          onChange={(url) => onChange({ url })}
+          pages={pages}
+          placeholder={t('sectionBuilder:onlineStore.menus.linkSearchPlaceholder', 'Search or paste link')}
+          className="w-full"
+          error={Boolean(error?.url)}
+        />
+        {error?.url && <p className="text-xs text-red-600">{requiredText}</p>}
+      </div>
       <button
         type="button"
         onClick={onRemove}
         aria-label={t('sectionBuilder:editor.common.delete', 'Delete')}
-        className="w-5 shrink-0 text-red-600"
+        className="mt-1 flex h-8 w-5 shrink-0 items-center justify-center rounded-md text-red-600 transition-colors hover:bg-red-50 hover:text-red-700"
       >
         <Trash2 size={16} />
       </button>
@@ -110,11 +125,22 @@ function MenuItemRow({ item, pages, onChange, onRemove }) {
  * rather than dispatching per-edit — there's no live undo/redo history to
  * coalesce into outside the Section Builder itself (see runDraftAction.js).
  */
-function MenuFormDrawer({ menu, isNew, pages, onSave, onClose, onRequestDelete }) {
+function MenuFormDrawer({ menu, isNew, pages, onSave, onClose }) {
   const { t } = useTranslation();
   const [name, setName] = useState(menu?.name ?? '');
   const [items, setItems] = useState(() => (menu?.items ?? []).map((item) => ({ ...item })));
+  // Keyed by item id — `{ label: bool, url: bool }`. Once a row exists (added
+  // via "Add menu item", or already present from a saved menu) both its
+  // fields are mandatory: Save validates every row and surfaces inline
+  // errors on whichever fields are still blank instead of persisting a menu
+  // with empty label/link entries.
+  const [itemErrors, setItemErrors] = useState({});
+  // Save is never preemptively disabled (same "surface the error on click
+  // instead" convention as PageEditor.jsx's own Title field) — this holds
+  // the inline error text shown under Name once a blank Save attempt fires.
+  const [nameError, setNameError] = useState(null);
   const handle = slugify(name);
+  const fieldRequiredText = t('sectionBuilder:onlineStore.menus.itemFieldRequired', 'Field cannot be empty');
 
   // Popup (ce-ui/ui/popup.tsx) already locks body scroll while `open` itself,
   // but has no Escape-to-close handling of its own — kept here so this form
@@ -124,12 +150,6 @@ function MenuFormDrawer({ menu, isNew, pages, onSave, onClose, onRequestDelete }
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
   }, [onClose]);
-
-  // The two default menus ('main-menu'/'footer-menu') can never be deleted —
-  // Header/Footer's `nav_menu_ref` defaults point at those fixed ids — so
-  // Delete is only ever offered for an existing, non-protected (custom)
-  // menu; never shown at all in create mode.
-  const canDelete = !isNew && menu?.id && !PROTECTED_MENU_IDS.includes(menu.id);
 
   const addItem = () => {
     // url starts as '' (not '/') so the Link input shows its "Search or
@@ -142,10 +162,53 @@ function MenuFormDrawer({ menu, isNew, pages, onSave, onClose, onRequestDelete }
 
   const removeItem = (id) => {
     setItems((prev) => prev.filter((item) => item.id !== id));
+    setItemErrors((prev) => {
+      if (!prev[id]) return prev;
+      const { [id]: _removed, ...rest } = prev;
+      return rest;
+    });
   };
 
   const updateItem = (id, patch) => {
     setItems((prev) => prev.map((item) => (item.id === id ? { ...item, ...patch } : item)));
+    // Clear only the field(s) just edited — the other field's error (if any)
+    // stays until it's fixed too, so fixing the label alone doesn't also
+    // silently drop a still-blank link's error.
+    setItemErrors((prev) => {
+      if (!prev[id]) return prev;
+      const cleared = { ...prev[id] };
+      if ('label' in patch) cleared.label = false;
+      if ('url' in patch) cleared.url = false;
+      if (!cleared.label && !cleared.url) {
+        const { [id]: _removed, ...rest } = prev;
+        return rest;
+      }
+      return { ...prev, [id]: cleared };
+    });
+  };
+
+  // Every present row's Label and Link are mandatory — returns the
+  // `{ [itemId]: { label, url } }` error map (empty when everything's
+  // filled in).
+  const validateItems = () => {
+    const errors = {};
+    items.forEach((item) => {
+      const labelBad = !item.label?.trim();
+      const urlBad = !item.url?.trim();
+      if (labelBad || urlBad) errors[item.id] = { label: labelBad, url: urlBad };
+    });
+    return errors;
+  };
+
+  const handleSaveClick = () => {
+    const nameBad = !name.trim();
+    setNameError(nameBad ? fieldRequiredText : null);
+
+    const errors = validateItems();
+    setItemErrors(errors);
+
+    if (nameBad || Object.keys(errors).length > 0) return;
+    onSave({ name: name.trim(), items });
   };
 
   // Same dnd-kit sensor set as RepeaterField.jsx/SectionListItem.jsx (the
@@ -185,20 +248,26 @@ function MenuFormDrawer({ menu, isNew, pages, onSave, onClose, onRequestDelete }
         onClick: onClose,
       }}
       primaryAction={{
-        label: t('sectionBuilder:onlineStore.menus.save', 'Save'),
-        onClick: () => onSave({ name: name.trim(), items }),
-        disabled: !name.trim(),
+        label: isNew
+          ? t('sectionBuilder:onlineStore.menus.save', 'Save')
+          : t('sectionBuilder:onlineStore.menus.saveChanges', 'Save Changes'),
+        onClick: handleSaveClick,
       }}
     >
       <div className="flex flex-col gap-4">
         <div>
           <TextField
             label={t('sectionBuilder:onlineStore.menus.nameLabel', 'Name')}
+            required
             size="lg"
             autoFocus={isNew}
             value={name}
-            onChange={(e) => setName(e.target.value)}
+            onChange={(e) => {
+              setName(e.target.value);
+              if (nameError) setNameError(null);
+            }}
             placeholder={t('sectionBuilder:onlineStore.menus.namePlaceholder', 'e.g. Main menu')}
+            errorText={nameError}
           />
           <p className="mt-1 text-xs text-gray-400">
             {t('sectionBuilder:onlineStore.menus.handlePrefix', 'Handle: {{handle}}', { handle: handle || '—' })}
@@ -206,46 +275,51 @@ function MenuFormDrawer({ menu, isNew, pages, onSave, onClose, onRequestDelete }
         </div>
 
         <div className="flex flex-col gap-2">
-          {/* No `overflow-hidden` here (unlike a plain rounded-corner card) — this
-              wraps the rows, and PageLinkCombobox's suggestion dropdown is an
-              absolutely-positioned child of a row; `overflow-hidden` on this
-              ancestor would clip that dropdown instead of letting it float
-              over neighbouring rows. Rounding is done per-edge below instead
-              (rounded-t-lg on the header, rounded-b-lg on the last row via
-              MenuItemRow's `last:rounded-b-lg`). */}
-          <div className="rounded-lg border border-lb-line-2">
-            {/* Header row classnames copied from Table's own <thead>/<th> (ce-ui/ui/table.tsx)
-                so this hand-rolled header is visually indistinguishable from a real Table
-                instance: h-[49px]/px-4 cell box, bg-lb-surface header background,
-                border-lb-line-2 divider, font-lb/font-lb-bold text-lb-on-surface typography. */}
-            <div className="flex h-[49px] items-center gap-2 rounded-t-lg border-b border-lb-line-2 bg-lb-surface px-4">
-              <span className="w-5 shrink-0" aria-hidden="true" />
-              <span className="w-1/2 font-lb font-lb-bold text-[14px] leading-[20px] text-lb-on-surface">
-                {t('sectionBuilder:onlineStore.menus.itemLabelField', 'Label')}
-              </span>
-              <span className="w-1/2 font-lb font-lb-bold text-[14px] leading-[20px] text-lb-on-surface">
-                {t('sectionBuilder:onlineStore.menus.itemLinkField', 'Link')}
-              </span>
-              <span className="w-5 shrink-0" aria-hidden="true" />
-            </div>
+          {/* No outer border/rounding here — only the horizontal divider
+              lines between the header and rows (border-b on each) remain,
+              matching Table's own row dividers instead of a bordered card
+              outline. No `overflow-hidden` either: PageLinkCombobox's
+              suggestion list now renders through a portal (see that file),
+              so nothing here needs to stay unclipped for it anymore, but
+              there's still no reason to clip anything else in this column. */}
+          <div>
             {items.length === 0 ? (
-              <p className="rounded-b-lg bg-lb-surface px-4 py-3 font-lb text-[14px] text-lb-on-surface-3">
+              <div className="flex items-center justify-center rounded-lb-card border-2 border-dashed border-lb-line-2 bg-lb-surface px-4 py-10 font-lb text-[14px] text-lb-on-surface-3">
                 {t('sectionBuilder:onlineStore.menus.noItems', 'No menu items yet.')}
-              </p>
+              </div>
             ) : (
-              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-                <SortableContext items={items.map((item) => item.id)} strategy={verticalListSortingStrategy}>
-                  {items.map((item) => (
-                    <MenuItemRow
-                      key={item.id}
-                      item={item}
-                      pages={pages}
-                      onChange={(patch) => updateItem(item.id, patch)}
-                      onRemove={() => removeItem(item.id)}
-                    />
-                  ))}
-                </SortableContext>
-              </DndContext>
+              <>
+                {/* Header row classnames copied from Table's own <thead>/<th> (ce-ui/ui/table.tsx)
+                    so this hand-rolled header is visually indistinguishable from a real Table
+                    instance: h-[49px]/px-4 cell box, bg-lb-surface header background,
+                    border-lb-line-2 divider, font-lb/font-lb-bold text-lb-on-surface typography.
+                    Hidden entirely in the empty state above — a header with nothing under it
+                    reads oddly next to the dashed placeholder box. */}
+                <div className="flex h-[49px] items-center gap-2 border-b border-lb-line-2 bg-lb-surface px-4">
+                  <span className="w-5 shrink-0" aria-hidden="true" />
+                  <span className="w-1/2 font-lb font-lb-bold text-[14px] leading-[20px] text-lb-on-surface">
+                    {t('sectionBuilder:onlineStore.menus.itemLabelField', 'Menu Item')}
+                  </span>
+                  <span className="w-1/2 font-lb font-lb-bold text-[14px] leading-[20px] text-lb-on-surface">
+                    {t('sectionBuilder:onlineStore.menus.itemLinkField', 'Link')}
+                  </span>
+                  <span className="w-5 shrink-0" aria-hidden="true" />
+                </div>
+                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                  <SortableContext items={items.map((item) => item.id)} strategy={verticalListSortingStrategy}>
+                    {items.map((item) => (
+                      <MenuItemRow
+                        key={item.id}
+                        item={item}
+                        pages={pages}
+                        error={itemErrors[item.id]}
+                        onChange={(patch) => updateItem(item.id, patch)}
+                        onRemove={() => removeItem(item.id)}
+                      />
+                    ))}
+                  </SortableContext>
+                </DndContext>
+              </>
             )}
           </div>
           <MainBtn
@@ -257,24 +331,6 @@ function MenuFormDrawer({ menu, isNew, pages, onSave, onClose, onRequestDelete }
             className="mt-1 w-fit"
           />
         </div>
-
-        {/* Delete lives here, not in Popup's own action row — `Popup` only
-            supports a fixed primary/secondary button pair (popup.tsx), with
-            no footer prop for a third, left-aligned, conditionally-shown
-            button — so it's pinned to the bottom of the scrollable content
-            instead, set off with a top divider so it still reads as its own
-            row sitting just above Cancel/Save. */}
-        {canDelete && (
-          <div className="flex justify-start border-t border-lb-line-1 pt-4">
-            <MainBtn
-              variant="danger"
-              size="lg"
-              leftIcon={<Trash2 size={16} />}
-              label={t('sectionBuilder:onlineStore.menus.delete', 'Delete')}
-              onClick={onRequestDelete}
-            />
-          </div>
-        )}
       </div>
     </Popup>
   );
@@ -302,7 +358,8 @@ function createMenuId(name, existingMenus) {
  */
 export default function MenusManagement() {
   const { t } = useTranslation();
-  const [draft, setDraft] = useState(() => loadDraft(STORE_ID) ?? createFreshState(STORE_ID));
+  const { showSnackbar } = useSnackbar();
+  const [draft, setDraft] = useState(() => loadOrSeedDemoDraft(STORE_ID));
   const [editingMenuId, setEditingMenuId] = useState(null);
   const [creatingMenu, setCreatingMenu] = useState(false);
   // Set to the menu being deleted while its ConfirmDialog is open — holds
@@ -335,6 +392,7 @@ export default function MenusManagement() {
     const next = runDraftAction(STORE_ID, { type: ACTIONS.SAVE_MENU, id: editingMenuId, name, items });
     setDraft(next);
     setEditingMenuId(null);
+    showSnackbar(t('sectionBuilder:onlineStore.menus.savedSnackbar', 'Menu successfully saved'), 'green');
   };
 
   const handleSaveNew = ({ name, items }) => {
@@ -342,6 +400,7 @@ export default function MenusManagement() {
     const next = runDraftAction(STORE_ID, { type: ACTIONS.SAVE_MENU, id, name, items });
     setDraft(next);
     setCreatingMenu(false);
+    showSnackbar(t('sectionBuilder:onlineStore.menus.savedSnackbar', 'Menu successfully saved'), 'green');
   };
 
   // Confirming ConfirmDialog closes both the confirm dialog AND the edit
@@ -350,6 +409,7 @@ export default function MenusManagement() {
   const handleConfirmDelete = () => {
     const next = runDraftAction(STORE_ID, { type: ACTIONS.DELETE_MENU, id: deletingMenuId });
     setDraft(next);
+    showSnackbar(t('sectionBuilder:onlineStore.menus.deletedSnackbar', 'Menu successfully deleted'), 'grey');
     setDeletingMenuId(null);
     setEditingMenuId(null);
   };
@@ -359,13 +419,66 @@ export default function MenusManagement() {
   const columns = [
     {
       key: 'name',
-      header: t('sectionBuilder:onlineStore.menus.columnName', 'Title'),
+      header: t('sectionBuilder:onlineStore.menus.columnName', 'Name'),
       render: (value) => <span style={{ color: '#282828' }}>{value}</span>,
     },
     {
       key: 'items',
       header: t('sectionBuilder:onlineStore.menus.columnItems', 'Items'),
-      render: (value) => t('sectionBuilder:onlineStore.menus.itemCount', '{{count}} items', { count: value.length }),
+      // Item *names* (comma-joined), not a count — a blank/unlabeled item
+      // (freshly added via "Add menu item", not yet given a label) is
+      // dropped from the list rather than showing as an empty entry between
+      // two commas.
+      render: (value) => {
+        const labels = value.map((item) => item.label?.trim()).filter(Boolean);
+        return labels.length ? (
+          <span className="block truncate" title={labels.join(', ')}>
+            {labels.join(', ')}
+          </span>
+        ) : (
+          <span className="text-lb-on-surface-3">{t('sectionBuilder:onlineStore.menus.noItemsShort', 'No items')}</span>
+        );
+      },
+    },
+    {
+      key: 'actions',
+      width: 160,
+      header: t('sectionBuilder:onlineStore.menus.columnActions', 'Actions'),
+      // Row click no longer opens the edit modal — Edit/Delete are the only
+      // way into a menu now, so this column carries both as tertiary
+      // (ghost-style) icon buttons rather than the whole row being a target.
+      render: (_value, row) => {
+        const isProtected = PROTECTED_MENU_IDS.includes(row.id);
+        return (
+          <div className="flex items-center gap-1">
+            <Tooltip content={t('sectionBuilder:onlineStore.menus.editTooltip', 'Edit')}>
+              <IconBtn
+                variant="ghost"
+                size="sm"
+                icon={<Pencil size={16} />}
+                aria-label={t('sectionBuilder:onlineStore.menus.editTooltip', 'Edit')}
+                onClick={() => setEditingMenuId(row.id)}
+              />
+            </Tooltip>
+            <Tooltip
+              content={
+                isProtected
+                  ? t('sectionBuilder:onlineStore.menus.deleteProtectedTooltip', "This menu can't be deleted")
+                  : t('sectionBuilder:onlineStore.menus.deleteTooltip', 'Delete')
+              }
+            >
+              <IconBtn
+                variant="danger-ghost"
+                size="sm"
+                icon={<Trash2 size={16} />}
+                disabled={isProtected}
+                aria-label={t('sectionBuilder:onlineStore.menus.deleteTooltip', 'Delete')}
+                onClick={() => setDeletingMenuId(row.id)}
+              />
+            </Tooltip>
+          </div>
+        );
+      },
     },
   ];
 
@@ -385,51 +498,46 @@ export default function MenusManagement() {
           />
         </div>
 
-        {/* No outer border here — only the horizontal row dividers Table
-            (ce-ui) already renders between rows/header are wanted, not a
-            bordered card outline. */}
-        <div className="menus-table-wrapper" style={{ background: '#FFFFFF', borderRadius: '12px', position: 'relative' }}>
-          <Table
-            columns={columns}
-            data={pagedMenus}
-            onRowClick={(row) => setEditingMenuId(row.id)}
-            totalRows={filteredMenus.length}
-            page={page}
-            perPage={perPage}
-            onPageChange={setPage}
-            hidePaginationOnSinglePage
-            filters={{
-              search: {
-                value: search,
-                onChange: (value) => {
-                  setSearch(value);
-                  setPage(1);
-                },
-                placeholder: t('sectionBuilder:onlineStore.menus.searchPlaceholder', 'Search by menu name'),
+        {/* No wrapper styling here — Table (ce-ui) already paints its own
+            white background + 12px rounded corners + overflow-hidden on
+            this exact box (table.tsx's root div). Duplicating the same
+            background/border-radius on this outer div doesn't add
+            anything and risks a hairline seam at the bottom corners at
+            certain zoom/DPI levels, since two independently-rasterized
+            rounded rects of the same radius on the same rect don't always
+            composite pixel-for-pixel identically — hence the "table
+            outline is cropped" artifact this replaces. No `onRowClick`
+            either — Edit/Delete in the Actions column are the only way
+            into a row now, so the row itself carries no click/hover
+            affordance (Table only adds its built-in hover-bg/cursor-pointer
+            when onRowClick is passed). */}
+        <Table
+          columns={columns}
+          data={pagedMenus}
+          totalRows={filteredMenus.length}
+          page={page}
+          perPage={perPage}
+          onPageChange={setPage}
+          hidePaginationOnSinglePage
+          filters={{
+            search: {
+              value: search,
+              onChange: (value) => {
+                setSearch(value);
+                setPage(1);
               },
-              rowsPerPage: {
-                onChange: (nextPerPage) => {
-                  setPerPage(nextPerPage);
-                  setPage(1);
-                },
+              placeholder: t('sectionBuilder:onlineStore.menus.searchPlaceholder', 'Search by menu name'),
+            },
+            rowsPerPage: {
+              onChange: (nextPerPage) => {
+                setPerPage(nextPerPage);
+                setPage(1);
               },
-            }}
-            emptyStateTitle={t('sectionBuilder:onlineStore.menus.noMenus', 'No menus yet')}
-          />
-        </div>
+            },
+          }}
+          emptyStateTitle={t('sectionBuilder:onlineStore.menus.noMenus', 'No menus yet')}
+        />
       </div>
-
-      {/*
-        Same occlusion issue/fix as PagesManagement.jsx's `.pages-table-wrapper`
-        override: Table (ce-ui) paints an opaque background on each <td>, which
-        hides the row's own hover background — so hover is reapplied here via a
-        scoped selector on this table's own wrapper class instead.
-      */}
-      <style>{`
-        .menus-table-wrapper tbody tr:hover td {
-          background-color: #F9FAFB;
-        }
-      `}</style>
 
       {editingMenu && (
         <MenuFormDrawer
@@ -438,7 +546,6 @@ export default function MenusManagement() {
           pages={pages}
           onSave={handleSaveExisting}
           onClose={() => setEditingMenuId(null)}
-          onRequestDelete={() => setDeletingMenuId(editingMenu.id)}
         />
       )}
       {creatingMenu && (
@@ -454,9 +561,9 @@ export default function MenusManagement() {
       <ConfirmDialog
         open={!!deletingMenu}
         danger
-        title={t('sectionBuilder:onlineStore.menus.deleteConfirmTitle', 'Delete "{{name}}"?', { name: deletingMenu?.name ?? '' })}
-        description={t('sectionBuilder:onlineStore.menus.deleteConfirmDescription', "This can't be undone. Any header or footer section using this menu will show no links.")}
-        confirmLabel={t('sectionBuilder:onlineStore.menus.delete', 'Delete')}
+        title={t('sectionBuilder:onlineStore.menus.deleteConfirmTitle', 'Delete this menu?')}
+        description={t('sectionBuilder:onlineStore.menus.deleteConfirmDescription', 'This menu and its items will be permanently deleted.')}
+        confirmLabel={t('sectionBuilder:onlineStore.menus.deleteConfirm', 'Yes, Delete')}
         onConfirm={handleConfirmDelete}
         onCancel={() => setDeletingMenuId(null)}
       />

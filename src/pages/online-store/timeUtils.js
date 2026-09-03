@@ -18,3 +18,18 @@ export function formatRelativeTime(timestamp) {
   const diffDay = Math.floor(diffHour / 24);
   return `${diffDay} day${diffDay === 1 ? '' : 's'} ago`;
 }
+
+/**
+ * Absolute date + time, e.g. "Sep 3, 2026, 3:45 PM" — for Files' "Date
+ * Added" column, where a relative "245 days ago" isn't precise enough.
+ */
+export function formatDateTime(timestamp) {
+  if (!timestamp) return '';
+  return new Date(timestamp).toLocaleString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
