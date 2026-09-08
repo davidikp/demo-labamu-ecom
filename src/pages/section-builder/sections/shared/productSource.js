@@ -166,3 +166,17 @@ export function resolveStorefrontProductByHandle(theme, handle, mediaLibrary) {
 export function buildProductPath(handle) {
   return `/products/${handle}`;
 }
+
+/** Shared route-builder for the Shop system page — matches `catalog_list`'s
+ * own filter semantics (`category !== 'all' && product.category !== category`
+ * — see its Renderer.jsx), so a link built here always lands on a
+ * pre-filtered Shop exactly reproducing what re-selecting that category in
+ * the sidebar would show. No `category` (or 'all') links to the plain,
+ * unfiltered Shop page. The query string travels as part of the same
+ * opaque path string `onNavigate`/`navigateToPath` already thread through
+ * (see ThemePreview.jsx/PreviewLive.jsx) — `catalog_list`'s Renderer reads
+ * it back out via its own `initialCategory` prop, not by parsing this
+ * string itself. */
+export function buildShopPath(category) {
+  return category && category !== 'all' ? `/shop?category=${encodeURIComponent(category)}` : '/shop';
+}

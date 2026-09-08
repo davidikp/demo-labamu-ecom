@@ -8,7 +8,7 @@ import { parseBlockSelection, isAtBlockMax, createBlockCtx } from '../sections/b
 import SectionShell from './SectionShell';
 import PageFrame from './PageFrame';
 
-const RenderedEntity = memo(function RenderedEntity({ entity, theme, mediaLibrary, onEdit, blockCtx, isMobile, breakpoint, onNavigate, currentPath, menus }) {
+const RenderedEntity = memo(function RenderedEntity({ entity, theme, mediaLibrary, onEdit, blockCtx, isMobile, breakpoint, onNavigate, currentPath, menus, initialCategory }) {
   const { t } = useTranslation();
   const Renderer = SECTION_DEFINITIONS[entity.type]?.Renderer;
   if (!Renderer) {
@@ -36,6 +36,12 @@ const RenderedEntity = memo(function RenderedEntity({ entity, theme, mediaLibrar
         // other section's Renderer simply ignores this unknown prop, same as
         // `breakpoint` above.
         menus={menus}
+        // A "See All"/product-card link to Shop can carry a `?category=`
+        // query the caller (ThemePreview.jsx/PreviewLive.jsx) parses out of
+        // `currentPath` and passes down here — only `catalog_list`'s
+        // Renderer looks at it, every other section ignores this unknown
+        // prop too.
+        initialCategory={initialCategory}
       />
     </SectionShell>
   );
@@ -237,6 +243,7 @@ export default function Canvas({
   onNavigate,
   currentPath,
   menus,
+  initialCategory,
 }) {
   const { t } = useTranslation();
   const isMobile = viewport === 'mobile';
@@ -289,6 +296,7 @@ export default function Canvas({
               // the interactive builder.
               onNavigate={onNavigate}
               currentPath={currentPath}
+              initialCategory={initialCategory}
             />
           ))
         ) : (

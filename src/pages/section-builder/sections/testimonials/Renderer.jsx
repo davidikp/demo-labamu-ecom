@@ -8,17 +8,26 @@ import AddBlockControl from '../../ui/AddBlockControl';
 import StorefrontContainer from '../../ui/primitives/StorefrontContainer';
 import { HEADING_SIZE_CLASS, DISPLAY_HEADING_CLASS } from '../shared/headingSize';
 import { themedCardStyle } from '../shared/themedLayout';
+import { useResponsiveMobile } from '../shared/useResponsiveMobile';
 
-const COLS_CLASS = { '2': 'sm:grid-cols-2', '3': 'sm:grid-cols-3' };
+const COLS_CLASS = { '2': 'grid-cols-2', '3': 'grid-cols-3' };
 // Default falls back to the previous hardcoded value (a universally-recognised
 // rating color) when a theme doesn't set `colors.rating` — themes opt into a
 // different star color (e.g. Houzez's golden-reference #FACC15) via that
 // token instead of this default ever changing globally.
 const DEFAULT_STAR_COLOR = '#F59E0B';
 
-function TestimonialsRenderer({ data, blocks = [], theme, mediaLibrary, onEdit, blockCtx }) {
+function TestimonialsRenderer({ data, blocks = [], theme, mediaLibrary, onEdit, blockCtx, isMobile, breakpoint }) {
   const { t } = useTranslation();
-  const colsClass = COLS_CLASS[data.columns_desktop] ?? COLS_CLASS['3'];
+  // The builder/preview canvas simulates each device as a fixed-width frame
+  // inside a real (usually wide) browser, so a `sm:`/`md:` Tailwind
+  // breakpoint never reflects the selected device there (see
+  // useResponsiveMobile.js, and the same fix already applied to
+  // map_embed/contact_form's Renderer). Collapse to one column for mobile
+  // and tablet, driven by the `breakpoint`/`isMobile` props instead of CSS.
+  const mobile = useResponsiveMobile(isMobile);
+  const stacked = mobile || breakpoint === 'tablet';
+  const colsClass = stacked ? 'grid-cols-1' : (COLS_CLASS[data.columns_desktop] ?? COLS_CLASS['3']);
   const starColor = theme?.colors?.rating ?? DEFAULT_STAR_COLOR;
   const quotes = blocks.filter((b) => b.type === 'quote');
   const genericBlocks = blocks.filter((b) => b.type !== 'quote');
@@ -61,7 +70,7 @@ function TestimonialsRenderer({ data, blocks = [], theme, mediaLibrary, onEdit, 
       {quotes.length === 0 && !blockCtx ? (
         <p className="text-sm text-gray-400">{t('sectionBuilder:sections.testimonials.emptyState')}</p>
       ) : (
-        <div className={`grid grid-cols-1 gap-6 ${colsClass}`}>
+        <div className={`grid gap-6 ${colsClass}`}>
           {quotes.map((b) => {
             const nameEl = blockCtx ? (
               <EditableText

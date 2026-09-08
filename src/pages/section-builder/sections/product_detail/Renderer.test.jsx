@@ -275,8 +275,13 @@ describe('ProductDetailRenderer — Buy Now', () => {
 });
 
 describe('ProductDetailRenderer — stock available', () => {
-  it('shows "{stock} Stock Available" under the quantity stepper for a numeric-stock product', () => {
+  it('hides the stock count by default (show_stock defaults to false)', () => {
     renderPDP({ product: alphaProduct() });
+    expect(screen.queryByText('3 Stock Available')).toBeNull();
+  });
+
+  it('shows "{stock} Stock Available" under the quantity stepper when show_stock is on', () => {
+    renderPDP({ data: { show_stock: true }, product: alphaProduct() });
     expect(screen.getByText('3 Stock Available')).toBeTruthy();
   });
 });

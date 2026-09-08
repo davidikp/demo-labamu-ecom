@@ -14,7 +14,7 @@ function mapEmbedSrc(address, zoom) {
   return `https://www.google.com/maps?q=${encodeURIComponent(address)}&z=${zoom ?? 14}&output=embed`;
 }
 
-function MapEmbedRenderer({ data, blocks = [], theme, mediaLibrary, onEdit, blockCtx, isMobile }) {
+function MapEmbedRenderer({ data, blocks = [], theme, mediaLibrary, onEdit, blockCtx, isMobile, breakpoint }) {
   const { t } = useTranslation();
   const mobile = useResponsiveMobile(isMobile);
   const height = mobile ? data.map_height_mobile ?? 250 : data.map_height ?? 400;
@@ -28,17 +28,32 @@ function MapEmbedRenderer({ data, blocks = [], theme, mediaLibrary, onEdit, bloc
   const hasAddressDetails = onEdit || data.address || data.store_hours || data.phone_number;
   const mapLeft = data.map_position === 'left';
   const prominent = data.heading_style === 'prominent';
-  // Mobile always stacks text-above-map regardless of `map_position` — only
-  // the desktop side differs. Full literal class strings (not string
-  // interpolation) so Tailwind's build-time scanner can see both branches.
-  const textOrderClass = mapLeft ? 'order-1 md:order-2' : 'order-1 md:order-1';
-  const mapOrderClass = mapLeft ? 'order-2 md:order-1' : 'order-2 md:order-2';
+  // The builder canvas (and ThemePreview/PreviewLive) render every viewport
+  // inside PageFrame's fixed-width simulated device frame, not a real
+  // narrow browser window — so a `md:` Tailwind breakpoint always evaluates
+  // against the real (usually wide) browser and never reflects the
+  // selected device (see useResponsiveMobile.js's doc comment). At the
+  // 768px-wide tablet frame this two-column layout's own minmax() minimums
+  // (400+300=700px, plus 64px gap) leave no room, so the `md:` grid used to
+  // overflow/crush there. Collapse to one column for tablet too, driven by
+  // the `breakpoint` prop Canvas.jsx already passes every Renderer, not CSS.
+  const stacked = mobile || breakpoint === 'tablet';
+  // Stacked (mobile/tablet) always puts text above map regardless of
+  // `map_position` — only the unstacked (desktop) side order differs.
+  const textOrder = stacked ? 1 : mapLeft ? 2 : 1;
+  const mapOrder = stacked ? 2 : mapLeft ? 1 : 2;
   const addressColor = theme?.colors?.text_primary;
 
   return (
     <StorefrontContainer as="section" theme={theme}>
-      <div className="grid grid-cols-1 items-center gap-8 md:gap-16 md:[grid-template-columns:minmax(400px,1.2fr)_minmax(300px,1fr)]">
-        <div className={`relative flex w-full flex-col ${prominent ? '' : 'gap-4'} ${textOrderClass}`}>
+      <div
+        className="grid items-center"
+        style={{
+          gridTemplateColumns: stacked ? '1fr' : 'minmax(400px, 1.2fr) minmax(300px, 1fr)',
+          gap: stacked ? '32px' : '64px',
+        }}
+      >
+        <div className={`relative flex w-full flex-col ${prominent ? '' : 'gap-4'}`} style={{ order: textOrder }}>
           <BlockStream
             sectionType="map_embed"
             blocks={blocks}
@@ -103,7 +118,7 @@ function MapEmbedRenderer({ data, blocks = [], theme, mediaLibrary, onEdit, bloc
             </div>
           )}
         </div>
-        <div className={`relative w-full overflow-hidden bg-gray-200 ${mapOrderClass}`} style={{ height: `${height}px`, borderRadius: `${mapRadius}px` }}>
+        <div className="relative w-full overflow-hidden bg-gray-200" style={{ height: `${height}px`, borderRadius: `${mapRadius}px`, order: mapOrder }}>
           {mapSrc ? (
             <>
               <iframe

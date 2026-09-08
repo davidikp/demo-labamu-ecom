@@ -3,7 +3,7 @@ import { useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { loadDraft } from './state/storage';
 import { mergeRequiredSystemPages, requiredSystemPages } from './state/defaultTheme';
-import { matchStorefrontPage } from './state/pageRouting';
+import { matchStorefrontPage, parsePathQuery } from './state/pageRouting';
 import Canvas from './ui/Canvas';
 import ViewportToggle from './ui/ViewportToggle';
 import { DEFAULT_BREAKPOINT } from './themes/breakpoints';
@@ -79,6 +79,7 @@ export default function PreviewLive() {
   // uses, so a direct link to `?path=/shop` (or `?path=/products/:handle`)
   // resolves identically to clicking there.
   const match = path ? matchStorefrontPage(draft?.pages, path) : null;
+  const initialCategory = path ? parsePathQuery(path).get('category') : null;
   const activePage = match?.page ?? draft?.pages?.find((p) => p.id === draft?.activePageId) ?? draft?.pages?.[0];
   const sections = activePage?.sections ?? [];
   const isProductPage = match?.page?.systemType === 'product';
@@ -159,6 +160,7 @@ export default function PreviewLive() {
               menus={draft?.menus}
               onNavigate={handleNavigate}
               currentPath={activePage?.slug}
+              initialCategory={initialCategory}
               readOnly
             />
           )}

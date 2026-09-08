@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { resolveColor } from '../../ui/fields/colorValue';
 import { themedButtonStyle } from './themedButtonStyle';
 import { themedCardStyle, CARD_SHADOW_CSS } from './themedLayout';
+import { buildProductPath } from './productSource';
 
 /**
  * @module section-builder/sections/shared/ProductCard
@@ -19,7 +20,7 @@ import { themedCardStyle, CARD_SHADOW_CSS } from './themedLayout';
  * large PDP-style split layout (image + details panel), not a repeated grid
  * card, so it doesn't share this component's visual concerns.
  */
-function ProductCard({ product, theme, showPrice, showQuickAdd, aspectClass, widthStyle, onQuickAddClick }) {
+function ProductCard({ product, theme, showPrice, showQuickAdd, aspectClass, widthStyle, onQuickAddClick, onNavigate }) {
   const { t } = useTranslation();
   const [hovered, setHovered] = useState(false);
   const soldOut = product.stock === 0;
@@ -27,10 +28,15 @@ function ProductCard({ product, theme, showPrice, showQuickAdd, aspectClass, wid
   const cardStyle = themedCardStyle(layout);
   const border = theme?.colors?.border;
   const hoverShadow = hovered ? CARD_SHADOW_CSS[layout.card_shadow] ?? 'none' : 'none';
+  // Optional — `onNavigate` is only wired for callers that render a real
+  // storefront (see catalog_list/Renderer.jsx's identical pattern); a
+  // caller that doesn't pass it (e.g. a context this card isn't clickable
+  // in) renders exactly as before, non-interactive.
+  const handleClick = onNavigate && product.handle ? () => onNavigate(buildProductPath(product.handle)) : undefined;
 
   return (
     <div
-      className="flex flex-col text-left"
+      className={`flex flex-col text-left ${handleClick ? 'cursor-pointer' : ''}`}
       style={{
         ...cardStyle,
         boxShadow: hoverShadow,
@@ -41,6 +47,8 @@ function ProductCard({ product, theme, showPrice, showQuickAdd, aspectClass, wid
       }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
+      onClick={handleClick}
+      role={handleClick ? 'link' : undefined}
     >
       <div className={`flex items-center justify-center bg-gray-50 text-gray-300 ${aspectClass}`}>
         {product.image ? (
@@ -83,7 +91,7 @@ function ProductCard({ product, theme, showPrice, showQuickAdd, aspectClass, wid
             <button
               type="button"
               disabled
-              onClick={onQuickAddClick}
+              onClick={(e) => { e.stopPropagation(); onQuickAddClick?.(e); }}
               className="w-full text-xs font-semibold"
               style={themedButtonStyle(theme.buttons, {
                 primary: resolveColor({ slot: 'primary' }, theme.colors),

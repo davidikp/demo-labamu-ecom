@@ -8,7 +8,7 @@ import { HEADING_SIZE_CLASS } from '../shared/headingSize';
 import { ASPECT_RATIO_CLASS } from '../shared/imageAspectRatio';
 import { useResponsiveMobile } from '../shared/useResponsiveMobile';
 
-function ProductCarouselRenderer({ data, blocks = [], theme, mediaLibrary, onEdit, blockCtx, isMobile }) {
+function ProductCarouselRenderer({ data, blocks = [], theme, mediaLibrary, onEdit, blockCtx, isMobile, onNavigate }) {
   const { t } = useTranslation();
   const mobile = useResponsiveMobile(isMobile);
   const count = data.products_to_show ?? 8;
@@ -76,6 +76,7 @@ function ProductCarouselRenderer({ data, blocks = [], theme, mediaLibrary, onEdi
                 showQuickAdd={data.show_add_to_cart}
                 aspectClass={ASPECT_RATIO_CLASS.square}
                 widthStyle={cardWidthStyle}
+                onNavigate={onNavigate}
               />
             ))}
           </div>

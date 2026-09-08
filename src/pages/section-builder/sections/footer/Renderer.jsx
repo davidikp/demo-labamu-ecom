@@ -101,8 +101,11 @@ function FooterRenderer({ data, onNavigate, theme, mediaLibrary, isMobile }) {
         <span className="flex gap-2">{t('sectionBuilder:sections.footer.socialPlaceholder')}</span>
       ) : null;
     }
+    // flex-wrap so a squeezed tablet-width column wraps to a second row
+    // instead of shrinking the (shrink-0) icons out of their square shape
+    // — see SocialIcon.jsx.
     return (
-      <span className="flex items-center gap-4">
+      <span className="flex flex-wrap items-center gap-4">
         {socialLinks.map((link, i) => <SocialIcon key={link.id ?? `${link.platform}-${i}`} platform={link.platform} url={link.url} />)}
       </span>
     );

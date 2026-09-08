@@ -197,6 +197,20 @@ export default function PageEditor() {
   const [urlHandleError, setUrlHandleError] = useState(null);
   const [titleError, setTitleError] = useState(null);
   const [scheduleError, setScheduleError] = useState(null);
+  // Add New Page's URL handle auto-follows Title (slugified) until the user
+  // edits the handle field directly — then that manual edit wins and the
+  // two fields stay disconnected for the rest of this session, same
+  // "auto-sync until overridden" convention as e.g. Shopify's handle field.
+  // Only relevant in create mode: an existing page's handle is seeded from
+  // its already-persisted slug (see initialForm above) and never auto-syncs
+  // to Title again.
+  const [urlHandleTouched, setUrlHandleTouched] = useState(false);
+  // Same auto-sync-until-edited convention as urlHandleTouched, for the SEO
+  // card's own "Page title" (metaTitle) field — kept as its own independent
+  // touched flag rather than reusing urlHandleTouched, since editing one of
+  // the two synced fields shouldn't stop the other from still following
+  // Title.
+  const [metaTitleTouched, setMetaTitleTouched] = useState(false);
 
   // Simulate triggers — no real backend to fail load/save against, so these
   // are the deliberate escape hatch for exercising those negative states on
@@ -225,6 +239,20 @@ export default function PageEditor() {
   const isDirty = formToSnapshot(form) !== savedSnapshot;
 
   const patchForm = (patch) => setForm((f) => ({ ...f, ...patch }));
+
+  // Sets Title, keeping Add New Page's URL handle and SEO "Page title"
+  // mirroring it (slugified for the handle, verbatim for metaTitle) live as
+  // the user types — each independently, right up until the user touches
+  // that field directly (urlHandleTouched/metaTitleTouched above), at which
+  // point that field's manual edit wins and it stops following Title. Both
+  // Title's own input and "Generate text" go through this (not raw
+  // patchForm) so the sync applies no matter how Title got set.
+  const setName = (name) => {
+    const patch = { name };
+    if (isCreate && !urlHandleTouched) patch.urlHandle = slugify(name);
+    if (isCreate && !metaTitleTouched) patch.metaTitle = name;
+    patchForm(patch);
+  };
 
   // Persists the form (create or update) and returns the page's id, or
   // `null` if the save was rejected (empty title, bad URL handle, an
@@ -264,15 +292,21 @@ export default function PageEditor() {
     const seo = { metaTitle: form.metaTitle, metaDescription: form.metaDescription };
 
     if (isCreate && !pageId) {
+      // URL handle is user-editable in create mode too now (auto-synced
+      // from Title until touched — see setName above), so a collision
+      // surfaces as the same inline error Edit Page already shows instead
+      // of silently appending a random suffix.
+      const normalizedHandle = slugify(form.urlHandle) || slugify(form.name);
+      if (isSlugTaken(normalizedHandle, draft.pages)) {
+        setUrlHandleError(t('sectionBuilder:onlineStore.pageEditor.urlHandleTaken', 'This URL handle is already in use by another page.'));
+        return null;
+      }
       const newId = createPageId(form.name);
-      const slug = isSlugTaken(slugify(form.name), draft.pages)
-        ? `${slugify(form.name)}-${newId.slice(-8)}`
-        : slugify(form.name);
       const page = {
         id: newId,
         name: form.name.trim(),
         type: 'custom',
-        slug: `/${slug}`,
+        slug: `/${normalizedHandle}`,
         sections: syncSectionsWithContent([], newId, form),
         content: form.content,
         seo,
@@ -616,7 +650,7 @@ export default function PageEditor() {
                   type="text"
                   value={form.name}
                   onChange={(e) => {
-                    patchForm({ name: e.target.value });
+                    setName(e.target.value);
                     if (titleError) setTitleError(null);
                   }}
                   placeholder={t('sectionBuilder:onlineStore.pageEditor.titlePlaceholder', 'e.g. About us')}
@@ -665,7 +699,10 @@ export default function PageEditor() {
               <input
                 type="text"
                 value={form.metaTitle}
-                onChange={(e) => patchForm({ metaTitle: e.target.value })}
+                onChange={(e) => {
+                  if (isCreate) setMetaTitleTouched(true);
+                  patchForm({ metaTitle: e.target.value });
+                }}
                 className="w-full h-10 rounded-lg border border-gray-300 px-3 text-sm text-gray-800 outline-none focus:border-[#006BFF] lb-mb-heading"
               />
               <label className="block text-xs font-medium text-gray-600 mb-1">
@@ -677,41 +714,46 @@ export default function PageEditor() {
                 onChange={(e) => patchForm({ metaDescription: e.target.value })}
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-800 outline-none focus:border-[#006BFF] resize-none lb-mb-heading"
               />
-              {!isCreate && pageId && (
-                <>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="block text-xs font-medium text-gray-600">
-                      {t('sectionBuilder:onlineStore.pageEditor.urlHandle', 'URL handle')}
-                    </label>
-                    <CopyUrlButton url={pageUrlFor(existingPage, storeDomain)} size={13} />
-                  </div>
-                  <div className="flex items-center rounded-lg border border-gray-300 focus-within:border-[#006BFF] overflow-hidden">
-                    <span className="pl-3 text-sm text-gray-400">/</span>
-                    <input
-                      type="text"
-                      value={form.urlHandle}
-                      onChange={(e) => patchForm({ urlHandle: e.target.value })}
-                      onBlur={(e) => patchForm({ urlHandle: slugify(e.target.value) })}
-                      className="flex-1 h-10 px-1.5 text-sm text-gray-800 outline-none"
-                    />
-                  </div>
-                  {urlHandleError && <p className="mt-1 text-xs text-red-600">{urlHandleError}</p>}
-                  {handleChanged && (
-                    <label className="mt-2 flex items-start gap-2 text-xs text-gray-600">
-                      <input
-                        type="checkbox"
-                        checked={form.redirectOldHandle}
-                        onChange={(e) => patchForm({ redirectOldHandle: e.target.checked })}
-                        className="mt-0.5"
-                      />
-                      {t(
-                        'sectionBuilder:onlineStore.pageEditor.redirectOldHandle',
-                        'Create a redirect from the old URL ({{old}})',
-                        { old: existingPage?.slug ?? '' }
-                      )}
-                    </label>
+              {/* Shown in both create and edit mode now. In create mode it
+                  auto-fills from Title (slugified) until the user edits it
+                  directly — see setName above — so there's no real URL to
+                  copy yet and no prior handle to offer a redirect from;
+                  both of those stay edit-mode-only below. */}
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-medium text-gray-600">
+                  {t('sectionBuilder:onlineStore.pageEditor.urlHandle', 'URL handle')}
+                </label>
+                {!isCreate && pageId && <CopyUrlButton url={pageUrlFor(existingPage, storeDomain)} size={13} />}
+              </div>
+              <div className="flex items-center rounded-lg border border-gray-300 focus-within:border-[#006BFF] overflow-hidden">
+                <span className="pl-3 text-sm text-gray-400">/</span>
+                <input
+                  type="text"
+                  value={form.urlHandle}
+                  onChange={(e) => {
+                    if (isCreate) setUrlHandleTouched(true);
+                    patchForm({ urlHandle: e.target.value });
+                    if (urlHandleError) setUrlHandleError(null);
+                  }}
+                  onBlur={(e) => patchForm({ urlHandle: slugify(e.target.value) })}
+                  className="flex-1 h-10 px-1.5 text-sm text-gray-800 outline-none"
+                />
+              </div>
+              {urlHandleError && <p className="mt-1 text-xs text-red-600">{urlHandleError}</p>}
+              {!isCreate && pageId && handleChanged && (
+                <label className="mt-2 flex items-start gap-2 text-xs text-gray-600">
+                  <input
+                    type="checkbox"
+                    checked={form.redirectOldHandle}
+                    onChange={(e) => patchForm({ redirectOldHandle: e.target.checked })}
+                    className="mt-0.5"
+                  />
+                  {t(
+                    'sectionBuilder:onlineStore.pageEditor.redirectOldHandle',
+                    'Create a redirect from the old URL ({{old}})',
+                    { old: existingPage?.slug ?? '' }
                   )}
-                </>
+                </label>
               )}
             </div>
           </div>
@@ -852,7 +894,7 @@ export default function PageEditor() {
           'sectionBuilder:onlineStore.pageEditor.deleteConfirmDescription',
           'This page and its content will be permanently deleted.'
         )}
-        confirmLabel={t('sectionBuilder:onlineStore.pageEditor.delete', 'Yes, Delete')}
+        confirmLabel={t('sectionBuilder:onlineStore.pageEditor.deleteConfirm', 'Yes, Delete')}
         danger
         onConfirm={handleDelete}
         onCancel={() => setConfirmDelete(false)}
@@ -914,7 +956,7 @@ export default function PageEditor() {
       <GenerateTextModal
         open={generateTitleOpen}
         mode="title"
-        onApply={(text) => patchForm({ name: text })}
+        onApply={(text) => setName(text)}
         onClose={() => setGenerateTitleOpen(false)}
         simulateGenFail={simulateGenFail}
         simulateUnavailable={simulateUnavailable}

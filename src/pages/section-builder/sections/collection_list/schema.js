@@ -75,6 +75,11 @@ export const schema = {
     dependsOn: { field: 'display_style', equals: 'cards' },
     options: [{ value: '2', label: '2' }, { value: '3', label: '3' }, { value: '4', label: '4' }],
   },
+  columns_tablet: {
+    type: 'select', label: 'Columns on tablet', default: '3', group: 'tablet',
+    dependsOn: { field: 'display_style', equals: 'cards' },
+    options: [{ value: '2', label: '2' }, { value: '3', label: '3' }, { value: '4', label: '4' }],
+  },
   columns_mobile: {
     type: 'select', label: 'Columns on mobile', default: '2', group: 'mobile',
     dependsOn: { field: 'display_style', equals: 'cards' },

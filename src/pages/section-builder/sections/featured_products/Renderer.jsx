@@ -1,11 +1,11 @@
 import { memo } from 'react';
 import { ChevronRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import catalog from '../../mocks/catalog.json';
 import EditableText from '../../ui/EditableText';
 import StorefrontContainer from '../../ui/primitives/StorefrontContainer';
 import { resolveMedia } from '../../ui/fields/imageValue';
 import ProductCard from '../shared/ProductCard';
+import { buildShopPath, resolveStorefrontProducts } from '../shared/productSource';
 import { HEADING_SIZE_CLASS } from '../shared/headingSize';
 import { ASPECT_RATIO_CLASS } from '../shared/imageAspectRatio';
 import { useResponsiveMobile } from '../shared/useResponsiveMobile';
@@ -17,7 +17,7 @@ const COLS_CLASS = { '1': 'grid-cols-1', '2': 'grid-cols-2', '3': 'grid-cols-3',
 const SCROLL_CARD_WIDTH = { width: '140px', flexShrink: 0, scrollSnapAlign: 'start' };
 
 function deriveCategory(product) {
-  return product.vendor || 'General';
+  return product.category || 'General';
 }
 
 function groupProductsByCategory(products) {
@@ -34,15 +34,30 @@ function groupProductsByCategory(products) {
   return groups;
 }
 
-function productsForSection(data, mediaLibrary) {
+/** Resolves each item through `resolveStorefrontProducts` (the same
+ * normalization/handle-assignment product_detail's PDP and catalog_list's
+ * Shop page use — see productSource.js) rather than a separately hand-
+ * rolled shape, so a card built here always carries a real `handle` and
+ * `category` a click/"See All" link can use, and always matches the exact
+ * product a click actually resolves to. A `source: 'custom'` item not
+ * found there (a merchant's own ad-hoc entry, not part of
+ * `theme.productCatalog`) falls back to the original minimal shape — it
+ * has no PDP page to link to, so it simply renders non-clickable (see
+ * ProductCard's own `product.handle`-gated click handler). */
+function productsForSection(data, theme, mediaLibrary) {
   const items = data.products ?? [];
-  if (!items.length) return catalog.products.slice(0, 4);
+  const resolved = resolveStorefrontProducts(theme, mediaLibrary);
+  if (!items.length) return resolved.slice(0, 4);
   return items
     .map((item) => {
       if (item.source === 'custom') {
-        return { id: item.id, name: item.title, image: resolveMedia(item.image, mediaLibrary)?.url ?? null, price: item.price || '', compareAtPrice: null, stock: 1 };
+        return (
+          resolved.find((p) => p.id === item.id) ?? {
+            id: item.id, name: item.title, image: resolveMedia(item.image, mediaLibrary)?.url ?? null, price: item.price || '', compareAtPrice: null, stock: 1,
+          }
+        );
       }
-      return catalog.products.find((p) => p.id === item.product_id) ?? null;
+      return resolved.find((p) => p.id === item.product_id) ?? null;
     })
     .filter(Boolean);
 }
@@ -50,12 +65,12 @@ function productsForSection(data, mediaLibrary) {
 /** Renders one row of product cards, either as a wrapping grid or — when
  * `mobile` and `mobile_layout === 'horizontal_scroll'` — a single
  * scroll-snapped row (golden-reference Houzez mobile behavior). */
-function ProductRow({ products, theme, data, aspectClass, colsClass, mobile, horizontalScroll }) {
+function ProductRow({ products, theme, data, aspectClass, colsClass, mobile, horizontalScroll, onNavigate }) {
   if (mobile && horizontalScroll) {
     return (
       <div className="flex gap-4 overflow-x-auto pb-2" style={{ scrollSnapType: 'x mandatory', WebkitOverflowScrolling: 'touch' }}>
         {products.map((product) => (
-          <ProductCard key={product.id} product={product} theme={theme} showPrice={data.show_price} showQuickAdd={data.show_quick_add} aspectClass={aspectClass} widthStyle={SCROLL_CARD_WIDTH} />
+          <ProductCard key={product.id} product={product} theme={theme} showPrice={data.show_price} showQuickAdd={data.show_quick_add} aspectClass={aspectClass} widthStyle={SCROLL_CARD_WIDTH} onNavigate={onNavigate} />
         ))}
       </div>
     );
@@ -63,31 +78,52 @@ function ProductRow({ products, theme, data, aspectClass, colsClass, mobile, hor
   return (
     <div className={`grid gap-4 ${colsClass}`}>
       {products.map((product) => (
-        <ProductCard key={product.id} product={product} theme={theme} showPrice={data.show_price} showQuickAdd={data.show_quick_add} aspectClass={aspectClass} />
+        <ProductCard key={product.id} product={product} theme={theme} showPrice={data.show_price} showQuickAdd={data.show_quick_add} aspectClass={aspectClass} onNavigate={onNavigate} />
       ))}
     </div>
   );
 }
 
-function ViewAllLink({ label, theme }) {
+/** `category` is the Shop-page category this row's own "See All" should
+ * pre-filter to (derived from its own products/group — see
+ * FeaturedProductsRenderer below); `undefined` renders inert (no
+ * `onNavigate`, e.g. the interactive builder canvas — matching header/
+ * footer nav links' inert-in-the-builder convention) rather than a dead
+ * link. */
+function ViewAllLink({ label, theme, onClick }) {
   const primary = theme?.colors?.primary;
+  const Tag = onClick ? 'button' : 'p';
   return (
-    <p className={`flex shrink-0 items-center gap-1 text-sm font-semibold ${primary ? '' : 'text-gray-700 underline'}`} style={{ color: primary }}>
+    <Tag
+      type={onClick ? 'button' : undefined}
+      onClick={onClick}
+      className={`flex shrink-0 items-center gap-1 text-sm font-semibold ${primary ? '' : 'text-gray-700 underline'} ${onClick ? 'cursor-pointer' : ''}`}
+      style={{ color: primary }}
+    >
       {label} <ChevronRight size={16} strokeWidth={2.5} />
-    </p>
+    </Tag>
   );
 }
 
-function FeaturedProductsRenderer({ data, onEdit, isMobile, mediaLibrary, theme }) {
+function FeaturedProductsRenderer({ data, onEdit, isMobile, breakpoint, mediaLibrary, theme, onNavigate }) {
   const { t } = useTranslation();
   const mobile = useResponsiveMobile(isMobile);
-  const products = productsForSection(data, mediaLibrary);
-  const colsClass = COLS_CLASS[mobile ? data.columns_mobile ?? '2' : data.columns_desktop ?? '4'] ?? 'grid-cols-2';
+  const products = productsForSection(data, theme, mediaLibrary);
+  // See map_embed/testimonials/etc Renderer.jsx — the builder/preview canvas
+  // simulates each device as a fixed-width frame inside a real (usually
+  // wide) browser, so this reads the `breakpoint` prop Canvas.jsx already
+  // passes down rather than a CSS breakpoint.
+  const columns = mobile
+    ? data.columns_mobile ?? '2'
+    : breakpoint === 'tablet'
+      ? data.columns_tablet ?? '3'
+      : data.columns_desktop ?? '4';
+  const colsClass = COLS_CLASS[columns] ?? 'grid-cols-2';
   const horizontalScroll = data.mobile_layout === 'horizontal_scroll';
   const groups = data.group_by_category ? groupProductsByCategory(products) : null;
   const headingSizeClass = HEADING_SIZE_CLASS[data.heading_size] ?? HEADING_SIZE_CLASS.medium;
   const aspectClass = ASPECT_RATIO_CLASS[data.image_aspect_ratio] ?? ASPECT_RATIO_CLASS.square;
-  const viewAllLabel = t('sectionBuilder:sections.featuredProducts.viewAll');
+  const viewAllLabel = data.view_all_label || t('sectionBuilder:sections.featuredProducts.viewAll');
 
   return (
     <StorefrontContainer as="section" theme={theme}>
@@ -108,7 +144,13 @@ function FeaturedProductsRenderer({ data, onEdit, isMobile, mediaLibrary, theme 
           ) : (
             <span />
           )}
-          {!groups && data.show_view_all !== false && <ViewAllLink label={viewAllLabel} theme={theme} />}
+          {!groups && data.show_view_all !== false && (
+            <ViewAllLink
+              label={viewAllLabel}
+              theme={theme}
+              onClick={onNavigate ? () => onNavigate(buildShopPath(products[0] ? deriveCategory(products[0]) : null)) : undefined}
+            />
+          )}
         </div>
       )}
       {groups ? (
@@ -117,14 +159,16 @@ function FeaturedProductsRenderer({ data, onEdit, isMobile, mediaLibrary, theme 
             <div key={group.category}>
               <div className="mb-4 flex items-center justify-between">
                 <h3 className="text-base font-semibold text-gray-900">{group.category}</h3>
-                {data.show_view_all !== false && <ViewAllLink label={viewAllLabel} theme={theme} />}
+                {data.show_view_all !== false && (
+                  <ViewAllLink label={viewAllLabel} theme={theme} onClick={onNavigate ? () => onNavigate(buildShopPath(group.category)) : undefined} />
+                )}
               </div>
-              <ProductRow products={group.products} theme={theme} data={data} aspectClass={aspectClass} colsClass={colsClass} mobile={mobile} horizontalScroll={horizontalScroll} />
+              <ProductRow products={group.products} theme={theme} data={data} aspectClass={aspectClass} colsClass={colsClass} mobile={mobile} horizontalScroll={horizontalScroll} onNavigate={onNavigate} />
             </div>
           ))}
         </div>
       ) : (
-        <ProductRow products={products} theme={theme} data={data} aspectClass={aspectClass} colsClass={colsClass} mobile={mobile} horizontalScroll={horizontalScroll} />
+        <ProductRow products={products} theme={theme} data={data} aspectClass={aspectClass} colsClass={colsClass} mobile={mobile} horizontalScroll={horizontalScroll} onNavigate={onNavigate} />
       )}
     </StorefrontContainer>
   );

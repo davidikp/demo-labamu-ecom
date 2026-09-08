@@ -7,7 +7,7 @@ import ViewportToggle from '../section-builder/ui/ViewportToggle';
 import { DEFAULT_BREAKPOINT } from '../section-builder/themes/breakpoints';
 import { siteTemplateById, defaultPreviewDataFor } from '../section-builder/state/siteTemplates';
 import { mergeRequiredSystemPages, requiredSystemPages } from '../section-builder/state/defaultTheme';
-import { matchStorefrontPage } from '../section-builder/state/pageRouting';
+import { matchStorefrontPage, parsePathQuery } from '../section-builder/state/pageRouting';
 import ProductDetailPage from '../section-builder/ui/ProductDetailPage';
 import EditorialCollectionDetailPage from '../section-builder/ui/EditorialCollectionDetailPage';
 import { StorefrontCartProvider } from '../section-builder/sections/shared/storefrontCart';
@@ -72,6 +72,7 @@ export default function ThemePreview() {
   }
 
   const match = path ? matchStorefrontPage(pages, path) : null;
+  const initialCategory = path ? parsePathQuery(path).get('category') : null;
   // `pages`' own `home` entry is the exact same object as
   // `template.pages[0]` (mergeRequiredSystemPages only appends missing
   // pages, never touches existing ones), so its `.sections` is identical to
@@ -100,7 +101,13 @@ export default function ThemePreview() {
   return (
     <StorefrontCartProvider>
       <div className="min-h-screen">
-        <div className="sticky top-0 z-10 flex items-center gap-2 border-b border-gray-200 bg-white px-4 py-3">
+        {/* z-[60]: page sections use z-10 through z-50 for their own
+            internal layering (e.g. hero_banner's content-over-photo div) —
+            those establish stacking contexts sibling to this toolbar's, so
+            a tied z-index falls back to DOM order and a later section can
+            paint over this "sticky" bar while scrolling past it. Needs to
+            beat the highest z-index used anywhere in a section. */}
+        <div className="sticky top-0 z-[60] flex items-center gap-2 border-b border-gray-200 bg-white px-4 py-3">
           <button
             type="button"
             onClick={() => navigate('/online-store/theme')}
@@ -158,6 +165,7 @@ export default function ThemePreview() {
             readOnly
             onNavigate={handleNavigate}
             currentPath={activePage?.slug ?? '/'}
+            initialCategory={initialCategory}
           />
         )}
       </div>

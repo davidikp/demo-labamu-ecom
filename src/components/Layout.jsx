@@ -34,7 +34,7 @@ const MENU_ITEMS = [
   {
     id: 'website-studio', icon: Store, labelKey: 'dashboard:sidebar.websiteStudio', label: 'Website Studio',
     children: [
-      { id: 'site-builder', path: '/online-store/theme', labelKey: 'dashboard:sidebar.siteBuilder', label: 'Site Builder' },
+      { id: 'site-builder', path: '/online-store/theme', labelKey: 'dashboard:sidebar.siteBuilder', label: 'Website Builder' },
       { id: 'page-list', path: '/online-store/pages', labelKey: 'dashboard:sidebar.pageList', label: 'Page List' },
       { id: 'preferences', path: '/online-store/preferences', labelKey: 'dashboard:sidebar.preferences', label: 'Preferences' },
     ],
@@ -166,7 +166,6 @@ export default function Layout() {
             return (
               <div
                 key={item.id}
-                style={{ borderBottom: '1px solid var(--neutral-line-separator-1)' }}
                 onMouseEnter={(e) => {
                   if (isSidebarCollapsed) {
                     setHoveredMenuItemId(item.id);
@@ -177,7 +176,7 @@ export default function Layout() {
                   if (isSidebarCollapsed) setHoveredMenuItemId(null);
                 }}
               >
-                <div style={{ padding: isSidebarCollapsed ? '6px 0' : '6px 16px' }}>
+                <div style={{ padding: isSidebarCollapsed ? '0' : '0 16px' }}>
                   <div style={{ position: 'relative', display: 'flex', justifyContent: isSidebarCollapsed ? 'center' : 'stretch' }}>
                     {isParentActive && (
                       <div style={{ position: 'absolute', left: isSidebarCollapsed ? 0 : -16, top: '6px', bottom: '6px', width: '5px', borderRadius: '0 999px 999px 0', background: 'var(--feature-brand-primary)' }} />

@@ -1,6 +1,6 @@
 import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Share2 } from 'lucide-react';
+import { Share2, ChevronRight } from 'lucide-react';
 import { resolveColor } from '../../ui/fields/colorValue';
 import { themedButtonStyle } from '../shared/themedButtonStyle';
 import { useResponsiveMobile } from '../shared/useResponsiveMobile';
@@ -151,8 +151,11 @@ function ProductDetailRenderer({ data, theme, product: productProp, mediaLibrary
   return (
     <section className="bg-white">
       <StorefrontContainer theme={theme} maxWidth>
-        {/* Breadcrumb: Home > {category} > {product name} */}
-        <p className="mb-4 text-xs text-gray-500">
+        {/* Breadcrumb: Home > {category} > {product name} — a real
+            ChevronRight icon (not a literal '›' character) and a single
+            uniform gray-500 text-sm treatment for every crumb, including
+            the current page, matching the reference. */}
+        <div className="mb-4 flex items-center gap-1 text-sm text-gray-500">
           <button
             type="button"
             onClick={() => handleNavigate('/')}
@@ -162,7 +165,7 @@ function ProductDetailRenderer({ data, theme, product: productProp, mediaLibrary
           </button>
           {product.category && (
             <>
-              <span className="mx-1.5">›</span>
+              <ChevronRight size={16} className="shrink-0" aria-hidden />
               <button
                 type="button"
                 onClick={() => handleNavigate('/shop')}
@@ -172,14 +175,14 @@ function ProductDetailRenderer({ data, theme, product: productProp, mediaLibrary
               </button>
             </>
           )}
-          <span className="mx-1.5">›</span>
-          <span className="text-gray-700">{product.name}</span>
-        </p>
+          <ChevronRight size={16} className="shrink-0" aria-hidden />
+          <span>{product.name}</span>
+        </div>
 
         <div className={`flex gap-10 ${resolvedIsMobile ? 'flex-col' : 'flex-row'}`}>
           {/* Gallery */}
           <div className={`flex flex-col gap-4 ${resolvedIsMobile ? 'w-full' : 'flex-1'}`}>
-            <div className="aspect-square w-full overflow-hidden rounded-xl bg-gray-100">
+            <div className="aspect-square w-full overflow-hidden bg-gray-100" style={{ borderRadius: `${theme?.layout?.image_corners ?? 12}px` }}>
               {images[selectedImage] ? (
                 <img src={images[selectedImage]} alt={product.name} className="h-full w-full object-cover" />
               ) : (
@@ -197,14 +200,14 @@ function ProductDetailRenderer({ data, theme, product: productProp, mediaLibrary
                       key={img + i}
                       type="button"
                       onClick={() => setSelectedImage(i)}
-                      className={`aspect-square overflow-hidden rounded-xl bg-gray-100 ${
+                      className={`aspect-square overflow-hidden bg-gray-100 ${
                         resolvedIsMobile ? 'w-16 shrink-0' : 'flex-1'
                       } ${selected ? 'border-2 p-[5px]' : ''}`}
-                      style={selected ? { borderColor: resolveColor({ slot: 'primary' }, theme?.colors) } : undefined}
+                      style={{ borderRadius: `${theme?.layout?.image_corners ?? 12}px`, ...(selected ? { borderColor: resolveColor({ slot: 'primary' }, theme?.colors) } : {}) }}
                       aria-label={t('sectionBuilder:sections.productDetail.viewImage', 'View image {{n}}', { n: i + 1 })}
                       aria-current={selected}
                     >
-                      <img src={img} alt="" className="h-full w-full rounded-lg object-cover" />
+                      <img src={img} alt="" className="h-full w-full object-cover" style={{ borderRadius: `${Math.max((theme?.layout?.image_corners ?? 12) - 4, 0)}px` }} />
                     </button>
                   );
                 })}
@@ -292,7 +295,7 @@ function ProductDetailRenderer({ data, theme, product: productProp, mediaLibrary
                       +
                     </button>
                   </div>
-                  {stockIsNumeric && (
+                  {data.show_stock && stockIsNumeric && (
                     <span className="text-xs text-gray-500">
                       {product.stock} {t('sectionBuilder:sections.productDetail.stockAvailable', 'Stock Available')}
                     </span>

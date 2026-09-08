@@ -54,9 +54,11 @@ export const DEFAULT_HERO_RECIPE = {
   // so every theme that doesn't set its own recipe (or sets one but leaves
   // this out) sees zero change.
   backgroundPosition: { desktop: 'center', mobile: 'center' },
-  // 'cover' — the original, still-default behavior for every theme that
-  // doesn't set its own recipe.
-  backgroundSize: { desktop: 'cover', mobile: 'cover' },
+  // Extra zoom multiplier applied *on top of* the guaranteed-full-coverage
+  // 'cover' fit (see hero_banner/Renderer.jsx's background layer) — 1 means
+  // no extra zoom, matching the original, still-default `bg-cover` behavior
+  // for every theme that doesn't set its own recipe.
+  backgroundZoom: { desktop: 1, mobile: 1 },
   typography: {
     // context="hero" — the split_panel Main Hero's heading/subtitle.
     hero: {
@@ -103,19 +105,15 @@ export const HOUZEZ_HERO_RECIPE = {
     // linear-gradient(to right, rgba(22,137,75,0.95) 0%, rgba(22,137,75,0.9) 100%) — :1083
     mobile: [{ offset: '0%', alpha: 0.95 }, { offset: '100%', alpha: 0.9 }],
   },
-  // backgroundPosition: isMobile ? 'center' : 'right center' — :1073
-  backgroundPosition: { desktop: 'right center', mobile: 'center' },
-  // houzez-appointment.png is a pre-composed mockup export — it already
-  // bakes in its own green panel + "Book an Appointment!" copy on its left
-  // ~43% (a leftover from however the asset was produced), which this
-  // section's own real heading/subtext/overlay then render on top of.
-  // 'cover' alone (scale ~1.2x at this image's aspect ratio) only crops
-  // ~300px off the left edge — not enough to push the panel off-screen.
-  // Needs >=176% at this image's aspect ratio/container proportions to
-  // fully hide it (620px of a 1440px-wide image, right-anchored) — 190%
-  // gives a safety margin while only trimming a modest, acceptable amount
-  // off the photo's own top/bottom.
-  backgroundSize: { desktop: '190% auto', mobile: 'cover' },
+  // houzez-appointment.png used to be a pre-composed mockup export that
+  // baked its own green panel + "Book an Appointment!" copy into the image
+  // itself (a leftover from however the asset was produced), which this
+  // section's own real heading/subtext/overlay then rendered on top of,
+  // double-showing the heading — hence a 1.9x zoom + right-anchored crop
+  // here to push that baked-in panel off-screen. Replaced with the real,
+  // clean Figma asset (node 366:103480, no baked-in text at all), so no
+  // override is needed anymore — omitted entirely, falling back to
+  // DEFAULT_HERO_RECIPE's plain 'cover'/'center'/no-zoom below.
   typography: {
     // Main Hero (split_panel). fontSize 56/18px, fontWeight 800,
     // lineHeight 1.1, maxWidth 500px — :837-844

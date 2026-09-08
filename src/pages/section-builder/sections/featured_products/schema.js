@@ -54,6 +54,10 @@ export const schema = {
       { value: '5', label: '5' }, { value: '6', label: '6' },
     ],
   },
+  columns_tablet: {
+    type: 'select', label: 'Columns on tablet', default: '3', group: 'tablet',
+    options: [{ value: '2', label: '2' }, { value: '3', label: '3' }, { value: '4', label: '4' }],
+  },
   columns_mobile: {
     type: 'select', label: 'Columns on mobile', default: '2', group: 'mobile',
     options: [{ value: '1', label: '1' }, { value: '2', label: '2' }],
@@ -65,6 +69,12 @@ export const schema = {
   },
   show_price: { type: 'boolean', label: 'Show price', default: true, group: 'layout' },
   show_view_all: { type: 'boolean', label: 'Show "View all" link', default: true, group: 'layout' },
+  // Falls back to the shared sectionBuilder:sections.featuredProducts.viewAll
+  // translation ("View all products") when unset — unchanged default for
+  // every existing section. A per-section override lets a theme like
+  // Xinear's reference ("See All") differ without changing that shared
+  // string globally.
+  view_all_label: { type: 'text', label: '"View all" link label', maxLength: 40, default: '', group: 'layout' },
   show_quick_add: { type: 'boolean', label: 'Show quick "Add to cart" button', default: false, group: 'layout' },
   group_by_category: { type: 'boolean', label: 'Group into rows by category', default: false, group: 'layout' },
   ...IMAGE_ASPECT_RATIO_FIELD,

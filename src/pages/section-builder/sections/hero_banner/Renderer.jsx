@@ -171,26 +171,48 @@ function HeroBannerRenderer({ data, blocks = [], theme, mediaLibrary, blockCtx, 
   const heroRecipe = resolveHeroRecipe(theme);
   const bgPositionRecipe = heroRecipe.backgroundPosition;
   const backgroundPosition = (mobile ? bgPositionRecipe?.mobile : bgPositionRecipe?.desktop) ?? 'center';
-  // Falls back to 'cover' (DEFAULT_HERO_RECIPE) for every theme that doesn't
-  // set its own recipe — a plain 'cover' background hero renders byte-
-  // identical to before. Houzez's recipe zooms further than 'cover' to
+  // Falls back to 1 (DEFAULT_HERO_RECIPE) for every theme that doesn't set
+  // its own recipe — a plain, unzoomed 'cover' background hero renders
+  // byte-identical to before. Houzez's recipe zooms further than 'cover' to
   // fully crop a mockup-style background image's own baked-in content off
   // the visible edge — see heroRecipes.js's comment.
-  const bgSizeRecipe = heroRecipe.backgroundSize;
-  const backgroundSize = (mobile ? bgSizeRecipe?.mobile : bgSizeRecipe?.desktop) ?? 'cover';
+  const bgZoomRecipe = heroRecipe.backgroundZoom;
+  const backgroundZoom = (mobile ? bgZoomRecipe?.mobile : bgZoomRecipe?.desktop) ?? 1;
 
   return (
     <section
       className="relative flex justify-center overflow-hidden px-6"
-      style={{
-        backgroundImage: activeImage ? `url(${activeImage.url})` : undefined,
-        backgroundPosition,
-        backgroundSize,
-        minHeight: `${data.min_height ?? 500}px`,
-      }}
+      style={{ minHeight: `${data.min_height ?? 500}px` }}
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
     >
+      {activeImage && (
+        // Two layers, not a single `background-size: <percent>`: a plain
+        // percentage (e.g. '190% auto') only sets the image's *width*,
+        // leaving its height to scale proportionally — on a container
+        // whose aspect ratio doesn't match the image (a narrow, tall
+        // mobile frame vs. a wide photo), that computed height falls short
+        // of the container's, and the default `background-repeat` tiles
+        // the leftover space instead of leaving it covered. The inner
+        // layer uses `cover` (which *always* fills both dimensions, at any
+        // container aspect ratio, with no repeat) and the extra zoom the
+        // Houzez recipe needs to crop its baked-in panel off-screen (see
+        // heroRecipes.js) is layered on top via `transform: scale(...)`,
+        // anchored at the same point `backgroundPosition` uses so it zooms
+        // toward/away from that same focal point.
+        <div className="pointer-events-none absolute inset-0 overflow-hidden">
+          <div
+            className="absolute inset-0 bg-no-repeat"
+            style={{
+              backgroundImage: `url(${activeImage.url})`,
+              backgroundPosition,
+              backgroundSize: 'cover',
+              transform: backgroundZoom !== 1 ? `scale(${backgroundZoom})` : undefined,
+              transformOrigin: backgroundPosition,
+            }}
+          />
+        </div>
+      )}
       {activeImage && <BackgroundOverlay data={data} theme={theme} mobile={mobile} />}
       <div className={`relative z-10 flex ${isCtaBanner ? 'max-w-3xl' : 'max-w-lg'} flex-col ${position}`}>
         <BlockStream
@@ -205,10 +227,18 @@ function HeroBannerRenderer({ data, blocks = [], theme, mediaLibrary, blockCtx, 
         />
       </div>
       {isCarousel && (
-        <div className="absolute inset-x-0 bottom-4 z-10 flex items-center justify-center gap-2">
-          <HeroArrow direction="prev" variant="minimal" onClick={() => goTo(activeIndex - 1)} theme={theme} />
-          <HeroDots count={slides.length} active={activeIndex} onSelect={goTo} variant="minimal" theme={theme} />
-          <HeroArrow direction="next" variant="minimal" onClick={() => goTo(activeIndex + 1)} theme={theme} />
+        <div className="absolute inset-x-0 bottom-4 z-10 flex items-center justify-center">
+          {/* 'minimal' arrows/dots are plain white — legible over a
+              Houzez-style dark/photo-heavy hero, but Xinear's own hero
+              photo is pale, leaving them nearly invisible without some
+              backdrop. A small translucent dark pill (sized to the
+              controls, not the full section width) keeps them visible
+              against any photo brightness, not just dark ones. */}
+          <div className="flex items-center gap-2 rounded-full bg-black/25 px-3 py-1.5">
+            <HeroArrow direction="prev" variant="minimal" onClick={() => goTo(activeIndex - 1)} theme={theme} />
+            <HeroDots count={slides.length} active={activeIndex} onSelect={goTo} variant="minimal" theme={theme} />
+            <HeroArrow direction="next" variant="minimal" onClick={() => goTo(activeIndex + 1)} theme={theme} />
+          </div>
         </div>
       )}
     </section>

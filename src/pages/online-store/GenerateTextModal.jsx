@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Sparkles } from 'lucide-react';
+import { Sparkles, RefreshCw } from 'lucide-react';
 import { Popup } from '../../ce-ui';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 
@@ -143,9 +143,27 @@ export default function GenerateTextModal({
           : undefined
       }
     >
-      <label className="lb-mb-label block text-xs font-medium text-lb-on-surface-2">
-        {t('sectionBuilder:onlineStore.pageEditor.generatePromptLabel', 'Describe what you want')}
-      </label>
+      <div className="lb-mb-label flex items-center justify-between">
+        <label className="block text-xs font-medium text-lb-on-surface-2">
+          {t('sectionBuilder:onlineStore.pageEditor.generatePromptLabel', 'Describe what you want')}
+        </label>
+        {/* Regenerate — only once a result exists, right where Insert
+            alongside/Replace would otherwise be the only way back to
+            generation. Re-runs with the same prompt still sitting in the
+            textarea below rather than clearing it, so there's nothing to
+            retype for another pass. */}
+        {showingResult && (
+          <button
+            type="button"
+            onClick={handleGenerate}
+            disabled={state === 'loading'}
+            className="flex items-center gap-1 text-xs font-medium text-[#8A3FFC] hover:underline disabled:opacity-50"
+          >
+            <RefreshCw size={12} />
+            {t('sectionBuilder:onlineStore.pageEditor.generateRegenerate', 'Regenerate')}
+          </button>
+        )}
+      </div>
       <textarea
         autoFocus
         rows={3}

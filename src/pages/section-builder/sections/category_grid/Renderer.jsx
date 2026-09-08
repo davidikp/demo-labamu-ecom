@@ -7,15 +7,22 @@ import { HEADING_SIZE_CLASS } from '../shared/headingSize';
 import { useResponsiveMobile } from '../shared/useResponsiveMobile';
 
 const COLS_CLASS = { '4': 'grid-cols-4', '6': 'grid-cols-6', '8': 'grid-cols-8', '10': 'grid-cols-10' };
+const TABLET_COLS_CLASS = { '3': 'grid-cols-3', '4': 'grid-cols-4', '6': 'grid-cols-6' };
 const MOBILE_COLS_CLASS = { '3': 'grid-cols-3', '4': 'grid-cols-4' };
 
-function CategoryGridRenderer({ data, onEdit, isMobile, mediaLibrary, theme }) {
+function CategoryGridRenderer({ data, onEdit, isMobile, breakpoint, mediaLibrary, theme, onNavigate }) {
   const { t } = useTranslation();
   const mobile = useResponsiveMobile(isMobile);
   const items = data.items ?? [];
+  // See map_embed/testimonials/etc Renderer.jsx — the builder/preview
+  // canvas simulates each device as a fixed-width frame inside a real
+  // (usually wide) browser, so this reads the `breakpoint` prop Canvas.jsx
+  // already passes down rather than a CSS breakpoint.
   const colsClass = mobile
     ? MOBILE_COLS_CLASS[data.columns_mobile ?? '4'] ?? 'grid-cols-4'
-    : COLS_CLASS[data.columns_desktop ?? '8'] ?? 'grid-cols-8';
+    : breakpoint === 'tablet'
+      ? TABLET_COLS_CLASS[data.columns_tablet ?? '6'] ?? 'grid-cols-6'
+      : COLS_CLASS[data.columns_desktop ?? '8'] ?? 'grid-cols-8';
   const headingSizeClass = HEADING_SIZE_CLASS[data.heading_size] ?? HEADING_SIZE_CLASS.medium;
   // Icon circles shrink on mobile — matches the golden-reference Houzez
   // ratio (64px mobile / 84px desktop, ≈0.76) proportionally, so a merchant
@@ -52,6 +59,18 @@ function CategoryGridRenderer({ data, onEdit, isMobile, mediaLibrary, theme }) {
               <a
                 key={item.id}
                 href={item.url || undefined}
+                // A plain `href` alone would do a real full-page browser
+                // navigation to e.g. '/shop' — a route this preview/live
+                // storefront only ever resolves client-side via `onNavigate`
+                // (see editorial_collection_list's CollectionCard, header/
+                // footer nav links) — hitting it as a real URL 404s outside
+                // the app. Builder canvas (no onNavigate) leaves the link
+                // inert, same convention those use.
+                onClick={
+                  onNavigate && item.url
+                    ? (e) => { e.preventDefault(); onNavigate(item.url); }
+                    : (e) => e.preventDefault()
+                }
                 className="flex flex-col items-center gap-2 text-center transition-transform duration-200 hover:-translate-y-1"
               >
                 <div

@@ -98,10 +98,26 @@ export const SITE_TEMPLATES = [
     // Centered, editorial footer to match the inline header's understated,
     // minimal identity — no link columns competing for attention.
     footer: { layout_variant: 'centered-tagline', tagline: 'Considered essentials, made to last.' },
-    media: media('clothing', [
-      { key: 'hero', filename: 'hero.jpg', width: 1600, height: 1067, size: 175992 },
-      { key: 'secondary', filename: 'secondary.jpg', width: 1200, height: 801, size: 161855 },
-    ]),
+    media: [
+      ...media('clothing', [
+        { key: 'hero', filename: 'hero.jpg', width: 1600, height: 1067, size: 175992 },
+        { key: 'secondary', filename: 'secondary.jpg', width: 1200, height: 801, size: 161855 },
+      ]),
+      // A few catalog product shots reused as extra dummy files, so Content
+      // > Files has more than two rows to demo the table/pagination/bulk
+      // actions with. Same real-byte-size convention as media() above.
+      ...['ruffle-shirt-pleatted', 'kulot-pants', 'red-picnic-matt-top', 'summer-jeans-shorts'].map(
+        (key, i) => ({
+          id: `clothing-product-${key}`,
+          filename: `${key}.png`,
+          url: `/assets/templates/clothing/${key}.png`,
+          width: key === 'summer-jeans-shorts' ? 512 : 1024,
+          height: key === 'summer-jeans-shorts' ? 512 : 1024,
+          size: [1328500, 1378594, 1499334, 543947][i],
+          uploadedAt: '2026-01-01T00:00:00.000Z',
+        })
+      ),
+    ],
     pages: [
       {
         id: 'home', name: 'Home', type: 'system', slug: '/', seo: {}, hiddenFromNav: false,
@@ -246,6 +262,19 @@ export const SITE_TEMPLATES = [
         background: '#ffffff', surface: '#f4f4f4', primary: '#20201e', primary_text: '#ffffff',
         accent: '#20201e', accent_text: '#ffffff', text_primary: '#1b1916', text_secondary: '#767573', border: '#e8e8e8',
       },
+      // Xinear's reference has sharp, unrounded corners everywhere — cards,
+      // buttons, images — unlike theme-settings-schema.json's own defaults
+      // (card_corners: 6, buttons.corner_radius: 4). Every other field is
+      // still that schema's own default value, spelled out in full rather
+      // than only `{ card_corners: 0 }` — the seed path (siteTemplateApply.js
+      // -> builderReducer.js's APPLY_SITE_TEMPLATE_SEED) does a shallow
+      // `{...state.theme, ...theme}` merge, so a partial `layout`/`buttons`
+      // object would replace the whole group and silently lose every field
+      // it doesn't mention (only defaultPreviewDataFor's own read-only
+      // preview path merges per-field) — same convention Houzez's own
+      // `layout` override below already follows.
+      layout: { container_width: '1200', container_gutter: 'standard', section_spacing: 'medium', section_padding: 'medium', image_corners: 0, card_corners: 0, card_shadow: 'none' },
+      buttons: { corner_radius: 0, padding_horizontal: 20, padding_vertical: 10, font_size: null, font_weight: '500', letter_spacing: 'normal', text_transform: 'none', border_width: 0, hover_effect: 'darken' },
     },
     header: {
       layout_variant: 'centered-nav',
@@ -255,6 +284,15 @@ export const SITE_TEMPLATES = [
       show_language_switcher: true,
       show_search_icon: false,
       show_cart_icon: true,
+      // SECTION_CHROME_FIELDS_NO_PADDING's own full_width default is false
+      // (constrained to theme.layout.container_width) — the reference
+      // shows the header's own bottom divider running full browser width,
+      // not inset to the content container.
+      full_width: true,
+      // header/schema.js's own default is color_scheme: 'primary' (a solid
+      // dark bar) — the reference shows a plain white header, same override
+      // Houzez's header applies.
+      color_scheme: 'background',
     },
     // Content > Menus (US-Content.1) — the header no longer stores its nav
     // inline (see header/schema.js's `nav_menu_ref`); a template instead
@@ -286,6 +324,15 @@ export const SITE_TEMPLATES = [
       logo_text: 'Xinear',
       logo_image: image('xinear-logo'),
       show_border: true,
+      // footer/schema.js's own default is color_scheme: 'primary' (a solid
+      // dark bar) — the reference shows a plain white footer, same override
+      // Houzez's footer applies.
+      color_scheme: 'background',
+      // full_width: true — see header's comment above; without it the
+      // footer's own top divider (between the link columns and the
+      // copyright bar) sits inset to the content container instead of
+      // running full browser width.
+      full_width: true,
       // Figma's visible footer icon row shows X/Instagram/Facebook/YouTube
       // (4 icons) — LinkedIn's icon component exists in the Figma file (see
       // socialIcons/linkedin.svg) but isn't part of the visible footer
@@ -327,9 +374,6 @@ export const SITE_TEMPLATES = [
       { key: 'hero', filename: 'hero-banner.png', width: 1440, height: 620, size: 557480 },
       { key: 'appointment', filename: 'appointment-banner.png', width: 1440, height: 331, size: 749102 },
       { key: 'quote', filename: 'quote-banner.png', width: 1440, height: 524, size: 1150671 },
-      // contact-us.png: a real Figma asset, but contact_form has no image
-      // field to attach it to — registered here for completeness/future use
-      // only (see contact_form section below).
       { key: 'contact', filename: 'contact-us.png', width: 520, height: 520, size: 236927 },
       // store-map.png: a real Figma asset, but map_embed's Renderer always
       // draws a fixed gray placeholder box (no image field exists) — this
@@ -356,6 +400,17 @@ export const SITE_TEMPLATES = [
               ],
               text_alignment: 'left',
               content_position: 'center',
+              // The reference shows the photo running edge-to-edge right
+              // below the navbar, no visible gap above/below it —
+              // SECTION_CHROME_FIELDS' own padding_top/padding_bottom
+              // default (48px) would otherwise leave a visible white bar.
+              padding_top: 0, padding_bottom: 0,
+              // SECTION_CHROME_FIELDS' own full_width default is false
+              // (constrained to theme.layout.container_width, 1200px here)
+              // — invisible whenever the viewport happens to be narrower
+              // than that, but the reference photo runs the full 1440px
+              // frame width with no side gutter at all.
+              full_width: true,
             },
             [
               block('heading', { text: 'Pakain Terbaik Musim Panas' }),
@@ -375,13 +430,15 @@ export const SITE_TEMPLATES = [
               { id: 'xinear-cat-perfumes', handle: 'perfumes' },
             ],
           }),
-          // Figma shows 5 products per row.
+          // Figma shows 5 products per row and a "See All" link (not the
+          // shared default "View all products" string every other theme's
+          // featured_products uses).
           defaultSection('xinear-home-tops', 'featured_products', {
-            heading: 'Tops', columns_desktop: '5',
+            heading: 'Tops', columns_desktop: '5', view_all_label: 'See All',
             products: defaultProductItems(['p5', 'p6', 'p7', 'p8', 'p9']),
           }),
           defaultSection('xinear-home-bottoms', 'featured_products', {
-            heading: 'Bottoms', columns_desktop: '5',
+            heading: 'Bottoms', columns_desktop: '5', view_all_label: 'See All',
             products: defaultProductItems(['p10', 'p11', 'p12', 'p13', 'p14']),
           }),
           defaultSection(
@@ -389,9 +446,24 @@ export const SITE_TEMPLATES = [
             'hero_banner',
             {
               background_image: image('xinear-appointment'),
-              overlay_opacity: 40,
+              // Figma's overlay is rgba(32,32,30,0.3) — 30%, not 40%.
+              overlay_opacity: 30,
               text_alignment: 'center',
               content_position: 'center',
+              // hero_banner's own default color_scheme is 'surface' (dark
+              // heading/subhead text) — the reference shows white text over
+              // this photo, same override Houzez's Appointment section
+              // applies (color_scheme: 'primary' resolves to primary_text,
+              // white for both themes).
+              color_scheme: 'primary',
+              // Otherwise SECTION_CHROME_FIELDS' own padding_top/
+              // padding_bottom default (48px) reveals that scheme's black
+              // background as a solid bar above/below the full-bleed photo
+              // — the reference shows the photo running edge-to-edge. Same
+              // for full_width (see xinear-home-hero's comment) — without
+              // it, that black background shows as side bars too, at any
+              // viewport wider than theme.layout.container_width.
+              padding_top: 0, padding_bottom: 0, full_width: true,
             },
             [
               block('heading', { text: 'Book an Appointment!' }),
@@ -423,16 +495,21 @@ export const SITE_TEMPLATES = [
               }),
             ],
           ),
-          // rating_form's own schema defaults already match Figma's copy —
-          // no overrides needed.
-          defaultSection('xinear-home-rating', 'rating_form'),
+          // rating_form's own schema defaults already match Figma's copy,
+          // except the second field's placeholder ("Reviews", not the
+          // schema default "Message").
+          defaultSection('xinear-home-rating', 'rating_form', { message_field_label: 'Reviews' }),
           // Figma shows this as a plain solid-gray banner with no photo —
           // no background_image, color_scheme: 'surface' renders the
           // theme's flat neutral surface color instead.
           defaultSection(
             'xinear-home-waitlist',
             'hero_banner',
-            { color_scheme: 'surface', text_alignment: 'center', content_position: 'center' },
+            // full_width: true — see xinear-home-hero's comment; without it
+            // this flat surface-colored panel shows narrower than its
+            // full-bleed siblings at any viewport wider than
+            // theme.layout.container_width.
+            { color_scheme: 'surface', text_alignment: 'center', content_position: 'center', full_width: true },
             [
               block('heading', { text: 'Join Waitlist' }),
               block('subheading', {
@@ -441,21 +518,19 @@ export const SITE_TEMPLATES = [
               block('button', { label: 'Join Now', url: '/waitlist' }),
             ],
           ),
-          // Sibling templates (clothing/fnb/manufacture) all seed
-          // contact_form with no block overrides, relying on its
-          // seedBlocks presets (3 generic form_field blocks) — matched here
-          // for consistency rather than hand-authoring a heading/lead-text
-          // block pair + custom-labeled Name/Email/Phone/Message fields
-          // that no sibling template does either. contact-us.png is
-          // registered in media above but unused (no image field exists).
           // Real Figma copy: "Contact Us" heading, lead text, and
-          // Name/Email/Phone Number/Message fields (contact-us.png's portrait
-          // photo has nowhere to go — contact_form has no image field, see
-          // the media() registration below).
+          // Name/Email/Phone Number/Message fields, beside contact-us.png's
+          // portrait photo — positioned *before* the form (image_position:
+          // 'left'), the mirror image of Houzez's split layout (form first,
+          // image after). Button label is "Send Message", not the shared
+          // "Send" every other theme's contact_form uses.
           defaultSection(
             'xinear-home-contact',
             'contact_form',
-            { reply_to_email: '' },
+            {
+              reply_to_email: '', layout: 'split', image: image('xinear-contact'),
+              image_position: 'left', button_label: 'Send Message',
+            },
             [
               block('heading', { text: 'Contact Us' }),
               block('text', { content: 'Contact us For further business inquiries or collaborations' }),
@@ -473,8 +548,17 @@ export const SITE_TEMPLATES = [
           ),
           // quote_request_form's own schema defaults already match Figma's
           // copy exactly ("Request a Quote" / "Need a custom tailored
-          // clothing..." / "Request a Quote" button) — no overrides needed.
-          defaultSection('xinear-home-quote', 'quote_request_form'),
+          // clothing..." / "Request a Quote" button). Per merchant request,
+          // uses the same CTA-opens-a-dialog experience as Houzez's RFQ
+          // (presentation: 'modal_trigger') rather than the inline form —
+          // the full-bleed photo backdrop (quote-banner.png, registered in
+          // media above but previously unused) still applies either way.
+          // full_width: true — see xinear-home-hero's comment; without it
+          // this full-bleed photo shows narrower than its siblings at any
+          // viewport wider than theme.layout.container_width.
+          defaultSection('xinear-home-quote', 'quote_request_form', {
+            background_image: image('xinear-quote'), presentation: 'modal_trigger', full_width: true,
+          }),
         ],
       },
     ],
@@ -672,7 +756,12 @@ export const SITE_TEMPLATES = [
     media: media('houzez', [
       { key: 'logo', filename: 'assets/houzez-logo.png', width: 125, height: 45, size: 1653 },
       { key: 'banner', filename: 'assets/houzez-banner.png', width: 640, height: 419, size: 208945 },
-      { key: 'appointment', filename: 'assets/houzez-appointment.png', width: 1440, height: 331, size: 580716 },
+      // Replaced with the real Figma asset (node 366:103480) — a clean
+      // photo with no baked-in text/panel, unlike the old placeholder this
+      // filename used to point to (see heroRecipes.js's HOUZEZ_HERO_RECIPE,
+      // whose zoom/position hack existed only to crop that baked-in panel
+      // off-screen and is no longer needed).
+      { key: 'appointment', filename: 'assets/houzez-appointment.png', width: 1440, height: 331, size: 686925 },
       { key: 'contact', filename: 'assets/houzez-contact.png', width: 520, height: 520, size: 590190 },
       // A real Figma/prototype asset, registered for completeness — like
       // Xinear's store-map.png, map_embed's Renderer always draws a Google

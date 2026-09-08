@@ -2,8 +2,9 @@ import { memo, useMemo, useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import EditableText from '../../ui/EditableText';
 import StorefrontContainer from '../../ui/primitives/StorefrontContainer';
-import { resolveStorefrontProducts, buildProductPath } from '../shared/productSource';
+import { resolveStorefrontProducts } from '../shared/productSource';
 import { ASPECT_RATIO_CLASS } from '../shared/imageAspectRatio';
+import ProductCard from '../shared/ProductCard';
 
 /**
  * @module section-builder/sections/catalog_list/Renderer
@@ -72,12 +73,6 @@ function resolveGridColsClass(breakpoint, columnsDesktop) {
   return `grid-cols-2 ${tabletClass} ${desktopClass}`;
 }
 
-function formatPrice(product) {
-  if (typeof product.price === 'string' && product.price.trim()) return product.price;
-  if (typeof product.price === 'number') return `$${product.price.toFixed(2)}`;
-  return '';
-}
-
 function deriveCategories(products) {
   const seen = new Set();
   const categories = [];
@@ -90,63 +85,18 @@ function deriveCategories(products) {
   return categories;
 }
 
-/** Golden reference (`ShopPage.jsx`'s `ProductCard`) renders a flat card —
- * square 1:1 image with no rounded corners, no border, no shadow, image
- * gap-then-name-then-price with no card padding box — a deliberately
- * different, flatter treatment than this codebase's other product-bearing
- * sections (which use the theme's `card_corners`/`card_shadow` tokens via
- * `themedCardStyle`). Shop intentionally does NOT apply `themedCardStyle`
- * here to match golden's flat look exactly, rather than inventing a
- * Shop-specific token set or forcing golden's flat look onto the shared
- * token (which other sections still legitimately want to keep using). */
-function ProductGridCard({ product, aspectClass, onNavigate }) {
-  const { t } = useTranslation();
-  const soldOut = product.stock === 0;
-  const handleClick = onNavigate ? () => onNavigate(buildProductPath(product.handle)) : undefined;
-
-  return (
-    <div
-      onClick={handleClick}
-      style={{ cursor: handleClick ? 'pointer' : 'default' }}
-      className="flex flex-col text-left"
-    >
-      <div className={`relative mb-2.5 flex items-center justify-center overflow-hidden bg-gray-100 text-gray-300 ${aspectClass}`}>
-        {product.image ? (
-          <img src={product.image} alt={product.name} className="h-full w-full object-cover" />
-        ) : (
-          t('sectionBuilder:sections.common.noImage')
-        )}
-        {soldOut && (
-          <span className="absolute right-2 top-2 rounded bg-gray-900/80 px-2 py-0.5 text-[11px] font-medium text-white">
-            {t('sectionBuilder:sections.common.soldOut', 'Sold out')}
-          </span>
-        )}
-      </div>
-      <p
-        className="mb-1 overflow-hidden text-sm text-gray-900"
-        style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', lineHeight: 1.4 }}
-      >
-        {product.name}
-      </p>
-      <p className="text-[15px] font-bold text-gray-900">
-        {soldOut ? <span className="text-sm font-medium text-gray-400">{t('sectionBuilder:sections.common.soldOut', 'Sold out')}</span> : formatPrice(product)}
-      </p>
-    </div>
-  );
-}
-
 /** Golden's `CategorySidebar` is a collapsible "All Categories" header (bold,
  * with a left accent bar + chevron) followed by an indented flat list of
  * category rows, the active one bold/dark and inactive ones grey with a
  * hover tint. Reproduced with Tailwind utility classes instead of golden's
  * inline styles/JS hover handlers (this codebase's convention), keeping the
  * same row padding rhythm, weight/color contrast, and hover tint. */
-function CategoryFilter({ categories, selected, onSelect }) {
+function CategoryFilter({ categories, selected, onSelect, accentColor }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(true);
   return (
     <div>
-      <div className="mb-1 flex items-center justify-between border-l-2 border-l-[var(--sb-accent,#006BFF)] py-2 pl-3 pr-1">
+      <div className="mb-1 flex items-center justify-between border-l-2 py-2 pl-3 pr-1" style={{ borderLeftColor: accentColor }}>
         <button
           type="button"
           onClick={() => onSelect('all')}
@@ -194,11 +144,16 @@ function CategoryFilter({ categories, selected, onSelect }) {
  * "Rp" currency-prefix chrome golden hardcodes is deliberately dropped here
  * since this component also renders Xinear's USD catalog — a fixed "Rp"
  * label would misrepresent a non-Houzez storefront's currency. */
-function PriceFilter({ min, max, onChange }) {
+function PriceFilter({ min, max, onChange, accentColor, theme }) {
   const { t } = useTranslation();
+  // Same theme-aware radius rule as the header's language switcher — a
+  // theme that explicitly opts into sharp corners everywhere (0 — e.g.
+  // Xinear) gets square fields; every other theme (Houzez's own reference
+  // shows 8px, not the previous hardcoded 0) gets 8px.
+  const radius = theme?.buttons?.corner_radius === 0 ? '0px' : '8px';
   return (
     <div>
-      <div className="mb-2 flex items-center justify-between border-l-2 border-l-[var(--sb-accent,#006BFF)] py-2 pl-3 pr-1 text-sm font-bold text-gray-900">
+      <div className="mb-2 flex items-center justify-between border-l-2 py-2 pl-3 pr-1 text-sm font-bold text-gray-900" style={{ borderLeftColor: accentColor }}>
         {t('sectionBuilder:sections.catalogList.priceFilter', 'Price Filter')}
       </div>
       <div className="flex flex-col gap-2.5 pl-3">
@@ -207,14 +162,16 @@ function PriceFilter({ min, max, onChange }) {
           placeholder={t('sectionBuilder:sections.catalogList.lowestPrice', 'Lowest Price')}
           value={min}
           onChange={(e) => onChange({ min: e.target.value, max })}
-          className="h-10 rounded-none border border-gray-200 px-2.5 text-sm"
+          className="h-10 appearance-none border border-gray-200 px-2.5 text-sm"
+          style={{ borderRadius: radius }}
         />
         <input
           type="number"
           placeholder={t('sectionBuilder:sections.catalogList.highestPrice', 'Highest Price')}
           value={max}
           onChange={(e) => onChange({ min, max: e.target.value })}
-          className="h-10 rounded-none border border-gray-200 px-2.5 text-sm"
+          className="h-10 appearance-none border border-gray-200 px-2.5 text-sm"
+          style={{ borderRadius: radius }}
         />
       </div>
     </div>
@@ -271,7 +228,11 @@ function Pagination({ currentPage, totalPages, onPageChange }) {
  * trigger-button + disclosure-panel shape (icon+label chip, bordered pill,
  * outside-click-to-close), using this codebase's category/sort state
  * directly instead of golden's internal duplicate state. */
-function MobileFilterBar({ categories, selected, onCategorySelect, priceMin, priceMax, onPriceChange, sort, onSortChange }) {
+function MobileFilterBar({ categories, selected, onCategorySelect, priceMin, priceMax, onPriceChange, sort, onSortChange, theme }) {
+  // Same theme-aware radius rule as PriceFilter/the header's language
+  // switcher — square for a theme that opts into sharp corners everywhere
+  // (0 — e.g. Xinear), 8px (Houzez's own reference) otherwise.
+  const priceFieldRadius = theme?.buttons?.corner_radius === 0 ? '0px' : '8px';
   const { t } = useTranslation();
   const [catOpen, setCatOpen] = useState(false);
   const [sortOpen, setSortOpen] = useState(false);
@@ -363,14 +324,16 @@ function MobileFilterBar({ categories, selected, onCategorySelect, priceMin, pri
             placeholder={t('sectionBuilder:sections.catalogList.lowestPrice', 'Lowest Price')}
             value={priceMin}
             onChange={(e) => onPriceChange({ min: e.target.value, max: priceMax })}
-            className="h-10 rounded-none border border-gray-200 px-2.5 text-sm"
+            className="h-10 appearance-none border border-gray-200 px-2.5 text-sm"
+            style={{ borderRadius: priceFieldRadius }}
           />
           <input
             type="number"
             placeholder={t('sectionBuilder:sections.catalogList.highestPrice', 'Highest Price')}
             value={priceMax}
             onChange={(e) => onPriceChange({ min: priceMin, max: e.target.value })}
-            className="h-10 rounded-none border border-gray-200 px-2.5 text-sm"
+            className="h-10 appearance-none border border-gray-200 px-2.5 text-sm"
+            style={{ borderRadius: priceFieldRadius }}
           />
         </div>
       )}
@@ -378,13 +341,37 @@ function MobileFilterBar({ categories, selected, onCategorySelect, priceMin, pri
   );
 }
 
-function CatalogListRenderer({ data, onEdit, theme, isMobile, breakpoint, onNavigate }) {
+function CatalogListRenderer({ data, onEdit, theme, isMobile, breakpoint, onNavigate, initialCategory, mediaLibrary }) {
   const { t } = useTranslation();
-  const allProducts = useMemo(() => resolveStorefrontProducts(theme), [theme]);
+  // `mediaLibrary` was previously never threaded into resolveStorefrontProducts
+  // here (unlike product_detail's PDP, which does pass it) — a template
+  // like Houzez whose own product images are `{ mediaId }` references (see
+  // mocks/houzezProducts.js), not plain catalog.json URL strings, could
+  // never resolve to a real image on the Shop page without it, always
+  // falling back to "No image".
+  const allProducts = useMemo(() => resolveStorefrontProducts(theme, mediaLibrary), [theme, mediaLibrary]);
   const categories = useMemo(() => deriveCategories(allProducts), [allProducts]);
+  // "All Categories"/"Price Filter"'s accent bar previously read a
+  // `--sb-accent` CSS custom property that nothing in the codebase ever
+  // set — it always fell through to its hardcoded #006BFF fallback
+  // regardless of theme. Wired to the theme's own accent (falling back to
+  // primary, then the same #006BFF final default) instead.
+  const accentColor = theme?.colors?.accent ?? theme?.colors?.primary ?? '#006BFF';
 
   const [search, setSearch] = useState('');
-  const [category, setCategory] = useState('all');
+  // `initialCategory` — Shop pre-filtered by a "See All"/product-card link
+  // (see productSource.js's buildShopPath, featured_products/Renderer.jsx)
+  // — seeds the filter, and re-applies whenever it changes (clicking a
+  // *different* category's "See All" while already on Shop should
+  // re-filter, not no-op) via React's "adjust state during render" pattern
+  // (react.dev/learn/you-might-not-need-an-effect) rather than a
+  // useEffect-driven setState, which would cascade an extra render.
+  const [category, setCategory] = useState(() => initialCategory || 'all');
+  const [prevInitialCategory, setPrevInitialCategory] = useState(initialCategory);
+  if (initialCategory && initialCategory !== prevInitialCategory) {
+    setPrevInitialCategory(initialCategory);
+    setCategory(initialCategory);
+  }
   const [priceMin, setPriceMin] = useState('');
   const [priceMax, setPriceMax] = useState('');
   const [sort, setSort] = useState('newest');
@@ -466,8 +453,8 @@ function CatalogListRenderer({ data, onEdit, theme, isMobile, breakpoint, onNavi
                 for it to read cleanly, unlike at 390px. */}
             {!resolvedIsMobile && (
               <aside className="flex w-60 flex-none flex-col gap-4 pt-2">
-                <CategoryFilter categories={categories} selected={category} onSelect={(c) => { setCategory(c); resetPage(); }} />
-                <PriceFilter min={priceMin} max={priceMax} onChange={({ min, max }) => { setPriceMin(min); setPriceMax(max); resetPage(); }} />
+                <CategoryFilter categories={categories} selected={category} onSelect={(c) => { setCategory(c); resetPage(); }} accentColor={accentColor} />
+                <PriceFilter min={priceMin} max={priceMax} onChange={({ min, max }) => { setPriceMin(min); setPriceMax(max); resetPage(); }} accentColor={accentColor} theme={theme} />
               </aside>
             )}
 
@@ -482,6 +469,7 @@ function CatalogListRenderer({ data, onEdit, theme, isMobile, breakpoint, onNavi
                   onPriceChange={({ min, max }) => { setPriceMin(min); setPriceMax(max); resetPage(); }}
                   sort={sort}
                   onSortChange={(v) => { setSort(v); resetPage(); }}
+                  theme={theme}
                 />
               )}
 
@@ -537,7 +525,7 @@ function CatalogListRenderer({ data, onEdit, theme, isMobile, breakpoint, onNavi
                   data-testid="catalog-grid"
                 >
                   {pagedProducts.map((product) => (
-                    <ProductGridCard key={product.id} product={product} aspectClass={aspectClass} onNavigate={onNavigate} />
+                    <ProductCard key={product.id} product={product} theme={theme} aspectClass={aspectClass} onNavigate={onNavigate} />
                   ))}
                 </div>
               )}

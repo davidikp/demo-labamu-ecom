@@ -23,10 +23,24 @@ import { matchPath } from 'react-router-dom';
  */
 export function matchStorefrontPage(pages, pathname) {
   if (!pathname) return null;
+  // A caller-built link can carry a query string (buildShopPath's own
+  // `?category=...` — see productSource.js) as part of the same opaque
+  // path value `onNavigate`/`navigateToPath` thread through end to end;
+  // route matching itself only ever cares about the pathname portion.
+  const [cleanPath] = pathname.split('?');
   for (const page of pages ?? []) {
     if (typeof page?.slug !== 'string') continue;
-    const match = matchPath({ path: page.slug, end: true }, pathname);
+    const match = matchPath({ path: page.slug, end: true }, cleanPath);
     if (match) return { page, params: match.params ?? {} };
   }
   return null;
+}
+
+/** Companion to `matchStorefrontPage` — pulls the query string (if any)
+ * back out of that same opaque path value. Currently only `category`
+ * (Shop's own pre-filter, see productSource.js's `buildShopPath` and
+ * catalog_list/Renderer.jsx's `initialCategory`) is a real consumer. */
+export function parsePathQuery(pathWithQuery) {
+  const [, query] = (pathWithQuery ?? '').split('?');
+  return new URLSearchParams(query ?? '');
 }

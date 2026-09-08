@@ -168,26 +168,38 @@ function HeaderRenderer({ data, isMobile, onNavigate, theme, mediaLibrary, curre
     // real i18n/locale mechanism is wired up here (this app's actual
     // language switching, if any, lives entirely elsewhere). "Selecting" a
     // language below only closes the dropdown, it does not change anything.
+    // Radius reads the theme's own buttons.corner_radius token: a theme
+    // that explicitly opts into sharp corners everywhere (0 — e.g. Xinear)
+    // gets a square trigger; every other theme gets the golden Houzez
+    // reference's own 8px radius (get_design_context on node 81:74378 —
+    // NOT a full pill, despite this trigger's previous hardcoded
+    // `rounded-full`).
+    const radius = theme?.buttons?.corner_radius === 0 ? '0px' : '8px';
+    const borderColor = theme?.colors?.border;
     return (
       <div className="relative">
         <button
           type="button"
           onClick={() => setLangOpen((v) => !v)}
-          className="flex items-center gap-1.5 rounded-full border border-gray-200 px-3 py-2 text-xs font-medium"
+          className={`flex items-center gap-2 border p-2 text-sm font-bold ${borderColor ? '' : 'border-gray-200'}`}
+          style={{ borderRadius: radius, borderColor }}
         >
           {renderFlag(activeLanguage)}
           <span>{activeLanguage.code}</span>
-          <ChevronDown size={12} aria-hidden className={langOpen ? 'rotate-180 transition-transform' : 'transition-transform'} />
+          <ChevronDown size={16} aria-hidden className={langOpen ? 'rotate-180 transition-transform' : 'transition-transform'} />
         </button>
         {langOpen && (
-          <div className="absolute right-0 top-full z-20 mt-2 min-w-[9rem] rounded-xl border border-gray-100 bg-white p-1.5 text-gray-900 shadow-lg">
+          <div
+            className="absolute right-0 top-full z-20 mt-2 min-w-[9rem] border border-gray-100 bg-white p-1.5 text-gray-900 shadow-lg"
+            style={{ borderRadius: theme?.buttons?.corner_radius === 0 ? '0px' : '0.75rem' }}
+          >
             {languages.map((lang) => (
               <button
                 key={lang.id ?? lang.code}
                 type="button"
                 onClick={() => setLangOpen(false)}
                 className={
-                  'flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs ' +
+                  `flex w-full items-center gap-2 px-3 py-2 text-left text-xs ${theme?.buttons?.corner_radius === 0 ? '' : 'rounded-lg'} ` +
                   (lang.code === activeLanguage.code ? 'bg-green-50 font-semibold' : 'hover:bg-gray-50')
                 }
               >

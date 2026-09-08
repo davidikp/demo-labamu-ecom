@@ -33,11 +33,21 @@ function collectionsForSection(data, mediaLibrary) {
     .filter(Boolean);
 }
 
-function CollectionListRenderer({ data, onEdit, isMobile, mediaLibrary }) {
+function CollectionListRenderer({ data, onEdit, isMobile, breakpoint, mediaLibrary }) {
   const { t } = useTranslation();
   const mobile = useResponsiveMobile(isMobile);
   const collections = collectionsForSection(data, mediaLibrary);
-  const colsClass = COLS_CLASS[mobile ? data.columns_mobile ?? '2' : data.columns_desktop ?? '3'] ?? 'grid-cols-2';
+  // See map_embed/testimonials/etc Renderer.jsx — the builder/preview canvas
+  // simulates each device as a fixed-width frame inside a real (usually
+  // wide) browser, so this reads the `breakpoint` prop Canvas.jsx already
+  // passes down rather than a CSS breakpoint. Only meaningful for 'cards' —
+  // 'circular' wraps naturally via flexbox, no fixed column count.
+  const columns = mobile
+    ? data.columns_mobile ?? '2'
+    : breakpoint === 'tablet'
+      ? data.columns_tablet ?? '3'
+      : data.columns_desktop ?? '3';
+  const colsClass = COLS_CLASS[columns] ?? 'grid-cols-2';
   const headingSizeClass = HEADING_SIZE_CLASS[data.heading_size] ?? HEADING_SIZE_CLASS.medium;
   const aspectClass = ASPECT_RATIO_CLASS[data.image_aspect_ratio] ?? ASPECT_RATIO_CLASS.square;
 
@@ -62,10 +72,14 @@ function CollectionListRenderer({ data, onEdit, isMobile, mediaLibrary }) {
         // reference uses 190x190 rounded squares). columns_desktop,
         // columns_mobile, and image_aspect_ratio are intentionally ignored
         // here, they only apply to the 'cards' display style.
-        <div className="flex flex-wrap justify-center gap-6 sm:justify-between">
+        // `sm:` (a real, ≥640px browser-width media query) doesn't reflect
+        // the builder canvas's simulated device frame — see
+        // useResponsiveMobile.js — so this reads the same `mobile` boolean
+        // used above instead of a CSS breakpoint.
+        <div className={`flex flex-wrap justify-center gap-6 ${mobile ? '' : 'justify-between'}`}>
           {collections.map((collection) => (
-            <div key={collection.id} className="flex w-20 flex-col items-center gap-2 sm:w-auto sm:flex-1">
-              <div className="flex aspect-square w-20 items-center justify-center overflow-hidden rounded-2xl bg-gray-100 text-gray-300 sm:w-full">
+            <div key={collection.id} className={`flex flex-col items-center gap-2 ${mobile ? 'w-20' : 'w-auto flex-1'}`}>
+              <div className={`flex aspect-square items-center justify-center overflow-hidden rounded-2xl bg-gray-100 text-gray-300 ${mobile ? 'w-20' : 'w-full'}`}>
                 {collection.image ? (
                   <img src={collection.image} alt={collection.name} className="h-full w-full object-cover" />
                 ) : (

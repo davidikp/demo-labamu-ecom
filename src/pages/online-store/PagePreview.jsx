@@ -51,7 +51,10 @@ export default function PagePreview() {
 
   return (
     <div className="min-h-screen">
-      <div className="sticky top-0 z-10 flex items-center gap-2 border-b border-gray-200 bg-white px-4 py-3">
+      {/* z-[60]: see ThemePreview.jsx's identical toolbar for why a tied
+          z-10 here would let a scrolled-past section's own z-10 content
+          (e.g. hero_banner's content-over-photo div) paint over this bar. */}
+      <div className="sticky top-0 z-[60] flex items-center gap-2 border-b border-gray-200 bg-white px-4 py-3">
         <button
           type="button"
           onClick={handleBack}
