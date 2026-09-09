@@ -3,7 +3,8 @@ import { createPortal } from 'react-dom';
 import { Plus, Paperclip, UploadCloud, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { resolveColor } from '../../ui/fields/colorValue';
-import { themedButtonStyle } from '../shared/themedButtonStyle';
+import { themedButtonStyle, themedButtonHoverStyle } from '../shared/themedButtonStyle';
+import ThemedButtonHover from '../shared/ThemedButtonHover';
 import { resolveFormRecipe } from '../shared/formRecipes';
 import { submitRfq } from '../../../../services/rfqService';
 import { resolveStorefrontProducts } from '../shared/productSource';
@@ -42,7 +43,7 @@ const SAMPLE_ITEMS = [
   { name: 'Safety Helmet Construction Helmet', qty: 10 },
 ];
 
-function StaticDetailedPreview({ buttonStyle, buttonLabel, primaryColor, inputClass }) {
+function StaticDetailedPreview({ buttonStyle, buttonHoverStyle, buttonLabel, primaryColor, inputClass }) {
   return (
     <div className="max-w-xl rounded-2xl border border-gray-200 bg-white shadow-sm">
       <div className="border-b border-gray-100 px-6 py-4">
@@ -117,7 +118,7 @@ function StaticDetailedPreview({ buttonStyle, buttonLabel, primaryColor, inputCl
       </div>
       <div className="flex justify-end gap-3 border-t border-gray-100 px-6 py-4">
         <span className="rounded-md border border-gray-300 bg-white px-5 py-2.5 text-sm font-semibold text-gray-700">Cancel</span>
-        <span style={buttonStyle}>{buttonLabel}</span>
+        <ThemedButtonHover style={buttonStyle} hoverStyle={buttonHoverStyle}>{buttonLabel}</ThemedButtonHover>
       </div>
     </div>
   );
@@ -129,7 +130,7 @@ function StaticDetailedPreview({ buttonStyle, buttonLabel, primaryColor, inputCl
  * simplified to one inline "add product" row instead of a nested
  * modal-in-modal picker — a deliberate structural simplification (still the
  * same real add/remove/validate/submit behavior), not a fake. */
-function FunctionalDetailedForm({ buttonStyle, buttonLabel, recipe, inputClass, primaryColor, products }) {
+function FunctionalDetailedForm({ buttonStyle, buttonHoverStyle, buttonLabel, recipe, inputClass, primaryColor, products }) {
   const { t } = useTranslation();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -315,9 +316,17 @@ function FunctionalDetailedForm({ buttonStyle, buttonLabel, recipe, inputClass, 
         <button type="button" onClick={resetForm} className="rounded-md border border-gray-300 bg-white px-5 py-2.5 text-sm font-semibold text-gray-700">
           {t('sectionBuilder:sections.quoteRequestForm.cancel', 'Cancel')}
         </button>
-        <button type="button" onClick={handleSubmit} disabled={status === 'submitting' || !name.trim()} style={buttonStyle} className="disabled:opacity-60">
+        <ThemedButtonHover
+          as="button"
+          type="button"
+          onClick={handleSubmit}
+          disabled={status === 'submitting' || !name.trim()}
+          style={buttonStyle}
+          hoverStyle={buttonHoverStyle}
+          className="disabled:opacity-60"
+        >
           {status === 'submitting' ? t('sectionBuilder:sections.quoteRequestForm.submitting', 'Submitting…') : buttonLabel}
-        </button>
+        </ThemedButtonHover>
       </div>
     </div>
   );
@@ -379,7 +388,7 @@ function RfqDialog({ open, onClose, title, children, footer, isMobile, zIndexCla
  * dialog → nested product-picker dialog flow. State here is the storefront
  * visitor's interaction state only, entirely separate from the merchant's
  * editor/content state (`data`) passed in as props. */
-function RfqModalFlow({ heading, subtext, buttonStyle, buttonLabel, recipe, inputClass, primaryColor, isMobile, isBuilder, products }) {
+function RfqModalFlow({ heading, subtext, buttonStyle, buttonHoverStyle, buttonLabel, recipe, inputClass, primaryColor, isMobile, isBuilder, products }) {
   const { t } = useTranslation();
   const [modalOpen, setModalOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
@@ -482,14 +491,16 @@ function RfqModalFlow({ heading, subtext, buttonStyle, buttonLabel, recipe, inpu
 
   return (
     <>
-      <button
+      <ThemedButtonHover
+        as="button"
         type="button"
         onClick={openModal}
         style={buttonStyle}
+        hoverStyle={buttonHoverStyle}
         className={isBuilder ? 'cursor-default' : undefined}
       >
         {buttonLabel}
-      </button>
+      </ThemedButtonHover>
 
       <RfqDialog
         open={modalOpen}
@@ -502,9 +513,17 @@ function RfqModalFlow({ heading, subtext, buttonStyle, buttonLabel, recipe, inpu
             <button type="button" onClick={closeModal} className="rounded-md border border-gray-300 bg-white px-5 py-2.5 text-sm font-semibold text-gray-700">
               {t('sectionBuilder:sections.quoteRequestForm.cancel', 'Cancel')}
             </button>
-            <button type="button" onClick={handleSubmit} disabled={status === 'submitting' || !name.trim()} style={buttonStyle} className="disabled:opacity-60">
+            <ThemedButtonHover
+              as="button"
+              type="button"
+              onClick={handleSubmit}
+              disabled={status === 'submitting' || !name.trim()}
+              style={buttonStyle}
+              hoverStyle={buttonHoverStyle}
+              className="disabled:opacity-60"
+            >
               {status === 'submitting' ? t('sectionBuilder:sections.quoteRequestForm.submitting', 'Submitting…') : t('sectionBuilder:sections.quoteRequestForm.submit', 'Submit Request')}
-            </button>
+            </ThemedButtonHover>
           </>
         }
       >
@@ -630,9 +649,17 @@ function RfqModalFlow({ heading, subtext, buttonStyle, buttonLabel, recipe, inpu
             <button type="button" onClick={() => setAddOpen(false)} className="rounded-md border border-gray-300 bg-white px-5 py-2.5 text-sm font-semibold text-gray-700">
               {t('sectionBuilder:sections.quoteRequestForm.cancel', 'Cancel')}
             </button>
-            <button type="button" onClick={confirmAddProduct} disabled={!draftProductId} style={buttonStyle} className="disabled:opacity-60">
+            <ThemedButtonHover
+              as="button"
+              type="button"
+              onClick={confirmAddProduct}
+              disabled={!draftProductId}
+              style={buttonStyle}
+              hoverStyle={buttonHoverStyle}
+              className="disabled:opacity-60"
+            >
               {t('sectionBuilder:sections.quoteRequestForm.addProduct', 'Add Product')}
-            </button>
+            </ThemedButtonHover>
           </>
         }
       >
@@ -710,6 +737,7 @@ function QuoteRequestFormRenderer({ data, theme, onEdit, isMobile, mediaLibrary 
     primary: primaryColor,
     primaryText: resolveColor({ slot: 'primary_text' }, theme.colors),
   });
+  const buttonHoverStyle = themedButtonHoverStyle(theme.buttons, buttonStyle, primaryColor);
   const buttonLabel = data.button_label || 'Request a Quote';
   const recipe = resolveFormRecipe(theme);
   // The current template's own storefront products (Houzez's construction
@@ -768,6 +796,7 @@ function QuoteRequestFormRenderer({ data, theme, onEdit, isMobile, mediaLibrary 
       heading={data.heading || 'Request a Quote'}
       subtext={data.subtext}
       buttonStyle={buttonStyle}
+      buttonHoverStyle={buttonHoverStyle}
       buttonLabel={buttonLabel}
       recipe={recipe}
       inputClass={inputClass}
@@ -778,12 +807,12 @@ function QuoteRequestFormRenderer({ data, theme, onEdit, isMobile, mediaLibrary 
     />
   ) : data.layout === 'detailed' ? (
     interactive ? (
-      <FunctionalDetailedForm buttonStyle={buttonStyle} buttonLabel={buttonLabel} recipe={recipe} inputClass={inputClass} primaryColor={primaryColor} products={products} />
+      <FunctionalDetailedForm buttonStyle={buttonStyle} buttonHoverStyle={buttonHoverStyle} buttonLabel={buttonLabel} recipe={recipe} inputClass={inputClass} primaryColor={primaryColor} products={products} />
     ) : (
-      <StaticDetailedPreview buttonStyle={buttonStyle} buttonLabel={buttonLabel} primaryColor={primaryColor} inputClass={inputClass} />
+      <StaticDetailedPreview buttonStyle={buttonStyle} buttonHoverStyle={buttonHoverStyle} buttonLabel={buttonLabel} primaryColor={primaryColor} inputClass={inputClass} />
     )
   ) : (
-    <SimpleForm data={data} theme={theme} onEdit={onEdit} buttonStyle={buttonStyle} buttonLabel={buttonLabel} inputClass={inputClass} recipe={recipe} interactive={interactive} t={t} />
+    <SimpleForm data={data} theme={theme} onEdit={onEdit} buttonStyle={buttonStyle} buttonHoverStyle={buttonHoverStyle} buttonLabel={buttonLabel} inputClass={inputClass} recipe={recipe} interactive={interactive} t={t} />
   );
 
   if (backgroundImage) {
@@ -811,7 +840,7 @@ function QuoteRequestFormRenderer({ data, theme, onEdit, isMobile, mediaLibrary 
   );
 }
 
-function SimpleForm({ onEdit, buttonStyle, buttonLabel, inputClass, recipe, interactive, t, data }) {
+function SimpleForm({ onEdit, buttonStyle, buttonHoverStyle, buttonLabel, inputClass, recipe, interactive, t, data }) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -839,13 +868,13 @@ function SimpleForm({ onEdit, buttonStyle, buttonLabel, inputClass, recipe, inte
           <input type="tel" disabled placeholder="Phone" className={inputClass} />
         </div>
         <textarea disabled placeholder="Message" rows={3} className={inputClass} />
-        <span style={buttonStyle} className="w-fit">
+        <ThemedButtonHover style={buttonStyle} hoverStyle={buttonHoverStyle} className="w-fit">
           {onEdit ? (
             <EditableText value={data.button_label} placeholder="Request a Quote" onCommit={(v) => onEdit('button_label', v)} />
           ) : (
             buttonLabel
           )}
-        </span>
+        </ThemedButtonHover>
       </div>
     );
   }
@@ -860,9 +889,17 @@ function SimpleForm({ onEdit, buttonStyle, buttonLabel, inputClass, recipe, inte
       <textarea value={message} onChange={(e) => setMessage(e.target.value)} placeholder="Message" rows={3} className={inputClass} style={fieldStyleFor(recipe, true)} />
       {status === 'success' && <p className="text-sm font-medium text-green-600">{t('sectionBuilder:sections.quoteRequestForm.submitSuccess', 'Your request has been submitted — we’ll be in touch soon.')}</p>}
       {status === 'error' && <p className="text-sm font-medium text-red-600">{t('sectionBuilder:sections.quoteRequestForm.submitError', 'Failed to submit request. Please try again.')}</p>}
-      <button type="button" onClick={handleSubmit} disabled={status === 'submitting' || !name.trim()} style={buttonStyle} className="w-fit disabled:opacity-60">
+      <ThemedButtonHover
+        as="button"
+        type="button"
+        onClick={handleSubmit}
+        disabled={status === 'submitting' || !name.trim()}
+        style={buttonStyle}
+        hoverStyle={buttonHoverStyle}
+        className="w-fit disabled:opacity-60"
+      >
         {status === 'submitting' ? t('sectionBuilder:sections.quoteRequestForm.submitting', 'Submitting…') : buttonLabel}
-      </button>
+      </ThemedButtonHover>
     </div>
   );
 }

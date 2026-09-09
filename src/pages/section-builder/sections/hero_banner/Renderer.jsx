@@ -8,6 +8,12 @@ import { resolveHeroRecipe } from '../shared/heroRecipes';
 
 const ALIGN_CLASS = { left: 'items-start text-left', center: 'items-center text-center', right: 'items-end text-right' };
 const POSITION_CLASS = { top: 'justify-start', center: 'justify-center', bottom: 'justify-end' };
+// Horizontal placement of the content box *within* the full-width section —
+// separate from ALIGN_CLASS, which only controls text alignment *inside*
+// that box. Without this, the box itself always sat centered on the page
+// (the section's own flex-justify was hardcoded to `justify-center`) even
+// when its text read as left-aligned relative to its own box.
+const H_JUSTIFY_CLASS = { left: 'justify-start', center: 'justify-center', right: 'justify-end' };
 
 const AUTOPLAY_MS = 5000;
 
@@ -138,6 +144,7 @@ function HeroBannerRenderer({ data, blocks = [], theme, mediaLibrary, blockCtx, 
 
   const align = ALIGN_CLASS[data.text_alignment] ?? ALIGN_CLASS.left;
   const position = POSITION_CLASS[data.content_position] ?? POSITION_CLASS.center;
+  const hJustify = H_JUSTIFY_CLASS[data.text_alignment] ?? H_JUSTIFY_CLASS.left;
   const activeImage = slides[activeIndex];
 
   if ((data.layout_variant ?? 'background') === 'split_panel') {
@@ -181,7 +188,7 @@ function HeroBannerRenderer({ data, blocks = [], theme, mediaLibrary, blockCtx, 
 
   return (
     <section
-      className="relative flex justify-center overflow-hidden px-6"
+      className={`relative flex ${hJustify} overflow-hidden px-6 md:px-16 lg:px-28`}
       style={{ minHeight: `${data.min_height ?? 500}px` }}
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}

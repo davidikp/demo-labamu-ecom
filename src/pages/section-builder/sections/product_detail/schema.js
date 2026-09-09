@@ -28,6 +28,7 @@ export const PRODUCT_CORE_SECTION_ID = 'product-default-detail';
 // SKU row rendered anywhere in this section; see Renderer.jsx.
 export const schema = {
   show_category: { type: 'boolean', label: 'Show category', default: true, group: 'layout' },
+  show_stock_status: { type: 'boolean', label: 'Show in-stock / sold-out status', default: true, group: 'layout' },
   show_stock: { type: 'boolean', label: 'Show stock count', default: false, group: 'layout' },
   show_related_products: { type: 'boolean', label: 'Show related products', default: true, group: 'layout' },
   related_heading: { type: 'text', label: 'Related products heading', maxLength: 60, default: 'Other picks', group: 'content' },

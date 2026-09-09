@@ -1,4 +1,5 @@
 import { memo, useMemo, useState, useRef, useEffect } from 'react';
+import { ChevronDown } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import EditableText from '../../ui/EditableText';
 import StorefrontContainer from '../../ui/primitives/StorefrontContainer';
@@ -174,6 +175,67 @@ function PriceFilter({ min, max, onChange, accentColor, theme }) {
           style={{ borderRadius: radius }}
         />
       </div>
+    </div>
+  );
+}
+
+/** Desktop sort control — was a bare native `<select>`, which renders with
+ * the browser/OS's own unstyled dropdown chrome (see screenshot: a plain
+ * blue-highlight system menu) instead of matching this storefront's other
+ * dropdown triggers. Same trigger shape as the header's language switcher
+ * and MobileFilterBar's own sort chip below — bordered box, label +
+ * rotating chevron, an absolutely-positioned option list closed on outside
+ * click. */
+function SortDropdown({ value, options, onChange, theme, ariaLabel }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  const active = options.find((o) => o.value === value) ?? options[0];
+  const radius = theme?.buttons?.corner_radius === 0 ? '0px' : '8px';
+  const borderColor = theme?.colors?.border;
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const onClickOutside = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener('mousedown', onClickOutside);
+    return () => document.removeEventListener('mousedown', onClickOutside);
+  }, [open]);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-label={ariaLabel}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        className={`flex h-9 items-center gap-1.5 border px-3 text-sm text-gray-900 ${borderColor ? '' : 'border-gray-200'}`}
+        style={{ borderRadius: radius, borderColor }}
+      >
+        {active.label}
+        <ChevronDown size={14} aria-hidden className={open ? 'rotate-180 transition-transform' : 'transition-transform'} />
+      </button>
+      {open && (
+        <div
+          className="absolute right-0 top-full z-20 mt-1.5 min-w-[10rem] border border-gray-100 bg-white p-1.5 shadow-lg"
+          style={{ borderRadius: theme?.buttons?.corner_radius === 0 ? '0px' : '0.75rem' }}
+        >
+          {options.map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => { onChange(opt.value); setOpen(false); }}
+              className={
+                `block w-full px-3 py-2 text-left text-sm ${theme?.buttons?.corner_radius === 0 ? '' : 'rounded-lg'} ` +
+                (opt.value === active.value ? 'bg-gray-100 font-semibold text-gray-900' : 'text-gray-700 hover:bg-gray-50')
+              }
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -491,16 +553,13 @@ function CatalogListRenderer({ data, onEdit, theme, isMobile, breakpoint, onNavi
                     aria-label={t('sectionBuilder:sections.catalogList.searchPlaceholder', 'Search products')}
                     className="h-9 rounded border border-gray-200 px-3 text-sm md:max-w-xs"
                   />
-                  <select
+                  <SortDropdown
                     value={sort}
-                    onChange={(e) => { setSort(e.target.value); resetPage(); }}
-                    aria-label={t('sectionBuilder:sections.catalogList.sortBy', 'Sort by')}
-                    className="h-9 rounded border border-gray-200 px-2 text-sm"
-                  >
-                    {SORT_OPTIONS.map((opt) => (
-                      <option key={opt.value} value={opt.value}>{opt.label}</option>
-                    ))}
-                  </select>
+                    options={SORT_OPTIONS}
+                    onChange={(v) => { setSort(v); resetPage(); }}
+                    theme={theme}
+                    ariaLabel={t('sectionBuilder:sections.catalogList.sortBy', 'Sort by')}
+                  />
                 </div>
               </div>
               {!resolvedIsMobile && <div className="mb-6 border-t border-gray-200" />}

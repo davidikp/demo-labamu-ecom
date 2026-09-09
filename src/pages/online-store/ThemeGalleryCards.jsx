@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { MoreVertical } from 'lucide-react';
-import { MainBtn, CTAButton, IconBtn } from '../../ce-ui';
+import { MainBtn, CTAButton, IconBtn, StatusBadge } from '../../ce-ui';
 import { formatRelativeTime } from './timeUtils';
 
 /**
@@ -16,21 +17,37 @@ import { formatRelativeTime } from './timeUtils';
 
 /** Small "More" popover menu — a plain absolutely-positioned list, not
  * ce-ui's Dropdown (that component is a form select, not a menu trigger).
- * Closes on outside click and Escape. */
+ * Closes on outside click and Escape. Portaled to document.body and
+ * positioned from the trigger's bounding rect (rather than living inside
+ * the trigger's own relatively-positioned wrapper) so it isn't clipped by
+ * a scrollable ancestor like .draft-theme-list. */
 export function MoreMenu({ items }) {
   const [open, setOpen] = useState(false);
-  const ref = useRef(null);
+  const [coords, setCoords] = useState(null);
+  const triggerRef = useRef(null);
+  const menuRef = useRef(null);
+
+  useLayoutEffect(() => {
+    if (!open || !triggerRef.current) return;
+    const rect = triggerRef.current.getBoundingClientRect();
+    setCoords({ top: rect.bottom + 6, right: window.innerWidth - rect.right });
+  }, [open]);
 
   useEffect(() => {
     if (!open) return undefined;
     function handleClick(e) {
-      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+      if (
+        triggerRef.current && !triggerRef.current.contains(e.target)
+        && menuRef.current && !menuRef.current.contains(e.target)
+      ) setOpen(false);
     }
     function handleKey(e) {
       if (e.key === 'Escape') setOpen(false);
     }
     document.addEventListener('mousedown', handleClick);
     document.addEventListener('keydown', handleKey);
+    window.addEventListener('scroll', () => setOpen(false), true);
+    window.addEventListener('resize', () => setOpen(false));
     return () => {
       document.removeEventListener('mousedown', handleClick);
       document.removeEventListener('keydown', handleKey);
@@ -38,7 +55,7 @@ export function MoreMenu({ items }) {
   }, [open]);
 
   return (
-    <div ref={ref} style={{ position: 'relative', display: 'inline-block' }}>
+    <div ref={triggerRef} style={{ display: 'inline-block' }}>
       <IconBtn
         icon={<MoreVertical size={16} />}
         variant="ghost"
@@ -46,9 +63,11 @@ export function MoreMenu({ items }) {
         onClick={(e) => { e.stopPropagation(); setOpen((v) => !v); }}
         aria-label="More actions"
       />
-      {open && (
+      {open && coords && createPortal(
         <div
+          ref={menuRef}
           className="more-menu-popover"
+          style={{ position: 'fixed', top: coords.top, right: coords.right }}
           onClick={(e) => e.stopPropagation()}
         >
           {items.map((item) => (
@@ -63,7 +82,8 @@ export function MoreMenu({ items }) {
               {item.label}
             </button>
           ))}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
@@ -99,11 +119,13 @@ export function PublishedThemeCard({
     <div className="published-theme-card">
       <div className="published-theme-card__preview">
         {previewData}
-        <span className="published-badge">{t('sectionBuilder:onlineStore.themes.publishedBadge', 'Published Theme')}</span>
       </div>
       <div className="published-theme-card__footer">
         <div style={{ minWidth: 0, flex: 1 }}>
-          <p style={{ margin: '0 0 4px 0', fontSize: '15px', fontWeight: 700, color: '#282828' }}>{domain}</p>
+          <p style={{ margin: '0 0 4px 0', fontSize: '15px', fontWeight: 700, color: '#282828', display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span>{domain}</span>
+            <StatusBadge label={t('sectionBuilder:onlineStore.themes.publishedBadge', 'Published Theme')} color="blue" tone="solid" />
+          </p>
           {isRenaming ? (
             <RenameField value={theme.name} onSubmit={onRenameSubmit} onCancel={onRenameCancel} />
           ) : (
@@ -176,7 +198,7 @@ export function DraftThemeRow({
  * the card next to the name, matching this app's previous layout, rather
  * than requiring a hover to find it). Coming-soon stubs opt out of the hover
  * lift/border/overlay entirely (`discover-card--static`) — there's genuinely
- * nothing to preview yet, only the badge.
+ * nothing to preview yet, just a dimmed preview image.
  */
 export function DiscoverCard({ item, previewData, isAdding, comingSoon, onAdd, onPreview }) {
   const { t } = useTranslation();
@@ -185,11 +207,7 @@ export function DiscoverCard({ item, previewData, isAdding, comingSoon, onAdd, o
       <div className={`discover-card${comingSoon ? ' discover-card--static' : ''}`}>
         <div className={`discover-card__preview${comingSoon ? '' : ' template-overlay-container'}`}>
           {previewData ?? <div className="discover-card__placeholder">{item.name}</div>}
-          {comingSoon && (
-            <span className="discover-card__coming-soon-badge">
-              {t('sectionBuilder:onlineStore.themes.comingSoon', 'Coming soon')}
-            </span>
-          )}
+          {comingSoon && <div className="discover-card__coming-soon-overlay" />}
           {/* No hover overlay for coming-soon stubs — there is genuinely
               nothing to preview yet. Real entries (Xinear) keep the Preview
               button even though the preview is currently just a

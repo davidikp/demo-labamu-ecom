@@ -5,6 +5,10 @@ import { HEADING_SIZE_FIELD } from '../shared/headingSize';
 export const schema = {
   heading: { type: 'text', label: 'Section heading', maxLength: 100, default: 'What customers say', group: 'content' },
   show_heading: { type: 'boolean', label: 'Show heading', default: true, group: 'content' },
+  heading_align: {
+    type: 'select', label: 'Heading alignment', default: 'left', group: 'content',
+    options: [{ value: 'left', label: 'Left' }, { value: 'center', label: 'Center' }],
+  },
   ...HEADING_SIZE_FIELD,
   columns_desktop: {
     type: 'select', label: 'Columns on desktop', default: '3', group: 'layout',

@@ -76,6 +76,47 @@ function media(templateId, entries) {
   }));
 }
 
+// Houzez's 8 category icons — shared verbatim between the homepage's own
+// `category_grid` strip and the Collection page below (see 'houzez-
+// collection-list' further down: "make the Collection page based on the
+// homepage's collection list, and clicking one opens its detail page" —
+// so the Collection page reuses this exact list rather than a curated
+// second one, and each icon links to that category's own filtered Shop
+// view (`/shop?category=<label>`, the same route `buildShopPath` builds
+// for "See All" links) instead of a plain, unfiltered `/shop`.
+const HOUZEZ_CATEGORY_ITEMS = [
+  { id: 'houzez-cat-house', label: 'House Construction', icon_image: image('houzez-cat-house'), url: '/shop?category=House%20Construction' },
+  { id: 'houzez-cat-glass', label: 'Glass Pane', icon_image: image('houzez-cat-glass'), url: '/shop?category=Glass%20Pane' },
+  { id: 'houzez-cat-safety', label: 'Safety Tools', icon_image: image('houzez-cat-safety'), url: '/shop?category=Safety%20Tools' },
+  { id: 'houzez-cat-foundation', label: 'Foundation', icon_image: image('houzez-cat-foundation'), url: '/shop?category=Foundation' },
+  { id: 'houzez-cat-paints', label: 'Paints and Flooring', icon_image: image('houzez-cat-paints'), url: '/shop?category=Paints%20and%20Flooring' },
+  { id: 'houzez-cat-roofing', label: 'Roofing', icon_image: image('houzez-cat-roofing'), url: '/shop?category=Roofing' },
+  { id: 'houzez-cat-doors', label: 'Doors and Windows', icon_image: image('houzez-cat-doors'), url: '/shop?category=Doors%20and%20Windows' },
+  { id: 'houzez-cat-excavation', label: 'Excavation', icon_image: image('houzez-cat-excavation'), url: '/shop?category=Excavation' },
+];
+
+// Xinear's own 6 categories, shown in the homepage's own `collection_list`
+// strip below the hero — each card opens that category's own filtered Shop
+// view (`/shop?category=<label>`, matching `product.vendor` on
+// catalog.json's own Tops/Bottoms/etc. products — productSource.js's
+// category fallback). `source: 'custom'` (not the catalog-handle shape
+// collection_list's *other* default items use) specifically so each card's
+// own `url` can point there instead of collection_list's built-in
+// `/collections/:handle` catalog-collection route. `image` is a plain
+// public-asset path (collection_list's own custom-source image resolution
+// tolerates that, same as category_grid's icon_image) reusing catalog.json's
+// existing category photos rather than new per-theme media. Not used by the
+// Collection *page* (`/collection`) — that's the separate editorial
+// lookbook feature (Forma, Terra, ...), see 'xinear-collection-list' below.
+const XINEAR_CATEGORY_ITEMS = [
+  { id: 'xinear-cat-tops', source: 'custom', title: 'Tops', image: '/assets/catalog/categories/tops.png', url: '/shop?category=Tops' },
+  { id: 'xinear-cat-bottoms', source: 'custom', title: 'Bottoms', image: '/assets/catalog/categories/bottoms.png', url: '/shop?category=Bottoms' },
+  { id: 'xinear-cat-dresses', source: 'custom', title: 'Dresses', image: '/assets/catalog/categories/dresses.png', url: '/shop?category=Dresses' },
+  { id: 'xinear-cat-shoes', source: 'custom', title: 'Shoes', image: '/assets/catalog/categories/shoes.png', url: '/shop?category=Shoes' },
+  { id: 'xinear-cat-bags', source: 'custom', title: 'Bags', image: '/assets/catalog/categories/bags.png', url: '/shop?category=Bags' },
+  { id: 'xinear-cat-perfumes', source: 'custom', title: 'Perfumes', image: '/assets/catalog/categories/perfumes.png', url: '/shop?category=Perfumes' },
+];
+
 export const SITE_TEMPLATES = [
   {
     id: 'clothing',
@@ -273,8 +314,14 @@ export const SITE_TEMPLATES = [
       // it doesn't mention (only defaultPreviewDataFor's own read-only
       // preview path merges per-field) — same convention Houzez's own
       // `layout` override below already follows.
-      layout: { container_width: '1200', container_gutter: 'standard', section_spacing: 'medium', section_padding: 'medium', image_corners: 0, card_corners: 0, card_shadow: 'none' },
-      buttons: { corner_radius: 0, padding_horizontal: 20, padding_vertical: 10, font_size: null, font_weight: '500', letter_spacing: 'normal', text_transform: 'none', border_width: 0, hover_effect: 'darken' },
+      layout: { container_width: '1200', container_gutter: 'standard', section_spacing: 'medium', section_padding: 'medium', image_corners: 0, card_corners: 0, card_shadow: 'none', card_border: false },
+      // hover_color: '#5e5e5d' — the Figma component library's "Button -
+      // Xinear" node (State=Hover, Type=Primary), an exact flat color swap
+      // rather than a generic brightness-filtered darken.
+      buttons: {
+        corner_radius: 0, padding_horizontal: 20, padding_vertical: 10, font_size: null, font_weight: '500',
+        letter_spacing: 'normal', text_transform: 'none', border_width: 0, hover_effect: 'darken', hover_color: '#5e5e5d',
+      },
     },
     header: {
       layout_variant: 'centered-nav',
@@ -309,6 +356,9 @@ export const SITE_TEMPLATES = [
         items: [
           { id: 'xinear-nav-home', label: 'Home', url: '/' },
           { id: 'xinear-nav-shop', label: 'Shop', url: '/shop' },
+          // Same "Collection" nav slot/position as Houzez's own nav (see
+          // its 'houzez-nav-collection' just below in this file).
+          { id: 'xinear-nav-collection', label: 'Collection', url: '/collection' },
           // "Appoinment" is the actual spelling in the Figma source — kept
           // verbatim rather than corrected, since this is real source copy.
           { id: 'xinear-nav-appointment', label: 'Make an Appoinment', url: '/appointment' },
@@ -400,6 +450,10 @@ export const SITE_TEMPLATES = [
               ],
               text_alignment: 'left',
               content_position: 'center',
+              // Reference photo reads a bit taller than the 500px schema
+              // default, but 850px overshot it — this splits the
+              // difference.
+              min_height: 620,
               // The reference shows the photo running edge-to-edge right
               // below the navbar, no visible gap above/below it —
               // SECTION_CHROME_FIELDS' own padding_top/padding_bottom
@@ -421,14 +475,7 @@ export const SITE_TEMPLATES = [
           ),
           defaultSection('xinear-home-categories', 'collection_list', {
             show_heading: false, display_style: 'circular',
-            collections: [
-              { id: 'xinear-cat-tops', handle: 'tops' },
-              { id: 'xinear-cat-bottoms', handle: 'bottoms' },
-              { id: 'xinear-cat-dresses', handle: 'dresses' },
-              { id: 'xinear-cat-shoes', handle: 'shoes' },
-              { id: 'xinear-cat-bags', handle: 'bags' },
-              { id: 'xinear-cat-perfumes', handle: 'perfumes' },
-            ],
+            collections: XINEAR_CATEGORY_ITEMS,
           }),
           // Figma shows 5 products per row and a "See All" link (not the
           // shared default "View all products" string every other theme's
@@ -476,7 +523,10 @@ export const SITE_TEMPLATES = [
           defaultSection(
             'xinear-home-testimonials',
             'testimonials',
-            { heading: 'What They Say', columns_desktop: '3' },
+            // color_scheme: 'background' -> white, overriding the schema's
+            // own 'surface' (gray) default — the reference has this section
+            // sitting on plain white, unlike the gray-toned sections around it.
+            { heading: 'What They Say', columns_desktop: '3', color_scheme: 'background', heading_align: 'center' },
             [
               block('quote', {
                 quote: 'Great materials and design especially considering the affordable price! I feel like a queen wearing the dresses you guys made! ',
@@ -508,8 +558,17 @@ export const SITE_TEMPLATES = [
             // full_width: true — see xinear-home-hero's comment; without it
             // this flat surface-colored panel shows narrower than its
             // full-bleed siblings at any viewport wider than
-            // theme.layout.container_width.
-            { color_scheme: 'surface', text_alignment: 'center', content_position: 'center', full_width: true },
+            // theme.layout.container_width. padding_top/bottom: 40 matches
+            // xinear-home-quote's own (quote_request_form's schema default)
+            // rather than hero_banner's own 48/48 default — without this,
+            // this flat panel (min_height 500 + 96px padding = 596px total)
+            // renders visibly taller than its sibling flat CTA panel
+            // (500 + 80 = 580px), even though both are meant to read as the
+            // same height.
+            {
+              color_scheme: 'surface', text_alignment: 'center', content_position: 'center', full_width: true,
+              padding_top: 40, padding_bottom: 40,
+            },
             [
               block('heading', { text: 'Join Waitlist' }),
               block('subheading', {
@@ -559,6 +618,44 @@ export const SITE_TEMPLATES = [
           defaultSection('xinear-home-quote', 'quote_request_form', {
             background_image: image('xinear-quote'), presentation: 'modal_trigger', full_width: true,
           }),
+        ],
+      },
+      // Overrides defaultTheme.js's generic Product page (same id/slug/
+      // systemType — mergeRequiredSystemPages only adds its own default
+      // when no existing page already fills that systemType) purely to
+      // turn off the "In stock" status line: the reference doesn't show
+      // it, and product_detail's own schema default (show_stock_status:
+      // true) is shared by every theme, so this is the one place a
+      // per-theme opt-out belongs.
+      {
+        id: 'product', name: 'Product', type: 'system', systemType: 'product', slug: '/products/:handle', seo: {}, hiddenFromNav: true,
+        sections: [
+          defaultSection('product-default-detail', 'product_detail', { show_stock_status: false }),
+        ],
+      },
+      // Collection (the editorial lookbook/portfolio feature — Forma,
+      // Terra, Luma, ...) and Collection Detail, added the same way Houzez
+      // exposes them by default (see its own 'houzez-collection-list'/
+      // 'houzez-collection-detail' entries and their shared doc comment):
+      // `mergeRequiredSystemPages` only ever merges 'shop'/'product', so
+      // without an explicit entry here neither page is reachable at all on
+      // this template. Same page shape/ids `defaultTheme.js`'s
+      // `createDefaultPages()` uses, so both sources stay interchangeable
+      // to `pageFillsSystemType`/`matchStorefrontPage`.
+      {
+        id: 'xinear-collection-list', name: 'Collection', type: 'system', systemType: 'editorial_collection_list', slug: '/collection', seo: {}, hiddenFromNav: false,
+        sections: [
+          // 'editorial-collection-list-grid' matches
+          // EDITORIAL_COLLECTION_LIST_CORE_SECTION_ID (editorial_collection_list/schema.js).
+          defaultSection('editorial-collection-list-grid', 'editorial_collection_list', {}),
+        ],
+      },
+      {
+        id: 'xinear-collection-detail', name: 'Collection Detail', type: 'system', systemType: 'editorial_collection_detail', slug: '/collection/:slug', seo: {}, hiddenFromNav: true,
+        sections: [
+          // 'editorial-collection-detail-story' matches
+          // EDITORIAL_COLLECTION_DETAIL_CORE_SECTION_ID (editorial_collection_detail/schema.js).
+          defaultSection('editorial-collection-detail-story', 'editorial_collection_detail', {}),
         ],
       },
     ],
@@ -833,16 +930,7 @@ export const SITE_TEMPLATES = [
           // the real design, at Houzez's own 8-column desktop layout.
           defaultSection('houzez-home-categories', 'category_grid', {
             show_heading: false, columns_desktop: '8', columns_mobile: '4',
-            items: [
-              { id: 'houzez-cat-house', label: 'House Construction', icon_image: image('houzez-cat-house'), url: '/shop' },
-              { id: 'houzez-cat-glass', label: 'Glass Pane', icon_image: image('houzez-cat-glass'), url: '/shop' },
-              { id: 'houzez-cat-safety', label: 'Safety Tools', icon_image: image('houzez-cat-safety'), url: '/shop' },
-              { id: 'houzez-cat-foundation', label: 'Foundation', icon_image: image('houzez-cat-foundation'), url: '/shop' },
-              { id: 'houzez-cat-paints', label: 'Paints and Flooring', icon_image: image('houzez-cat-paints'), url: '/shop' },
-              { id: 'houzez-cat-roofing', label: 'Roofing', icon_image: image('houzez-cat-roofing'), url: '/shop' },
-              { id: 'houzez-cat-doors', label: 'Doors and Windows', icon_image: image('houzez-cat-doors'), url: '/shop' },
-              { id: 'houzez-cat-excavation', label: 'Excavation', icon_image: image('houzez-cat-excavation'), url: '/shop' },
-            ],
+            items: HOUZEZ_CATEGORY_ITEMS,
           }),
           // Matches the golden-reference ProductGroup: 6-column desktop grid,
           // horizontal-scroll-snap row on mobile (see featured_products'
@@ -900,6 +988,11 @@ export const SITE_TEMPLATES = [
               // shared/headingSize.js); card_hierarchy 'name_first' matches
               // its bold-name-above-quote card order.
               heading_size: 'display', card_hierarchy: 'name_first',
+              // color_scheme: 'background' -> white, overriding the schema's
+              // own 'surface' (green-tinted) default — the reference has
+              // this section sitting on plain white, unlike the green-toned
+              // sections around it.
+              color_scheme: 'background',
               // 80px desktop / 40px mobile section padding, matching
               // HouzezPreview.jsx's `padding: isMobile ? '40px 16px 40px
               // 16px' : '80px 0 40px 0'` (bottom padding is 40px either way,
@@ -1003,8 +1096,14 @@ export const SITE_TEMPLATES = [
       {
         id: 'houzez-collection-list', name: 'Collection', type: 'system', systemType: 'editorial_collection_list', slug: '/collection', seo: {}, hiddenFromNav: false,
         sections: [
-          // 'editorial-collection-list-grid' matches
-          // EDITORIAL_COLLECTION_LIST_CORE_SECTION_ID (editorial_collection_list/schema.js).
+          // Reverted back to the plain editorial-collection grid (Forma,
+          // Terra, Luma, ...) — a prior version of this page swapped in a
+          // category_grid section based on the homepage's own category
+          // list instead, but "the Collection page" was always meant to be
+          // this editorial lookbook/portfolio feature, not another view
+          // onto Home's categories. 'editorial-collection-list-grid'
+          // matches EDITORIAL_COLLECTION_LIST_CORE_SECTION_ID
+          // (editorial_collection_list/schema.js).
           defaultSection('editorial-collection-list-grid', 'editorial_collection_list', {}),
         ],
       },
@@ -1014,6 +1113,17 @@ export const SITE_TEMPLATES = [
           // 'editorial-collection-detail-story' matches
           // EDITORIAL_COLLECTION_DETAIL_CORE_SECTION_ID (editorial_collection_detail/schema.js).
           defaultSection('editorial-collection-detail-story', 'editorial_collection_detail', {}),
+        ],
+      },
+      // Overrides defaultTheme.js's generic Product page — see
+      // xinear-home-hero's sibling override just above for why (same id/
+      // slug/systemType; mergeRequiredSystemPages only adds its own default
+      // when no existing page already fills that systemType) — purely to
+      // turn off the "In stock" status line, same as Xinear.
+      {
+        id: 'product', name: 'Product', type: 'system', systemType: 'product', slug: '/products/:handle', seo: {}, hiddenFromNav: true,
+        sections: [
+          defaultSection('product-default-detail', 'product_detail', { show_stock_status: false }),
         ],
       },
     ],

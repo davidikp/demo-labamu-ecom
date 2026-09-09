@@ -35,7 +35,7 @@ export const schema = {
     options: [{ value: 'none', label: 'None' }, { value: 'dark', label: 'Dark' }, { value: 'theme', label: "Theme color" }],
   },
   overlay_opacity: { type: 'range', label: 'Image overlay opacity', min: 0, max: 100, step: 5, default: 0, unit: '%', group: 'layout' },
-  min_height: { type: 'range', label: 'Min section height', min: 300, max: 800, step: 50, default: 500, unit: 'px', group: 'layout' },
+  min_height: { type: 'range', label: 'Min section height', min: 300, max: 900, step: 50, default: 500, unit: 'px', group: 'layout' },
   ...SECTION_CHROME_FIELDS,
   color_scheme: { ...SECTION_CHROME_FIELDS.color_scheme, default: 'surface' },
 };

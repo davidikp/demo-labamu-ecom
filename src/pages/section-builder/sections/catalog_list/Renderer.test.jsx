@@ -87,18 +87,21 @@ describe('CatalogListRenderer — price filter', () => {
 describe('CatalogListRenderer — sort', () => {
   it('sorts price ascending/descending', () => {
     renderCatalog({ data: { ...DATA, page_size: 10 } });
-    const select = screen.getByLabelText(/sort by/i);
-    fireEvent.change(select, { target: { value: 'price-asc' } });
+    const trigger = screen.getByLabelText(/sort by/i);
+    fireEvent.click(trigger);
+    fireEvent.click(screen.getByText('Price: Low to High'));
     let cards = screen.getAllByText(/Rp|\$/);
-    fireEvent.change(select, { target: { value: 'price-desc' } });
+    fireEvent.click(trigger);
+    fireEvent.click(screen.getByText('Price: High to Low'));
     cards = screen.getAllByText(/Rp|\$/);
     expect(cards.length).toBeGreaterThan(0);
   });
 
   it('newest/oldest use source-array order as a stable proxy (documented — no fabricated dates)', () => {
     renderCatalog({ data: { ...DATA, page_size: 10 } });
-    const select = screen.getByLabelText(/sort by/i);
-    fireEvent.change(select, { target: { value: 'oldest' } });
+    const trigger = screen.getByLabelText(/sort by/i);
+    fireEvent.click(trigger);
+    fireEvent.click(screen.getByText('Oldest'));
     expect(screen.getByText('Alpha Shirt')).toBeTruthy();
   });
 });

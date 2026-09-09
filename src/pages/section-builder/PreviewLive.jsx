@@ -86,6 +86,10 @@ export default function PreviewLive() {
   const productHandle = isProductPage ? match.params?.handle ?? null : null;
   const isEditorialCollectionDetailPage = match?.page?.systemType === 'editorial_collection_detail';
   const editorialCollectionSlug = isEditorialCollectionDetailPage ? match.params?.slug ?? null : null;
+  // A catalog Collection Detail page's own `/collections/:handle` route
+  // param — see `Canvas`'s `collectionHandle` prop / `featured_products`'
+  // own Renderer doc comment for why this exists.
+  const collectionHandle = match?.page?.systemType === 'collection' ? match.params?.handle ?? null : null;
 
   const handleNavigate = (url) => {
     // Parameterized match (e.g. '/products/dewalt-level-kit' -> the Product
@@ -161,6 +165,7 @@ export default function PreviewLive() {
               onNavigate={handleNavigate}
               currentPath={activePage?.slug}
               initialCategory={initialCategory}
+              collectionHandle={collectionHandle}
               readOnly
             />
           )}

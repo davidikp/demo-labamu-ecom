@@ -33,9 +33,21 @@ export function HeroArrow({ direction, variant = 'minimal', onClick, theme }) {
       </button>
     );
   }
+  // A bare '‹'/'›' text glyph used to be the whole button — a few pixels
+  // wide, and its baseline sits visibly off-center against the dots next
+  // to it (font glyph metrics, not a flex/alignment bug). Swapping to the
+  // same icon component the 'bordered' variant uses sidesteps both: an SVG
+  // centers cleanly in a flex box, at a modest size that gives a real (if
+  // still compact) touch target without the pill ballooning.
+  const Icon = direction === 'prev' ? ChevronLeft : ChevronRight;
   return (
-    <button type="button" aria-label={label} onClick={onClick} className="text-white/70 transition-colors hover:text-white">
-      {direction === 'prev' ? '‹' : '›'}
+    <button
+      type="button"
+      aria-label={label}
+      onClick={onClick}
+      className="flex h-7 w-7 items-center justify-center text-white/70 transition-colors hover:text-white"
+    >
+      <Icon size={18} strokeWidth={2} />
     </button>
   );
 }

@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { resolveColor } from '../../ui/fields/colorValue';
-import { themedButtonStyle } from './themedButtonStyle';
+import { themedButtonStyle, themedButtonHoverStyle } from './themedButtonStyle';
 import { themedCardStyle, CARD_SHADOW_CSS } from './themedLayout';
 import { buildProductPath } from './productSource';
+import ThemedButtonHover from './ThemedButtonHover';
 
 /**
  * @module section-builder/sections/shared/ProductCard
@@ -26,7 +27,7 @@ function ProductCard({ product, theme, showPrice, showQuickAdd, aspectClass, wid
   const soldOut = product.stock === 0;
   const layout = theme?.layout ?? {};
   const cardStyle = themedCardStyle(layout);
-  const border = theme?.colors?.border;
+  const border = layout.card_border !== false ? theme?.colors?.border : undefined;
   const hoverShadow = hovered ? CARD_SHADOW_CSS[layout.card_shadow] ?? 'none' : 'none';
   // Optional — `onNavigate` is only wired for callers that render a real
   // storefront (see catalog_list/Renderer.jsx's identical pattern); a
@@ -59,7 +60,7 @@ function ProductCard({ product, theme, showPrice, showQuickAdd, aspectClass, wid
       </div>
       <div className="flex flex-1 flex-col p-4">
         <p
-          className="mb-2 overflow-hidden text-gray-600"
+          className="mb-1 overflow-hidden text-gray-600"
           style={{
             fontSize: '13px',
             lineHeight: 1.5,
@@ -67,7 +68,6 @@ function ProductCard({ product, theme, showPrice, showQuickAdd, aspectClass, wid
             display: '-webkit-box',
             WebkitLineClamp: 2,
             WebkitBoxOrient: 'vertical',
-            minHeight: 'calc(13px * 1.5 * 2)',
           }}
         >
           {product.name}
@@ -86,22 +86,26 @@ function ProductCard({ product, theme, showPrice, showQuickAdd, aspectClass, wid
             )}
           </p>
         )}
-        {showQuickAdd && !soldOut && (
-          <div className="mt-3">
-            <button
-              type="button"
-              disabled
-              onClick={(e) => { e.stopPropagation(); onQuickAddClick?.(e); }}
-              className="w-full text-xs font-semibold"
-              style={themedButtonStyle(theme.buttons, {
-                primary: resolveColor({ slot: 'primary' }, theme.colors),
-                primaryText: resolveColor({ slot: 'primary_text' }, theme.colors),
-              })}
-            >
-              {t('sectionBuilder:sections.common.addToCart', 'Add to cart')}
-            </button>
-          </div>
-        )}
+        {showQuickAdd && !soldOut && (() => {
+          const quickAddPrimary = resolveColor({ slot: 'primary' }, theme.colors);
+          const quickAddStyle = themedButtonStyle(theme.buttons, { primary: quickAddPrimary, primaryText: resolveColor({ slot: 'primary_text' }, theme.colors) });
+          const quickAddHoverStyle = themedButtonHoverStyle(theme.buttons, quickAddStyle, quickAddPrimary);
+          return (
+            <div className="mt-3">
+              <ThemedButtonHover
+                as="button"
+                type="button"
+                disabled
+                onClick={(e) => { e.stopPropagation(); onQuickAddClick?.(e); }}
+                className="w-full text-xs font-semibold"
+                style={quickAddStyle}
+                hoverStyle={quickAddHoverStyle}
+              >
+                {t('sectionBuilder:sections.common.addToCart', 'Add to cart')}
+              </ThemedButtonHover>
+            </div>
+          );
+        })()}
       </div>
     </div>
   );

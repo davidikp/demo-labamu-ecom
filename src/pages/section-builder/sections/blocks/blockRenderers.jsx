@@ -1,6 +1,7 @@
+import { useState } from 'react';
 import { resolveColor } from '../../ui/fields/colorValue';
 import { resolveMedia } from '../../ui/fields/imageValue';
-import { themedButtonStyle } from '../shared/themedButtonStyle';
+import { themedButtonStyle, themedButtonHoverStyle } from '../shared/themedButtonStyle';
 import EditableText from '../../ui/EditableText';
 import BlockStream from '../../ui/BlockStream';
 import { useResponsiveMobile } from '../shared/useResponsiveMobile';
@@ -124,16 +125,26 @@ const BUTTON_STYLE_VARIANT = { secondary: 'outline', inverted: 'inverted' };
 // (Houzez) or `null` (every other theme, i.e. no override at all).
 export function ButtonBlock({ block, theme, context, onEdit, onSelect }) {
   const d = block.data ?? {};
+  const [hovered, setHovered] = useState(false);
   const variant = BUTTON_STYLE_VARIANT[d.style] ?? 'filled';
   const ctaOverride = context === 'hero_cta' ? resolveHeroRecipe(theme).ctaButton : undefined;
+  const primary = resolveColor({ slot: 'primary' }, theme.colors);
   const style = themedButtonStyle(theme.buttons, {
     variant,
-    primary: resolveColor({ slot: 'primary' }, theme.colors),
+    primary,
     primaryText: resolveColor({ slot: 'primary_text' }, theme.colors),
     override: ctaOverride ?? undefined,
   });
+  // theme.buttons.hover_effect was a schema field with no consumer anywhere
+  // — every button rendered with zero hover feedback regardless of the
+  // merchant's choice. See themedButtonHoverStyle's own doc comment.
+  const hoverStyle = hovered ? themedButtonHoverStyle(theme.buttons, style, primary) : null;
   return (
-    <span style={style}>
+    <span
+      style={hoverStyle ? { ...style, ...hoverStyle } : style}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
       {onEdit ? (
         <EditableText value={d.label} placeholder="Button" onCommit={(v) => onEdit('label', v)} onFocusSelect={onSelect} />
       ) : (

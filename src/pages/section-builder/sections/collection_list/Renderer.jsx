@@ -25,7 +25,14 @@ function collectionsForSection(data, mediaLibrary) {
   return items
     .map((item) => {
       if (item.source === 'custom') {
-        return { id: item.id, name: item.title, image: resolveMedia(item.image, mediaLibrary)?.url ?? null, url: item.url };
+        // `item.image` is normally `{mediaId}` (merchant-uploaded), but also
+        // tolerates a plain public-asset path string (e.g. a theme seeding
+        // catalog.json's own `/assets/catalog/categories/tops.png` rather
+        // than duplicating it into that theme's own media library) — same
+        // convention category_grid's own icon_image resolution and
+        // productSource.js's resolveImageValue already use.
+        const image = typeof item.image === 'string' ? item.image : resolveMedia(item.image, mediaLibrary)?.url ?? null;
+        return { id: item.id, name: item.title, image, url: item.url };
       }
       const collection = catalog.collections.find((c) => c.handle === item.handle);
       return collection ? { id: item.id, name: collection.name, image: collection.image, url: `/collections/${collection.handle}` } : null;
@@ -33,10 +40,16 @@ function collectionsForSection(data, mediaLibrary) {
     .filter(Boolean);
 }
 
-function CollectionListRenderer({ data, onEdit, isMobile, breakpoint, mediaLibrary }) {
+function CollectionListRenderer({ data, onEdit, isMobile, breakpoint, mediaLibrary, theme, onNavigate }) {
   const { t } = useTranslation();
   const mobile = useResponsiveMobile(isMobile);
   const collections = collectionsForSection(data, mediaLibrary);
+  // Theme-driven, like ProductCard — was hardcoded rounded-2xl regardless of
+  // theme.layout.image_corners, so e.g. Xinear's sharp-corner reference
+  // (image_corners: 0) never actually got sharp collection thumbnails. `?? 16`
+  // matches rounded-2xl's own 16px exactly, so a theme that doesn't override
+  // image_corners sees zero change.
+  const circularImageRadius = `${theme?.layout?.image_corners ?? 16}px`;
   // See map_embed/testimonials/etc Renderer.jsx — the builder/preview canvas
   // simulates each device as a fixed-width frame inside a real (usually
   // wide) browser, so this reads the `breakpoint` prop Canvas.jsx already
@@ -78,8 +91,26 @@ function CollectionListRenderer({ data, onEdit, isMobile, breakpoint, mediaLibra
         // used above instead of a CSS breakpoint.
         <div className={`flex flex-wrap justify-center gap-6 ${mobile ? '' : 'justify-between'}`}>
           {collections.map((collection) => (
-            <div key={collection.id} className={`flex flex-col items-center gap-2 ${mobile ? 'w-20' : 'w-auto flex-1'}`}>
-              <div className={`flex aspect-square items-center justify-center overflow-hidden rounded-2xl bg-gray-100 text-gray-300 ${mobile ? 'w-20' : 'w-full'}`}>
+            <a
+              key={collection.id}
+              href={collection.url || undefined}
+              // Was a plain `<div>` — no link, no click handler at all, so
+              // every collection tile here was inert regardless of theme.
+              // Same real-navigation-vs-inert-in-the-builder convention
+              // category_grid/header/footer nav links already use: a bare
+              // `href` alone would do a real full-page browser navigation
+              // this preview/live storefront only ever resolves client-side.
+              onClick={
+                onNavigate && collection.url
+                  ? (e) => { e.preventDefault(); onNavigate(collection.url); }
+                  : (e) => e.preventDefault()
+              }
+              className={`flex flex-col items-center gap-2 ${mobile ? 'w-20' : 'w-auto flex-1'}`}
+            >
+              <div
+                className={`flex aspect-square items-center justify-center overflow-hidden bg-gray-100 text-gray-300 ${mobile ? 'w-20' : 'w-full'}`}
+                style={{ borderRadius: circularImageRadius }}
+              >
                 {collection.image ? (
                   <img src={collection.image} alt={collection.name} className="h-full w-full object-cover" />
                 ) : (
@@ -89,13 +120,22 @@ function CollectionListRenderer({ data, onEdit, isMobile, breakpoint, mediaLibra
               {data.show_collection_title !== false && (
                 <p className="text-center text-sm font-medium text-gray-900">{collection.name}</p>
               )}
-            </div>
+            </a>
           ))}
         </div>
       ) : (
         <div className={`grid gap-4 ${colsClass}`}>
           {collections.map((collection) => (
-            <div key={collection.id}>
+            <a
+              key={collection.id}
+              href={collection.url || undefined}
+              onClick={
+                onNavigate && collection.url
+                  ? (e) => { e.preventDefault(); onNavigate(collection.url); }
+                  : (e) => e.preventDefault()
+              }
+              className="block"
+            >
               <div className={`mb-2 flex items-center justify-center overflow-hidden rounded-md bg-gray-100 text-gray-300 ${aspectClass}`}>
                 {collection.image ? (
                   <img src={collection.image} alt={collection.name} className="h-full w-full object-cover" />
@@ -106,7 +146,7 @@ function CollectionListRenderer({ data, onEdit, isMobile, breakpoint, mediaLibra
               {data.show_collection_title !== false && (
                 <p className="text-sm font-medium text-gray-900">{collection.name}</p>
               )}
-            </div>
+            </a>
           ))}
         </div>
       )}

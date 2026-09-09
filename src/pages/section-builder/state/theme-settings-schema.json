@@ -281,6 +281,12 @@
             { "value": "lift", "label": "Lift (subtle shadow)" },
             { "value": "none", "label": "None" }
           ]
+        },
+        "hover_color": {
+          "type": "color",
+          "label": "Hover background color",
+          "default": null,
+          "helpText": "Only used by the 'darken'/'lighten' hover effects. Leave unset to approximate it by adjusting the resting background's brightness instead of an exact color."
         }
       }
     },
@@ -364,6 +370,12 @@
             { "value": "subtle", "label": "Subtle" },
             { "value": "medium", "label": "Medium" }
           ]
+        },
+        "card_border": {
+          "type": "boolean",
+          "label": "Card border",
+          "default": true,
+          "helpText": "Outlines product cards with the theme's border color."
         }
       }
     },

@@ -1,7 +1,7 @@
-import { memo } from 'react';
+import { memo, useState } from 'react';
 import { Star } from 'lucide-react';
 import { resolveColor } from '../../ui/fields/colorValue';
-import { themedButtonStyle } from '../shared/themedButtonStyle';
+import { themedButtonStyle, useThemedButtonHover } from '../shared/themedButtonStyle';
 import { resolveFormRecipe } from '../shared/formRecipes';
 import StorefrontContainer from '../../ui/primitives/StorefrontContainer';
 import EditableText from '../../ui/EditableText';
@@ -13,21 +13,25 @@ import { useResponsiveMobile } from '../shared/useResponsiveMobile';
 const DEFAULT_STAR_COLOR = '#F59E0B';
 
 // Demo-only: a real rating-submission flow needs a backend endpoint this
-// codebase doesn't have yet, so the stars below are a static, unfilled,
-// non-interactive preview (no rating has been "selected"), and the button
-// doesn't submit anything — true of both layouts below.
+// codebase doesn't have yet, so no rating is ever actually "selected" and
+// the button doesn't submit anything — true of both layouts below. The
+// stacked layout's star row does still fill on hover (a plain visual
+// affordance, not a stateful selection) so it doesn't read as inert.
 function RatingFormRenderer({ data, theme, onEdit, isMobile, breakpoint }) {
   // Called unconditionally (rules-of-hooks) even though only the 'inline'
   // layout below actually needs it.
   const mobile = useResponsiveMobile(isMobile);
+  const [hoveredStar, setHoveredStar] = useState(0);
   const starColor = theme?.colors?.rating ?? DEFAULT_STAR_COLOR;
-  const buttonStyle = themedButtonStyle(theme.buttons, {
-    primary: resolveColor({ slot: 'primary' }, theme.colors),
+  const buttonPrimary = resolveColor({ slot: 'primary' }, theme.colors);
+  const restingButtonStyle = themedButtonStyle(theme.buttons, {
+    primary: buttonPrimary,
     primaryText: resolveColor({ slot: 'primary_text' }, theme.colors),
   });
+  const { style: buttonStyle, hoverHandlers: buttonHoverHandlers } = useThemedButtonHover(theme.buttons, restingButtonStyle, buttonPrimary);
 
   const buttonEl = (
-    <span style={buttonStyle} className="w-fit">
+    <span style={buttonStyle} className="w-fit" {...buttonHoverHandlers}>
       {onEdit ? (
         <EditableText value={data.button_label} placeholder="Give Rating" onCommit={(v) => onEdit('button_label', v)} />
       ) : (
@@ -55,9 +59,16 @@ function RatingFormRenderer({ data, theme, onEdit, isMobile, breakpoint }) {
     );
     return (
       <section className="flex flex-col items-center px-6 text-center">
-        <div className="mb-2 flex" style={{ color: starColor }}>
+        <div className="mb-2 flex gap-1" style={{ color: starColor }} onMouseLeave={() => setHoveredStar(0)}>
           {Array.from({ length: 5 }).map((_, i) => (
-            <Star key={i} size={20} fill="none" stroke={starColor} />
+            <Star
+              key={i}
+              size={32}
+              fill={i < hoveredStar ? starColor : 'none'}
+              stroke={starColor}
+              className="cursor-pointer transition-transform hover:scale-110"
+              onMouseEnter={() => setHoveredStar(i + 1)}
+            />
           ))}
         </div>
         {stackedHeading}
@@ -83,13 +94,13 @@ function RatingFormRenderer({ data, theme, onEdit, isMobile, breakpoint }) {
   const heading = onEdit ? (
     <EditableText
       as="h2"
-      className="mb-6 text-2xl font-bold"
+      className="mb-6 text-base font-normal"
       value={data.heading}
       placeholder="Leave us your thoughts on how do you like our products."
       onCommit={(v) => onEdit('heading', v)}
     />
   ) : (
-    <h2 className="mb-6 text-2xl font-bold">{data.heading || 'Leave us your thoughts on how do you like our products.'}</h2>
+    <h2 className="mb-6 text-base font-normal">{data.heading || 'Leave us your thoughts on how do you like our products.'}</h2>
   );
 
   // 'inline' layout: Name | Review | Rating side by side on desktop,
@@ -116,25 +127,46 @@ function RatingFormRenderer({ data, theme, onEdit, isMobile, breakpoint }) {
 
   return (
     <StorefrontContainer as="section" theme={theme}>
-      {heading}
-      <div
-        className={`grid gap-4 ${stacked ? 'items-start' : 'items-end'}`}
-        style={{ gridTemplateColumns: stacked ? '1fr' : recipe.inlineColumns, gap: `${recipe.inlineGap}px` }}
-      >
-        <div>
-          <label className={labelClass} style={labelStyle}>{data.name_field_label || 'Name'}</label>
-          <input type="text" disabled placeholder={data.name_field_label || 'Name'} className={fieldClass} style={fieldStyle} />
-        </div>
-        <div>
-          <label className={labelClass} style={labelStyle}>{data.message_field_label || 'Review'}</label>
-          <input type="text" disabled placeholder={data.message_field_label || 'Review'} className={fieldClass} style={fieldStyle} />
-        </div>
-        <div>
-          <label className={labelClass} style={labelStyle}>Rating</label>
-          <div className={`flex items-center gap-2 border px-4 ${recipe.field.borderColor ? '' : 'border-gray-300'}`} style={fieldStyle}>
-            {Array.from({ length: 5 }).map((_, i) => (
-              <Star key={i} size={recipe.starSize} fill="none" stroke={starColor} />
-            ))}
+      {/* Left rule (a blockquote-style accent, not a themed-field border) —
+          spans the heading and the field row beneath it, not the button. */}
+      <div className="border-l-2 border-gray-200 pl-4">
+        {heading}
+        <div
+          className={`grid gap-4 ${stacked ? 'items-start' : 'items-end'}`}
+          style={{ gridTemplateColumns: stacked ? '1fr' : recipe.inlineColumns, gap: `${recipe.inlineGap}px` }}
+        >
+          <div>
+            <label className={labelClass} style={labelStyle}>{data.name_field_label || 'Name'}</label>
+            <input type="text" disabled placeholder={data.name_field_label || 'Name'} className={fieldClass} style={fieldStyle} />
+          </div>
+          <div>
+            <label className={labelClass} style={labelStyle}>{data.message_field_label || 'Review'}</label>
+            <input type="text" disabled placeholder={data.message_field_label || 'Review'} className={fieldClass} style={fieldStyle} />
+          </div>
+          <div>
+            <label className={labelClass} style={labelStyle}>Rating</label>
+            {/* Same field-height bordered box as the Name/Review inputs
+                beside it, so the rating reads as one of this row's fields
+                rather than a bare row of icons — the stars themselves stay
+                hoverable (same fill-on-hover affordance as the 'stacked'
+                layout above), just inside that box instead of floating
+                free of it. */}
+            <div
+              className={`flex h-full items-center gap-2 border px-4 ${recipe.field.borderColor ? '' : 'border-gray-300'}`}
+              style={{ ...fieldStyle, color: starColor }}
+              onMouseLeave={() => setHoveredStar(0)}
+            >
+              {Array.from({ length: 5 }).map((_, i) => (
+                <Star
+                  key={i}
+                  size={recipe.starSize}
+                  fill={i < hoveredStar ? starColor : 'none'}
+                  stroke={starColor}
+                  className="cursor-pointer transition-transform hover:scale-110"
+                  onMouseEnter={() => setHoveredStar(i + 1)}
+                />
+              ))}
+            </div>
           </div>
         </div>
       </div>

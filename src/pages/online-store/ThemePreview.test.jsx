@@ -66,6 +66,13 @@ describe('ThemePreview — Product Detail Page routing (Phase 3)', () => {
 
   it('navigates from a Shop grid card into its PDP', () => {
     renderPreview('clothing', '/online-store/theme/clothing/preview?path=%2Fshop');
+    // 'Classic Tote Bag' (catalog.json's p1) is no longer on the default
+    // 'Newest' first page now that the shared demo catalog has more than a
+    // page_size worth of products (Dresses/Shoes/Bags/Perfumes dummy data
+    // added alongside it) — sort 'Oldest' to bring source-array order (p1
+    // first) back to the front, same as a merchant would.
+    fireEvent.click(screen.getByLabelText(/sort by/i));
+    fireEvent.click(screen.getByText('Oldest'));
     fireEvent.click(screen.getByText('Classic Tote Bag'));
     expect(screen.getByRole('heading', { name: 'Classic Tote Bag' })).toBeTruthy();
   });

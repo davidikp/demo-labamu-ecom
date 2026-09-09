@@ -10,6 +10,17 @@ const COLS_CLASS = { '4': 'grid-cols-4', '6': 'grid-cols-6', '8': 'grid-cols-8',
 const TABLET_COLS_CLASS = { '3': 'grid-cols-3', '4': 'grid-cols-4', '6': 'grid-cols-6' };
 const MOBILE_COLS_CLASS = { '3': 'grid-cols-3', '4': 'grid-cols-4' };
 
+/** `icon_image` is normally `{mediaId}` (merchant-uploaded, via `resolveMedia`)
+ * — but a template can also seed it as a plain public-asset path string
+ * (e.g. catalog.json's own `/assets/catalog/categories/tops.png`, already
+ * shared/registered nowhere in any theme's own media library), same
+ * tolerant-string-or-object convention productSource.js's own
+ * `resolveImageValue` already uses for product images. */
+function resolveIcon(value, mediaLibrary) {
+  if (typeof value === 'string') return value;
+  return resolveMedia(value, mediaLibrary)?.url ?? null;
+}
+
 function CategoryGridRenderer({ data, onEdit, isMobile, breakpoint, mediaLibrary, theme, onNavigate }) {
   const { t } = useTranslation();
   const mobile = useResponsiveMobile(isMobile);
@@ -54,7 +65,7 @@ function CategoryGridRenderer({ data, onEdit, isMobile, breakpoint, mediaLibrary
       ) : (
         <div className={`grid ${colsClass}`} style={mobile ? { columnGap: 8, rowGap: 16 } : { gap: 14 }}>
           {items.map((item) => {
-            const icon = resolveMedia(item.icon_image, mediaLibrary);
+            const iconUrl = resolveIcon(item.icon_image, mediaLibrary);
             return (
               <a
                 key={item.id}
@@ -77,8 +88,8 @@ function CategoryGridRenderer({ data, onEdit, isMobile, breakpoint, mediaLibrary
                   className={`flex items-center justify-center overflow-hidden rounded-full ${iconBg ? '' : 'bg-gray-100'}`}
                   style={{ width: size, height: size, backgroundColor: iconBg }}
                 >
-                  {icon ? (
-                    <img src={icon.url} alt={item.label} className="h-[45%] w-[45%] object-contain" />
+                  {iconUrl ? (
+                    <img src={iconUrl} alt={item.label} className="h-[45%] w-[45%] object-contain" />
                   ) : (
                     <span className="text-[10px] text-gray-300">{t('sectionBuilder:sections.common.noImage')}</span>
                   )}

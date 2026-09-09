@@ -8,7 +8,7 @@ import { parseBlockSelection, isAtBlockMax, createBlockCtx } from '../sections/b
 import SectionShell from './SectionShell';
 import PageFrame from './PageFrame';
 
-const RenderedEntity = memo(function RenderedEntity({ entity, theme, mediaLibrary, onEdit, blockCtx, isMobile, breakpoint, onNavigate, currentPath, menus, initialCategory }) {
+const RenderedEntity = memo(function RenderedEntity({ entity, theme, mediaLibrary, onEdit, blockCtx, isMobile, breakpoint, onNavigate, currentPath, menus, initialCategory, collectionHandle }) {
   const { t } = useTranslation();
   const Renderer = SECTION_DEFINITIONS[entity.type]?.Renderer;
   if (!Renderer) {
@@ -42,6 +42,11 @@ const RenderedEntity = memo(function RenderedEntity({ entity, theme, mediaLibrar
         // Renderer looks at it, every other section ignores this unknown
         // prop too.
         initialCategory={initialCategory}
+        // A collection ("collection detail") page's own `/collections/
+        // :handle` route param — only `featured_products`' Renderer looks
+        // at it (see its own doc comment), every other section ignores
+        // this unknown prop, same as `initialCategory` above.
+        collectionHandle={collectionHandle}
       />
     </SectionShell>
   );
@@ -244,6 +249,7 @@ export default function Canvas({
   currentPath,
   menus,
   initialCategory,
+  collectionHandle,
 }) {
   const { t } = useTranslation();
   const isMobile = viewport === 'mobile';
@@ -297,6 +303,7 @@ export default function Canvas({
               onNavigate={onNavigate}
               currentPath={currentPath}
               initialCategory={initialCategory}
+              collectionHandle={collectionHandle}
             />
           ))
         ) : (

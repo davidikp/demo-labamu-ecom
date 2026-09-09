@@ -81,6 +81,12 @@ export default function ThemePreview() {
   const sections = activePage?.sections ?? [];
   const productHandle = match?.page?.systemType === 'product' ? match.params?.handle ?? null : null;
   const editorialCollectionSlug = match?.page?.systemType === 'editorial_collection_detail' ? match.params?.slug ?? null : null;
+  // A catalog Collection Detail page's own `/collections/:handle` route
+  // param — see `Canvas`'s `collectionHandle` prop / `featured_products`'
+  // own Renderer doc comment for why this exists (that page was previously
+  // 100% generic: every collection's `:handle` rendered byte-identical,
+  // unfiltered content).
+  const collectionHandle = match?.page?.systemType === 'collection' ? match.params?.handle ?? null : null;
 
   const handleNavigate = (url) => {
     const targetMatch = matchStorefrontPage(pages, url);
@@ -100,14 +106,26 @@ export default function ThemePreview() {
 
   return (
     <StorefrontCartProvider>
-      <div className="min-h-screen">
+      {/* `h-screen flex-col` + the content wrapper's own `overflow-auto`
+          below — not a single `min-h-screen` document scroll — so this
+          toolbar and the storefront's own sticky header aren't sticky
+          within the *same* scrolling context. Two `position: sticky; top: 0`
+          elements sharing one scroll root both pin to the same y=0 row once
+          scrolled past, so the (lower-z-index, after the earlier z-index
+          fix) header would render fully hidden behind this toolbar instead
+          of sitting below it. Giving the content area its own scroll
+          container (same pattern PageFrame.jsx already uses for the
+          section-builder editor) means the header's sticky top:0 sticks to
+          the top of *that* box — which starts right under this toolbar —
+          instead of competing with it for the viewport's actual top edge. */}
+      <div className="flex h-screen flex-col">
         {/* z-[60]: page sections use z-10 through z-50 for their own
             internal layering (e.g. hero_banner's content-over-photo div) —
             those establish stacking contexts sibling to this toolbar's, so
             a tied z-index falls back to DOM order and a later section can
             paint over this "sticky" bar while scrolling past it. Needs to
             beat the highest z-index used anywhere in a section. */}
-        <div className="sticky top-0 z-[60] flex items-center gap-2 border-b border-gray-200 bg-white px-4 py-3">
+        <div className="z-[60] flex shrink-0 items-center gap-2 border-b border-gray-200 bg-white px-4 py-3">
           <button
             type="button"
             onClick={() => navigate('/online-store/theme')}
@@ -124,6 +142,7 @@ export default function ThemePreview() {
             <ViewportToggle viewport={viewport} onChange={setViewport} />
           </div>
         </div>
+        <div className="flex-1 overflow-auto">
         {productHandle !== null ? (
           <ProductDetailPage
             theme={previewData.theme}
@@ -166,8 +185,10 @@ export default function ThemePreview() {
             onNavigate={handleNavigate}
             currentPath={activePage?.slug ?? '/'}
             initialCategory={initialCategory}
+            collectionHandle={collectionHandle}
           />
         )}
+        </div>
       </div>
     </StorefrontCartProvider>
   );

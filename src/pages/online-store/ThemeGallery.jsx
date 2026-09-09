@@ -1,9 +1,10 @@
-import { useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import Canvas from '../section-builder/ui/Canvas';
 import ConfirmDialog from '../section-builder/ui/ConfirmDialog';
 import { Popup } from '../../ce-ui';
+import { useSnackbar } from '../../contexts/SnackbarContext';
 import { SITE_TEMPLATES, defaultPreviewDataFor, siteTemplateById } from '../section-builder/state/siteTemplates';
 import {
   loadDraft, saveDraft, clearDraft,
@@ -23,6 +24,19 @@ const STORE_ID = 'demo';
 // No store-domain field exists anywhere in this codebase yet (grepped for
 // myshopify/storeDomain) — hardcode a plausible one matching STORE_ID.
 const STORE_DOMAIN = `${STORE_ID}.myshopify.com`;
+
+// Cap shown next to "Draft themes" as a running "n/20" counter.
+const MAX_DRAFT_THEMES = 20;
+
+// Tracks whether this browser's already-saved published theme has been
+// one-time-migrated to Xinear (the new default) — see publishedTheme's
+// useState initializer below.
+const XINEAR_DEFAULT_MIGRATION_KEY = `ot_published_theme_xinear_default_migrated_v1:${STORE_ID}`;
+
+// Same one-time migration, but for the live section-builder draft (the
+// content "Edit theme" actually opens) — separate flag/storage domain from
+// the bookkeeping record above, see the `draft` useState initializer below.
+const XINEAR_DRAFT_MIGRATION_KEY = `ot_draft_xinear_default_migrated_v1:${STORE_ID}`;
 
 // Canvas's own desktop viewport width (see section-builder/ui/Canvas.jsx),
 // scaled down to card size. Approximate for the gallery cards — these are
@@ -107,6 +121,23 @@ export default function ThemeGallery() {
   // recomputed-and-discarded on every render.
   const [draft] = useState(() => {
     const loaded = loadDraft(STORE_ID);
+
+    // One-time migration: Xinear is now the default theme, including for
+    // this store's live draft (what "Edit theme" opens) — runs once per
+    // browser so it replaces whatever was already seeded (e.g. the old
+    // Clothing/"Horizon & Co." default), but never touches real edits made
+    // afterward. Deliberately unconditional (unlike the `looksUntouched`
+    // auto-seed below) since the whole point is to override existing
+    // content this one time.
+    let draftMigrated = true;
+    try { draftMigrated = localStorage.getItem(XINEAR_DRAFT_MIGRATION_KEY) === '1'; } catch { /* storage unavailable */ }
+    if (!draftMigrated) {
+      const xinearTemplate = siteTemplateById('xinear') ?? SITE_TEMPLATES[0];
+      const migrated = applySiteTemplate(STORE_ID, xinearTemplate, 'seed');
+      try { localStorage.setItem(XINEAR_DRAFT_MIGRATION_KEY, '1'); } catch { /* storage unavailable */ }
+      return migrated;
+    }
+
     if (loaded?.activeTemplateId) return loaded;
 
     if (loaded) {
@@ -128,7 +159,11 @@ export default function ThemeGallery() {
     const homePage = loaded?.pages?.find((p) => p.id === 'home') ?? loaded?.pages?.[0];
     const looksUntouched = !loaded || ((homePage?.sections?.length ?? 0) === 0 && isDefaultTheme(loaded.theme));
     if (looksUntouched) {
-      return applySiteTemplate(STORE_ID, SITE_TEMPLATES[0]);
+      // Xinear is the default theme for a fresh/untouched store (was
+      // SITE_TEMPLATES[0] — Clothing/"Horizon & Co."). Falls back to
+      // SITE_TEMPLATES[0] only if the roster ever loses its 'xinear' entry.
+      const defaultTemplate = siteTemplateById('xinear') ?? SITE_TEMPLATES[0];
+      return applySiteTemplate(STORE_ID, defaultTemplate);
     }
     return loaded;
   });
@@ -149,19 +184,30 @@ export default function ThemeGallery() {
   // ---------------------------------------------------------------------
   const [publishedTheme, setPublishedTheme] = useState(() => {
     const existing = loadPublishedTheme(STORE_ID);
-    if (existing) return existing;
-    // Seed from whatever's currently active in the live draft so the big
-    // card always has something real to show on first visit.
-    const activeTemplate = SITE_TEMPLATES.find((tpl) => tpl.id === activeTemplateId) ?? SITE_TEMPLATES[0];
+
+    // One-time migration: Xinear is now the default published theme. Runs
+    // once per browser (tracked by XINEAR_DEFAULT_MIGRATION_KEY) so it
+    // overwrites whatever was already saved (including the old
+    // Clothing/"Horizon & Co." seed), but never fights a merchant's own
+    // publish afterwards — once migrated, `existing` wins on every later
+    // load same as before this change.
+    let alreadyMigrated = true;
+    try { alreadyMigrated = localStorage.getItem(XINEAR_DEFAULT_MIGRATION_KEY) === '1'; } catch { /* storage unavailable */ }
+    if (existing && alreadyMigrated) return existing;
+
+    const xinearTemplate = siteTemplateById('xinear')
+      ?? SITE_TEMPLATES.find((tpl) => tpl.id === activeTemplateId)
+      ?? SITE_TEMPLATES[0];
     const seeded = {
-      id: `published-${Date.now()}`,
-      templateId: activeTemplate.id,
-      name: activeTemplate.name,
+      id: existing?.id ?? `published-${Date.now()}`,
+      templateId: xinearTemplate.id,
+      name: xinearTemplate.name,
       previewImageUrl: null,
-      publishedAt: Date.now(),
+      publishedAt: existing?.publishedAt ?? Date.now(),
       lastSavedAt: Date.now(),
     };
     savePublishedTheme(STORE_ID, seeded);
+    try { localStorage.setItem(XINEAR_DEFAULT_MIGRATION_KEY, '1'); } catch { /* storage unavailable */ }
     return seeded;
   });
   const [draftThemes, setDraftThemes] = useState(() => loadDraftThemes(STORE_ID));
@@ -174,6 +220,38 @@ export default function ThemeGallery() {
   const [publishConfirmTheme, setPublishConfirmTheme] = useState(null); // draft theme pending publish
   const [deleteConfirmTheme, setDeleteConfirmTheme] = useState(null); // draft theme pending delete
   const [addingDiscoverId, setAddingDiscoverId] = useState(null);
+  const { showSnackbar } = useSnackbar();
+
+  // Caps the draft-themes card to the published-theme card's rendered
+  // height, so a long draft list scrolls internally (.draft-theme-list)
+  // instead of growing the row taller than its row partner.
+  //
+  // A callback ref (rather than a plain ref read inside a useLayoutEffect
+  // with an empty dep array) so the observer attaches the moment the DOM
+  // node actually exists — a useLayoutEffect that runs before this node's
+  // conditional branch (publishedTheme && <div ref=...>) has committed
+  // would otherwise capture a null .current forever and never retry, which
+  // is exactly the "works after an in-session add, but not after a hard
+  // refresh" symptom this was seeing.
+  const [draftCardMaxHeight, setDraftCardMaxHeight] = useState(null);
+  const resizeObserverRef = useRef(null);
+  const publishedCardRef = useRef((node) => {
+    resizeObserverRef.current?.disconnect();
+    if (!node) return;
+    // Measure synchronously right away — ResizeObserver's own first
+    // callback is asynchronous (queued for "before next paint" at the
+    // earliest), which left a visible flash of the un-capped, hugging
+    // card on mount/remount. The observer below still catches later
+    // resizes (font/image load, viewport changes).
+    setDraftCardMaxHeight(node.getBoundingClientRect().height);
+    if (typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(([entry]) => {
+      setDraftCardMaxHeight(entry.contentRect.height);
+    });
+    observer.observe(node);
+    resizeObserverRef.current = observer;
+  }).current;
+  useEffect(() => () => resizeObserverRef.current?.disconnect(), []);
 
   function previewDataFor(template) {
     const isActive = template.id === activeTemplateId;
@@ -387,6 +465,11 @@ export default function ThemeGallery() {
     // this should be unreachable, but never apply a stub theme regardless.
     if (item.comingSoon) return;
 
+    if (draftThemes.length >= MAX_DRAFT_THEMES) {
+      showSnackbar(t('sectionBuilder:onlineStore.themes.draftFull', 'Draft theme is full'), 'red');
+      return;
+    }
+
     setAddingDiscoverId(item.id);
     setTimeout(() => {
       // Every draft theme gets its own section-builder storeId namespace
@@ -441,6 +524,7 @@ export default function ThemeGallery() {
       setDraftThemes(nextList);
       saveDraftThemes(STORE_ID, nextList);
       setAddingDiscoverId(null);
+      showSnackbar(t('sectionBuilder:onlineStore.themes.draftSaved', 'Draft theme successfully saved'), 'green');
     }, 800);
   }
 
@@ -484,9 +568,40 @@ export default function ThemeGallery() {
         }
         .gallery-card + .gallery-card { margin-top: 24px; }
 
+        .theme-gallery-row {
+          display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px; align-items: start;
+          margin-bottom: 24px;
+        }
+        @media (max-width: 900px) {
+          .theme-gallery-row { grid-template-columns: 1fr; }
+        }
+
+        .draft-heading-row {
+          display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px;
+        }
+        .draft-heading-row .section-heading { margin: 0; }
+        .draft-count {
+          flex-shrink: 0; font-size: 13px; font-weight: 700; color: #6B7280;
+        }
+        .draft-count--full { color: #DC2626; }
+
+        /* Card 2 is given an explicit height (in px, from JS — see
+           publishedCardRef) matching the published theme card's own
+           rendered height, and the draft list scrolls internally once it
+           outgrows that height instead of pushing the card taller than its
+           row partner. A definite height (rather than max-height on an
+           auto-sizing grid item, which fought with the grid's own track
+           sizing across renders) so the flex column below has something
+           concrete to size its scrollable child against. */
+        .theme-gallery-row .gallery-card {
+          display: flex; flex-direction: column; min-height: 0; overflow: hidden;
+        }
+        .draft-theme-list {
+          flex: 1 1 auto; overflow-y: auto; min-height: 0; padding-right: 4px;
+        }
+
         .published-theme-card {
           border-radius: 16px; border: 1px solid #E9E9E9; background: #F9FAFB;
-          margin-bottom: 24px;
         }
         /* overflow:hidden lives here (not on .published-theme-card) so it
            only crops the preview image — the footer below, which hosts the
@@ -494,11 +609,6 @@ export default function ThemeGallery() {
         .published-theme-card__preview {
           position: relative; width: 100%; height: 400px; overflow: hidden; background: #F3F4F6;
           border-radius: 16px 16px 0 0;
-        }
-        .published-badge {
-          position: absolute; top: 16px; right: 16px; z-index: 5;
-          padding: 6px 14px; border-radius: 100px; font-size: 10px; font-weight: 700;
-          background: #006BFF; color: #FFFFFF; letter-spacing: 0.02em;
         }
         .published-theme-card__footer {
           display: flex; align-items: center; gap: 16px; padding: 16px 20px; background: #FFFFFF; border-top: 1px solid #E9E9E9;
@@ -563,10 +673,8 @@ export default function ThemeGallery() {
         .discover-card__placeholder--coming-soon {
           background: linear-gradient(135deg, #F3F4F6 0%, #EAEBEE 100%); color: #9CA3AF;
         }
-        .discover-card__coming-soon-badge {
-          position: absolute; top: 16px; right: 16px; z-index: 5;
-          padding: 6px 14px; border-radius: 100px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
-          background: #E5E7EB; color: #6B7280;
+        .discover-card__coming-soon-overlay {
+          position: absolute; inset: 0; z-index: 5; background: rgba(0, 0, 0, 0.4);
         }
 
         .more-menu-popover {
@@ -587,30 +695,37 @@ export default function ThemeGallery() {
           {t('sectionBuilder:templates.gallery.heading')}
         </h1>
 
-        {/* Card 1 — published theme. Always rendered when a publishedTheme
-            record exists, regardless of whether it maps to a real
-            SITE_TEMPLATES entry (publishedPreviewElement always resolves to
-            something renderable — a live preview or an illustrative
-            placeholder). */}
-        {publishedTheme && (
-          <PublishedThemeCard
-            theme={publishedTheme}
-            domain={STORE_DOMAIN}
-            previewData={publishedPreviewElement}
-            isRenaming={renamingId === 'published'}
-            onEdit={handleOpen}
-            onPreview={handlePublishedPreview}
-            onRenameStart={() => setRenamingId('published')}
-            onRenameSubmit={handlePublishedRenameSubmit}
-            onRenameCancel={() => setRenamingId(null)}
-          />
-        )}
+        <div className="theme-gallery-row">
+          {/* Card 1 — published theme. Always rendered when a publishedTheme
+              record exists, regardless of whether it maps to a real
+              SITE_TEMPLATES entry (publishedPreviewElement always resolves to
+              something renderable — a live preview or an illustrative
+              placeholder). */}
+          {publishedTheme && (
+            <div ref={publishedCardRef}>
+              <PublishedThemeCard
+                theme={publishedTheme}
+                domain={STORE_DOMAIN}
+                previewData={publishedPreviewElement}
+                isRenaming={renamingId === 'published'}
+                onEdit={handleOpen}
+                onPreview={handlePublishedPreview}
+                onRenameStart={() => setRenamingId('published')}
+                onRenameSubmit={handlePublishedRenameSubmit}
+                onRenameCancel={() => setRenamingId(null)}
+              />
+            </div>
+          )}
 
-        {/* Card 2 — draft themes */}
-        <div className="gallery-card">
-          <h2 className="section-heading">{t('sectionBuilder:onlineStore.themes.draftHeading', 'Draft themes')}</h2>
+          {/* Card 2 — draft themes */}
+          <div className="gallery-card" style={draftCardMaxHeight ? { height: draftCardMaxHeight } : undefined}>
+          <div className="draft-heading-row">
+            <h2 className="section-heading">{t('sectionBuilder:onlineStore.themes.draftHeading', 'Draft themes')}</h2>
+            <span className={`draft-count${draftThemes.length >= MAX_DRAFT_THEMES ? ' draft-count--full' : ''}`}>{draftThemes.length}/{MAX_DRAFT_THEMES}</span>
+          </div>
           {draftThemes.length === 0 ? (
             <div style={{
+              flex: '1 1 auto',
               padding: '48px 24px',
               textAlign: 'center',
               color: '#9CA3AF',
@@ -626,7 +741,7 @@ export default function ThemeGallery() {
               {t('sectionBuilder:onlineStore.themes.draftEmpty', 'No draft themes yet — add one from Discover themes below.')}
             </div>
           ) : (
-            <div>
+            <div className="draft-theme-list">
               {draftThemes.map((d) => (
                 <DraftThemeRow
                   key={d.id}
@@ -646,6 +761,7 @@ export default function ThemeGallery() {
               ))}
             </div>
           )}
+          </div>
         </div>
 
         {/* Card 3 — discover themes */}

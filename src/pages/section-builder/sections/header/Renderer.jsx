@@ -267,7 +267,12 @@ function HeaderRenderer({ data, isMobile, onNavigate, theme, mediaLibrary, curre
   // silently does nothing regardless of its value isn't "existing generic
   // behavior" worth preserving. Position: fixed/sticky headers are already
   // this field's own documented default for every theme.
-  const stickyStyle = data.sticky !== false ? { position: 'sticky', top: 0, zIndex: 100 } : undefined;
+  // zIndex: 50, not some higher arbitrary value — ThemePreview.jsx's own
+  // builder-chrome toolbar is `sticky z-[60]` specifically documented as
+  // needing to "beat the highest z-index used anywhere in a section"; a
+  // header z-index at or above that overlaps/paints over the builder's own
+  // toolbar while scrolling instead of staying tucked beneath it.
+  const stickyStyle = data.sticky !== false ? { position: 'sticky', top: 0, zIndex: 50 } : undefined;
   const borderStyle = {
     ...(data.show_border ? { borderBottomWidth: 1, borderBottomStyle: 'solid', borderBottomColor: theme?.colors?.border || undefined } : {}),
     ...stickyStyle,

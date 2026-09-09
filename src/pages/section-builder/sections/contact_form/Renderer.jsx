@@ -4,7 +4,7 @@ import BlockStream from '../../ui/BlockStream';
 import StorefrontContainer from '../../ui/primitives/StorefrontContainer';
 import { resolveMedia } from '../../ui/fields/imageValue';
 import { resolveColor } from '../../ui/fields/colorValue';
-import { themedButtonStyle } from '../shared/themedButtonStyle';
+import { themedButtonStyle, useThemedButtonHover } from '../shared/themedButtonStyle';
 import { useResponsiveMobile } from '../shared/useResponsiveMobile';
 
 // TODO(backend): submission, email notification, and rate limiting (US-9.1's
@@ -21,10 +21,12 @@ function ContactFormRenderer({ data, blocks = [], theme, mediaLibrary, blockCtx,
   const stacked = mobile || breakpoint === 'tablet';
   const isSplit = data.layout === 'split';
   const image = isSplit ? resolveMedia(data.image, mediaLibrary) : null;
-  const buttonStyle = themedButtonStyle(theme.buttons, {
-    primary: resolveColor({ slot: 'primary' }, theme.colors),
+  const buttonPrimary = resolveColor({ slot: 'primary' }, theme.colors);
+  const restingButtonStyle = themedButtonStyle(theme.buttons, {
+    primary: buttonPrimary,
     primaryText: resolveColor({ slot: 'primary_text' }, theme.colors),
   });
+  const { style: buttonStyle, hoverHandlers } = useThemedButtonHover(theme.buttons, restingButtonStyle, buttonPrimary);
 
   const form = (
     <div className={isSplit ? 'space-y-5' : 'relative max-w-md space-y-3'}>
@@ -42,7 +44,7 @@ function ContactFormRenderer({ data, blocks = [], theme, mediaLibrary, blockCtx,
         // it, so it renders exactly as before.
         context={isSplit ? 'themed_form' : undefined}
       />
-      <span className="inline-block text-sm" style={buttonStyle}>{data.button_label || t('sectionBuilder:sections.contactForm.sendButton')}</span>
+      <span className="inline-block text-sm" style={buttonStyle} {...hoverHandlers}>{data.button_label || t('sectionBuilder:sections.contactForm.sendButton')}</span>
     </div>
   );
 

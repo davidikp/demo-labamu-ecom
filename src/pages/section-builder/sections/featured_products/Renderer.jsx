@@ -9,6 +9,7 @@ import { buildShopPath, resolveStorefrontProducts } from '../shared/productSourc
 import { HEADING_SIZE_CLASS } from '../shared/headingSize';
 import { ASPECT_RATIO_CLASS } from '../shared/imageAspectRatio';
 import { useResponsiveMobile } from '../shared/useResponsiveMobile';
+import catalog from '../../mocks/catalog.json';
 
 const COLS_CLASS = { '1': 'grid-cols-1', '2': 'grid-cols-2', '3': 'grid-cols-3', '4': 'grid-cols-4', '5': 'grid-cols-5', '6': 'grid-cols-6' };
 
@@ -32,6 +33,27 @@ function groupProductsByCategory(products) {
     groups[indexByCategory.get(category)].products.push(product);
   }
   return groups;
+}
+
+/** `collectionHandle` (the Collection Detail page's own `/collections/
+ * :handle` route param — see Canvas.jsx/ThemePreview.jsx/PreviewLive.jsx's
+ * own doc comments) resolves this section into showing exactly that one
+ * catalog collection's own products/name, overriding whatever `data.products`
+ * /heading the section was otherwise configured with. Without this, the
+ * Collection Detail page rendered byte-identical, unfiltered content for
+ * every collection regardless of which one was actually clicked — the route
+ * param existed but nothing ever consumed it. `catalog.json` is the same
+ * source `collection_list`'s own `collectionsForSection` reads real
+ * collections from (see its doc comment) — not Xinear/Houzez-specific
+ * itself, just whichever theme's demo/real catalog happens to be in play
+ * (Houzez has none, so its own collection links never resolve one here). */
+function resolveCollection(collectionHandle, theme, mediaLibrary) {
+  if (!collectionHandle) return null;
+  const collection = catalog.collections.find((c) => c.handle === collectionHandle);
+  if (!collection) return null;
+  const idSet = new Set(collection.productIds ?? []);
+  const products = resolveStorefrontProducts(theme, mediaLibrary).filter((p) => idSet.has(p.id));
+  return { collection, products };
 }
 
 /** Resolves each item through `resolveStorefrontProducts` (the same
@@ -97,7 +119,7 @@ function ViewAllLink({ label, theme, onClick }) {
     <Tag
       type={onClick ? 'button' : undefined}
       onClick={onClick}
-      className={`flex shrink-0 items-center gap-1 text-sm font-semibold ${primary ? '' : 'text-gray-700 underline'} ${onClick ? 'cursor-pointer' : ''}`}
+      className={`flex shrink-0 items-center gap-1 text-sm font-semibold hover:underline ${primary ? '' : 'text-gray-700 underline'} ${onClick ? 'cursor-pointer' : ''}`}
       style={{ color: primary }}
     >
       {label} <ChevronRight size={16} strokeWidth={2.5} />
@@ -105,10 +127,11 @@ function ViewAllLink({ label, theme, onClick }) {
   );
 }
 
-function FeaturedProductsRenderer({ data, onEdit, isMobile, breakpoint, mediaLibrary, theme, onNavigate }) {
+function FeaturedProductsRenderer({ data, onEdit, isMobile, breakpoint, mediaLibrary, theme, onNavigate, collectionHandle }) {
   const { t } = useTranslation();
   const mobile = useResponsiveMobile(isMobile);
-  const products = productsForSection(data, theme, mediaLibrary);
+  const collectionMatch = resolveCollection(collectionHandle, theme, mediaLibrary);
+  const products = collectionMatch ? collectionMatch.products : productsForSection(data, theme, mediaLibrary);
   // See map_embed/testimonials/etc Renderer.jsx — the builder/preview canvas
   // simulates each device as a fixed-width frame inside a real (usually
   // wide) browser, so this reads the `breakpoint` prop Canvas.jsx already
@@ -120,17 +143,24 @@ function FeaturedProductsRenderer({ data, onEdit, isMobile, breakpoint, mediaLib
       : data.columns_desktop ?? '4';
   const colsClass = COLS_CLASS[columns] ?? 'grid-cols-2';
   const horizontalScroll = data.mobile_layout === 'horizontal_scroll';
-  const groups = data.group_by_category ? groupProductsByCategory(products) : null;
+  // A collection detail page is already the destination a "View all"/group
+  // link would send you to, and its own products aren't grouped-by-category
+  // sub-rows — both only apply to the section's ordinary (non-collection)
+  // configuration.
+  const groups = !collectionMatch && data.group_by_category ? groupProductsByCategory(products) : null;
   const headingSizeClass = HEADING_SIZE_CLASS[data.heading_size] ?? HEADING_SIZE_CLASS.medium;
   const aspectClass = ASPECT_RATIO_CLASS[data.image_aspect_ratio] ?? ASPECT_RATIO_CLASS.square;
   const viewAllLabel = data.view_all_label || t('sectionBuilder:sections.featuredProducts.viewAll');
+  const showViewAll = !collectionMatch && data.show_view_all !== false;
 
   return (
     <StorefrontContainer as="section" theme={theme}>
-      {(data.show_heading !== false || (!groups && data.show_view_all !== false)) && (
+      {(data.show_heading !== false || (!groups && showViewAll)) && (
         <div className="mb-6 flex items-center justify-between gap-4">
           {data.show_heading !== false ? (
-            onEdit ? (
+            collectionMatch ? (
+              <h2 className={`font-semibold text-gray-900 ${headingSizeClass}`}>{collectionMatch.collection.name}</h2>
+            ) : onEdit ? (
               <EditableText
                 as="h2"
                 className={`font-semibold text-gray-900 ${headingSizeClass}`}
@@ -144,7 +174,7 @@ function FeaturedProductsRenderer({ data, onEdit, isMobile, breakpoint, mediaLib
           ) : (
             <span />
           )}
-          {!groups && data.show_view_all !== false && (
+          {!groups && showViewAll && (
             <ViewAllLink
               label={viewAllLabel}
               theme={theme}
@@ -153,7 +183,9 @@ function FeaturedProductsRenderer({ data, onEdit, isMobile, breakpoint, mediaLib
           )}
         </div>
       )}
-      {groups ? (
+      {collectionMatch && products.length === 0 ? (
+        <p className="text-sm text-gray-400">{t('sectionBuilder:sections.featuredProducts.collectionEmpty', 'No products in this collection yet.')}</p>
+      ) : groups ? (
         <div className="flex flex-col gap-8">
           {groups.map((group) => (
             <div key={group.category}>

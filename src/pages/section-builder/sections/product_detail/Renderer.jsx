@@ -2,14 +2,17 @@ import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Share2, ChevronRight } from 'lucide-react';
 import { resolveColor } from '../../ui/fields/colorValue';
-import { themedButtonStyle } from '../shared/themedButtonStyle';
+import { themedButtonStyle, themedButtonHoverStyle } from '../shared/themedButtonStyle';
+import ThemedButtonHover from '../shared/ThemedButtonHover';
 import { useResponsiveMobile } from '../shared/useResponsiveMobile';
-import { resolveStorefrontProducts, buildProductPath } from '../shared/productSource';
+import { resolveStorefrontProducts } from '../shared/productSource';
 import { resolvePdpOptionGroups } from '../shared/productOptionsConfig';
 import { useStorefrontCart } from '../shared/storefrontCartContext';
 import { useSnackbar } from '../../../../contexts/SnackbarContext';
 import EditableText from '../../ui/EditableText';
 import StorefrontContainer from '../../ui/primitives/StorefrontContainer';
+import ProductCard from '../shared/ProductCard';
+import { ASPECT_RATIO_CLASS } from '../shared/imageAspectRatio';
 
 /** Other Picks' column count, resolved off the builder's canonical
  * `breakpoint` signal (themes/breakpoints.js) the same way catalog_list's
@@ -55,6 +58,13 @@ function ProductDetailRenderer({ data, theme, product: productProp, mediaLibrary
 
   const allProducts = useMemo(() => resolveStorefrontProducts(theme, mediaLibrary), [theme, mediaLibrary]);
   const product = productProp ?? allProducts[0] ?? null;
+
+  const pdpPrimary = resolveColor({ slot: 'primary' }, theme?.colors);
+  const pdpPrimaryText = resolveColor({ slot: 'primary_text' }, theme?.colors);
+  const buyNowStyle = themedButtonStyle(theme?.buttons, { variant: 'outline', primary: pdpPrimary, primaryText: pdpPrimaryText });
+  const buyNowHoverStyle = themedButtonHoverStyle(theme?.buttons ?? {}, buyNowStyle, pdpPrimary);
+  const addToCartStyle = themedButtonStyle(theme?.buttons, { primary: pdpPrimary, primaryText: pdpPrimaryText });
+  const addToCartHoverStyle = themedButtonHoverStyle(theme?.buttons ?? {}, addToCartStyle, pdpPrimary);
 
   const images = product?.images?.length ? product.images : product?.image ? [product.image] : [];
   const hasMultipleImages = images.length > 1;
@@ -237,11 +247,13 @@ function ProductDetailRenderer({ data, theme, product: productProp, mediaLibrary
                 <p className="text-sm text-gray-500">{product.category}</p>
               )}
 
-              <p className={`text-sm font-medium ${soldOut ? 'text-red-500' : 'text-green-600'}`}>
-                {soldOut
-                  ? t('sectionBuilder:sections.common.soldOut', 'Sold out')
-                  : t('sectionBuilder:sections.productDetail.inStock', 'In stock')}
-              </p>
+              {data.show_stock_status !== false && (
+                <p className={`text-sm font-medium ${soldOut ? 'text-red-500' : 'text-green-600'}`}>
+                  {soldOut
+                    ? t('sectionBuilder:sections.common.soldOut', 'Sold out')
+                    : t('sectionBuilder:sections.productDetail.inStock', 'In stock')}
+                </p>
+              )}
 
               <div className="w-full border-t border-gray-200" />
 
@@ -309,31 +321,28 @@ function ProductDetailRenderer({ data, theme, product: productProp, mediaLibrary
               </div>
 
               <div className="flex w-full gap-2">
-                <button
+                <ThemedButtonHover
+                  as="button"
                   type="button"
                   disabled={soldOut}
                   onClick={handleAddToCart}
-                  style={themedButtonStyle(theme?.buttons, {
-                    variant: 'outline',
-                    primary: resolveColor({ slot: 'primary' }, theme?.colors),
-                    primaryText: resolveColor({ slot: 'primary_text' }, theme?.colors),
-                  })}
+                  style={buyNowStyle}
+                  hoverStyle={buyNowHoverStyle}
                   className="flex-1 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {t('sectionBuilder:sections.productDetail.buyNow', 'Buy Now')}
-                </button>
-                <button
+                </ThemedButtonHover>
+                <ThemedButtonHover
+                  as="button"
                   type="button"
                   disabled={soldOut}
                   onClick={handleAddToCart}
-                  style={themedButtonStyle(theme?.buttons, {
-                    primary: resolveColor({ slot: 'primary' }, theme?.colors),
-                    primaryText: resolveColor({ slot: 'primary_text' }, theme?.colors),
-                  })}
+                  style={addToCartStyle}
+                  hoverStyle={addToCartHoverStyle}
                   className="flex-1 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {soldOut ? t('sectionBuilder:sections.common.soldOut', 'Sold out') : t('sectionBuilder:sections.productDetail.addToCart', 'Add to cart')}
-                </button>
+                </ThemedButtonHover>
               </div>
             </div>
 
@@ -374,48 +383,16 @@ function ProductDetailRenderer({ data, theme, product: productProp, mediaLibrary
                 {t('sectionBuilder:sections.productDetail.seeAll', 'See All →')}
               </button>
             </div>
+            {/* Reuses the exact same card the Shop page grid renders
+                (catalog_list/Renderer.jsx) — this used to be a hand-rolled
+                near-duplicate (its own border-radius/shadow/name/price
+                styling), which drifted from Shop's actual card look
+                (no border, no shadow, different name/price type scale)
+                instead of matching it. */}
             <div className={`grid gap-4 ${relatedColsClass}`} data-testid="pdp-related-grid">
-              {related.map((p) => {
-                const relatedImages = p.images?.length ? p.images : p.image ? [p.image] : [];
-                return (
-                  <div
-                    key={p.id}
-                    onClick={() => handleNavigate(buildProductPath(p.handle))}
-                    style={{ cursor: onNavigate ? 'pointer' : 'default' }}
-                    className="flex flex-col gap-2"
-                  >
-                    <div className="relative aspect-[308/340] w-full overflow-hidden rounded-xl bg-gray-100">
-                      {relatedImages[0] ? (
-                        <img src={relatedImages[0]} alt={p.name} className="h-full w-full object-cover" />
-                      ) : (
-                        <div className="flex h-full w-full items-center justify-center text-xs text-gray-300">
-                          {t('sectionBuilder:sections.common.noImage')}
-                        </div>
-                      )}
-                      {relatedImages.length > 1 && (
-                        <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 items-center gap-1">
-                          {relatedImages.map((img, i) => (
-                            <span
-                              key={img + i}
-                              className={`rounded-full shadow-[0_0_4px_rgba(0,0,0,0.5)] ring-1 ring-white ${
-                                i === 0 ? 'h-2.5 w-2.5' : 'h-1.5 w-1.5 bg-white'
-                              }`}
-                              style={i === 0 ? { backgroundColor: resolveColor({ slot: 'primary' }, theme?.colors) } : undefined}
-                            />
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                    <span
-                      className="line-clamp-2 text-sm font-medium"
-                      style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: 1.4 }}
-                    >
-                      {p.name}
-                    </span>
-                    <span className="text-sm font-bold text-gray-900">{typeof p.price === 'string' ? p.price : `$${Number(p.price ?? 0).toFixed(2)}`}</span>
-                  </div>
-                );
-              })}
+              {related.map((p) => (
+                <ProductCard key={p.id} product={p} theme={theme} aspectClass={ASPECT_RATIO_CLASS.square} onNavigate={onNavigate ? handleNavigate : undefined} />
+              ))}
             </div>
           </div>
         )}

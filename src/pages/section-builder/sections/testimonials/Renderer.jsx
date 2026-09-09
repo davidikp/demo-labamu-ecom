@@ -36,9 +36,10 @@ function TestimonialsRenderer({ data, blocks = [], theme, mediaLibrary, onEdit, 
   // instead of composing with the shared `font-semibold` + size-class idiom
   // every other heading_size step uses — and gets golden's 32px bottom
   // margin (mb-8) instead of the shared mb-6, scoped to this section only.
+  const headingAlignClass = data.heading_align === 'center' ? 'text-center' : '';
   const headingClass = isDisplayHeading
-    ? `mb-8 ${DISPLAY_HEADING_CLASS} text-gray-900`
-    : `mb-6 font-semibold text-gray-900 ${HEADING_SIZE_CLASS[data.heading_size] ?? HEADING_SIZE_CLASS.medium}`;
+    ? `mb-8 ${DISPLAY_HEADING_CLASS} text-gray-900 ${headingAlignClass}`
+    : `mb-6 font-semibold text-gray-900 ${HEADING_SIZE_CLASS[data.heading_size] ?? HEADING_SIZE_CLASS.medium} ${headingAlignClass}`;
   // Only the radius comes from the theme's card recipe — `card_shadow` is a
   // hover-affordance token meant for clickable product cards (see
   // shared/ProductCard.jsx), not a resting testimonial card; applying it

@@ -1,7 +1,9 @@
 import { memo } from 'react';
+import { ChevronRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { resolveColor } from '../../ui/fields/colorValue';
-import { themedButtonStyle } from '../shared/themedButtonStyle';
+import { themedButtonStyle, themedButtonHoverStyle } from '../shared/themedButtonStyle';
+import ThemedButtonHover from '../shared/ThemedButtonHover';
 import StorefrontContainer from '../../ui/primitives/StorefrontContainer';
 import { EDITORIAL_COLLECTIONS } from '../shared/editorialCollections';
 import { groupGalleryRows } from '../shared/galleryRhythm';
@@ -96,6 +98,10 @@ function EditorialCollectionDetailRenderer({ data, theme, collection: collection
     );
   }
 
+  const ctaPrimary = resolveColor({ slot: 'primary' }, theme?.colors);
+  const ctaButtonStyle = themedButtonStyle(theme?.buttons ?? {}, { primary: ctaPrimary, primaryText: resolveColor({ slot: 'primary_text' }, theme?.colors) });
+  const ctaButtonHoverStyle = themedButtonHoverStyle(theme?.buttons ?? {}, ctaButtonStyle, ctaPrimary);
+
   const usesFirstGalleryImageAsHero = !collection.coverImage && Boolean(collection.images?.[0]);
   const heroImage = collection.coverImage ?? collection.images?.[0]?.src ?? null;
   const heroAlt = collection.coverImage ? collection.coverImageAlt : collection.images?.[0]?.alt;
@@ -118,9 +124,39 @@ function EditorialCollectionDetailRenderer({ data, theme, collection: collection
   const showCta = data.show_cta !== false && cta?.enabled && cta?.label;
   const ctaHref = cta?.href || '#';
 
+  const handleNavigate = (path) => {
+    if (!onNavigate) return; // inert in the interactive builder
+    onNavigate(path);
+  };
+
   return (
     <section className="bg-white">
       <StorefrontContainer theme={theme} maxWidth>
+        {/* Breadcrumb: Home > Collection > {collection title} — same
+            treatment as product_detail's own breadcrumb (a real
+            ChevronRight icon, uniform gray-500 text-sm for every crumb
+            including the current page), this page's own equivalent was
+            simply missing entirely. */}
+        <div className="mb-4 flex items-center gap-1 text-sm text-gray-500">
+          <button
+            type="button"
+            onClick={() => handleNavigate('/')}
+            className={onNavigate ? 'cursor-pointer hover:underline' : 'cursor-default'}
+          >
+            {t('sectionBuilder:sections.editorialCollectionDetail.home', 'Home')}
+          </button>
+          <ChevronRight size={16} className="shrink-0" aria-hidden />
+          <button
+            type="button"
+            onClick={() => handleNavigate('/collection')}
+            className={onNavigate ? 'cursor-pointer hover:underline' : 'cursor-default'}
+          >
+            {t('sectionBuilder:sections.editorialCollectionDetail.collectionList', 'Collection')}
+          </button>
+          <ChevronRight size={16} className="shrink-0" aria-hidden />
+          <span>{collection.title}</span>
+        </div>
+
         {/* 1. Collection introduction — an editorial reading width (~672px,
             Tailwind's max-w-2xl) rather than stretching across the whole
             page, so long-form copy stays comfortable to scan. */}
@@ -179,30 +215,23 @@ function EditorialCollectionDetailRenderer({ data, theme, collection: collection
         {showCta && (
           <div className="mt-16 flex justify-center sm:mt-24">
             {onNavigate ? (
-              <a
+              <ThemedButtonHover
+                as="a"
                 href={ctaHref}
                 onClick={(e) => {
                   e.preventDefault();
                   onNavigate(cta.href);
                 }}
-                style={themedButtonStyle(theme?.buttons ?? {}, {
-                  primary: resolveColor({ slot: 'primary' }, theme?.colors),
-                  primaryText: resolveColor({ slot: 'primary_text' }, theme?.colors),
-                })}
+                style={ctaButtonStyle}
+                hoverStyle={ctaButtonHoverStyle}
                 className="cursor-pointer"
               >
                 {cta.label}
-              </a>
+              </ThemedButtonHover>
             ) : (
-              <span
-                style={themedButtonStyle(theme?.buttons ?? {}, {
-                  primary: resolveColor({ slot: 'primary' }, theme?.colors),
-                  primaryText: resolveColor({ slot: 'primary_text' }, theme?.colors),
-                })}
-                className="cursor-default"
-              >
+              <ThemedButtonHover style={ctaButtonStyle} hoverStyle={ctaButtonHoverStyle} className="cursor-default">
                 {cta.label}
-              </span>
+              </ThemedButtonHover>
             )}
           </div>
         )}

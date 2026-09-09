@@ -201,7 +201,7 @@ describe('ProductDetailRenderer — related products', () => {
     renderPDP({ product: alphaProduct() });
     const heading = screen.getByText('Other picks');
     const grid = heading.closest('.mt-10').querySelector('.grid');
-    const names = Array.from(grid.querySelectorAll('span.font-medium')).map((n) => n.textContent);
+    const names = Array.from(grid.querySelectorAll('p.text-gray-600')).map((n) => n.textContent);
     expect(names).not.toContain('Alpha Jacket');
     expect(names[0]).toBe('Gamma Coat'); // same category (Outerwear), before Accessories
   });
@@ -363,17 +363,23 @@ describe('ProductDetailRenderer — responsive breakpoints', () => {
   });
 });
 
-describe('ProductDetailRenderer — carousel dots', () => {
-  it('overlays carousel dots inside the related-product image tile, not as a separate row below it', () => {
+describe('ProductDetailRenderer — Other picks card styling', () => {
+  // 'Other picks' used to be its own hand-rolled card markup (own border-
+  // radius/shadow/name-price styling, plus a multi-image carousel-dots
+  // overlay Shop's own card never had) — now renders through the exact
+  // same shared ProductCard component the Shop page grid uses, so the two
+  // are guaranteed to look identical instead of silently drifting apart.
+  // ProductCard has no per-item carousel-dots affordance, so a related
+  // product with multiple images no longer shows one here either — that's
+  // the intended trade-off of matching Shop's card exactly.
+  it('renders each related product through the shared ProductCard (no per-tile image carousel dots)', () => {
     const products = [
       { id: 'a', name: 'Alpha Jacket', price: 100, images: ['a1.png', 'a2.png'], stock: 3, category: 'Outerwear' },
       { id: 'e', name: 'Echo Shoes', price: 60, images: ['e1.png', 'e2.png'], stock: 4, category: 'Shoes' },
     ];
     renderPDP({ product: { ...alphaProduct(), category: 'Outerwear' }, theme: { ...THEME, productCatalog: products } });
     const grid = screen.getByTestId('pdp-related-grid');
-    const imageTile = grid.querySelector('.aspect-\\[308\\/340\\]');
-    const dots = imageTile?.querySelector('.absolute');
-    expect(dots).toBeTruthy();
+    expect(grid.querySelector('.absolute')).toBeNull();
   });
 });
 
