@@ -1,9 +1,10 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import Canvas from '../section-builder/ui/Canvas';
 import ConfirmDialog from '../section-builder/ui/ConfirmDialog';
-import { Popup } from '../../ce-ui';
+import { Popup, MainBtn } from '../../ce-ui';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import { SITE_TEMPLATES, defaultPreviewDataFor, siteTemplateById } from '../section-builder/state/siteTemplates';
 import {
@@ -16,6 +17,8 @@ import { inferActiveTemplateId, isDefaultTheme } from '../section-builder/state/
 import { THEME_ROSTER } from '../section-builder/themes/themeRoster';
 import { getUniqueName } from '../section-builder/state/nameUtils';
 import { PublishedThemeCard, DraftThemeRow, DiscoverCard } from './ThemeGalleryCards';
+import SimulateTrigger from './SimulateTrigger';
+import SessionExpiredIllustration from '../../assets/illustrations/session-expired.svg';
 
 // TODO: replace with the real active store id once multi-store routing
 // exists — matches the hardcoded id used by Layout.jsx's builder entry.
@@ -90,6 +93,41 @@ function FillWidthPreviewCanvas({ header, footer, sections, theme, mediaLibrary,
   );
 }
 
+/**
+ * Freezes a live preview into a true static snapshot — the published-theme
+ * card's thumbnail should read as a screenshot, not a running mini
+ * storefront, but FillWidthPreviewCanvas renders the real Canvas tree,
+ * carousel included: hero_banner/Renderer.jsx's slideshow auto-advances on
+ * its own internal `setInterval` regardless of the `readOnly` prop (that
+ * only suppresses selection/edit chrome, not section-level behavior like
+ * autoplay), so the "preview" was visibly animating.
+ *
+ * Mounts `children` normally just long enough to paint, then captures the
+ * rendered DOM's `innerHTML` and swaps to that frozen markup permanently —
+ * the live component tree (carousel timer included) unmounts for good at
+ * that point, so this isn't merely visually paused, its interval's cleanup
+ * genuinely stops it. 200ms is comfortably before hero_banner's own 5s
+ * autoplay tick, so the snapshot always lands on the first slide.
+ */
+function StaticSnapshot({ children }) {
+  const liveRef = useRef(null);
+  const [frozenHtml, setFrozenHtml] = useState(null);
+
+  useEffect(() => {
+    if (frozenHtml != null) return undefined;
+    const id = setTimeout(() => {
+      if (liveRef.current) setFrozenHtml(liveRef.current.innerHTML);
+    }, 200);
+    return () => clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  if (frozenHtml != null) {
+    return <div className="w-full h-full" dangerouslySetInnerHTML={{ __html: frozenHtml }} />;
+  }
+  return <div ref={liveRef} className="w-full h-full">{children}</div>;
+}
+
 // Fallback for theme records (published, draft, or Discover) that have no
 // real renderable Canvas content: coming-soon roster stubs, the real Xinear
 // entry (no seeded pages/sections/media yet — see discoverPreviewElement
@@ -108,6 +146,30 @@ function PreviewPlaceholder({ name, comingSoon, aspectRatio = 'aspect-[16/9]' })
     <div className={`relative w-full overflow-hidden discover-card__placeholder ${aspectRatio}${comingSoon ? ' discover-card__placeholder--coming-soon' : ''}`}>
       {name}
     </div>
+  );
+}
+
+// The rotated-square decorative background behind the simulated
+// session-expired takeover (Figma node 4430:25587) — ported from
+// LoginRevamp.jsx's own `BgRects`, which is the same design language, since
+// there's no shared component for it yet to import instead.
+function SessionExpiredBgRects() {
+  const base = {
+    position: 'absolute',
+    width: '309px',
+    height: '309px',
+    background: '#FFFFFF',
+    opacity: 0.1,
+    borderRadius: '30px',
+  };
+  return (
+    <>
+      <div style={{ ...base, left: '984px', top: '-29px', transform: 'rotate(-15.75deg)' }} />
+      <div style={{ ...base, left: '-115px', top: '-140px', transform: 'rotate(37deg)' }} />
+      <div style={{ ...base, left: '508px', top: '283px', transform: 'rotate(-30.26deg)' }} />
+      <div style={{ ...base, left: '1211px', top: '720px', transform: 'rotate(-30.26deg)' }} />
+      <div style={{ ...base, left: '115px', top: '894px', transform: 'rotate(22.2deg)' }} />
+    </>
   );
 }
 
@@ -220,7 +282,49 @@ export default function ThemeGallery() {
   const [publishConfirmTheme, setPublishConfirmTheme] = useState(null); // draft theme pending publish
   const [deleteConfirmTheme, setDeleteConfirmTheme] = useState(null); // draft theme pending delete
   const [addingDiscoverId, setAddingDiscoverId] = useState(null);
-  const { showSnackbar } = useSnackbar();
+  const { showSnackbar, hideSnackbar } = useSnackbar();
+
+  // Simulate trigger — there's no real backend for this screen's theme data
+  // to fail/time out against, or a real session to expire, so these are all
+  // forced via the panel below. Checked in this order (like PagesManagement's
+  // simulateNotFound/simulateLoadError) so the toggles don't fight if more
+  // than one is left on at once.
+  const [simulateSessionExpired, setSimulateSessionExpired] = useState(false);
+
+  // Grouped into 'select' dropdowns (one mutually-exclusive outcome at a
+  // time) rather than a checkbox per outcome — same convention as
+  // PagesManagement.jsx's "Bulk delete"/"Change visibility" selects — since
+  // this screen's checkbox list had grown long enough that most of the
+  // toggles were really just alternate outcomes of the same action anyway
+  // (e.g. a draft row can't simultaneously be "deleted elsewhere" and
+  // "published elsewhere"). Each defaults to 'none'; the derived booleans
+  // right below let the rest of this file keep reading a plain flag per
+  // outcome instead of comparing against the select's string value
+  // everywhere.
+  const [simulateThemeDataState, setSimulateThemeDataState] = useState('none'); // 'none' | 'error' | 'timeout'
+  const [simulateCatalogState, setSimulateCatalogState] = useState('none'); // 'none' | 'error'
+  const [simulatePreviewState, setSimulatePreviewState] = useState('none'); // 'none' | 'timeout' | 'error'
+  const [simulateDraftRowState, setSimulateDraftRowState] = useState('none'); // 'none' | 'deleted' | 'published'
+  const [simulateDraftActionState, setSimulateDraftActionState] = useState('none'); // 'none' | 'add' | 'publish' | 'rename' | 'edit' | 'duplicate' | 'delete'
+
+  const simulateThemeLoadError = simulateThemeDataState === 'error';
+  const simulateThemeLoadTimeout = simulateThemeDataState === 'timeout';
+  const simulateCatalogLoadError = simulateCatalogState === 'error';
+  const simulatePreviewLoadTimeout = simulatePreviewState === 'timeout';
+  const simulatePreviewLoadError = simulatePreviewState === 'error';
+  const simulateAddThemeError = simulateDraftActionState === 'add';
+  const simulateDraftDeletedElsewhere = simulateDraftRowState === 'deleted';
+  const simulateDraftPublishedElsewhere = simulateDraftRowState === 'published';
+  const simulatePublishThemeError = simulateDraftActionState === 'publish';
+  const simulateRenameThemeError = simulateDraftActionState === 'rename';
+  const simulateEditThemeError = simulateDraftActionState === 'edit';
+  const simulateDuplicateThemeError = simulateDraftActionState === 'duplicate';
+  const simulateDeleteThemeError = simulateDraftActionState === 'delete';
+
+  // Tracks which draft ids currently have a duplicate in flight — keyed by
+  // id (not a single boolean) so spamming Duplicate on row A is blocked
+  // while A is copying, without also locking out row B's own Duplicate.
+  const [duplicatingIds, setDuplicatingIds] = useState(() => new Set());
 
   // Caps the draft-themes card to the published-theme card's rendered
   // height, so a long draft list scrolls internally (.draft-theme-list)
@@ -355,6 +459,10 @@ export default function ThemeGallery() {
   }
 
   function handleOpen() {
+    if (simulateEditThemeError) {
+      showSnackbar(t('sectionBuilder:onlineStore.themes.editThemeFailed', 'Failed to open theme editor'), 'red');
+      return;
+    }
     navigate(`/section-builder/${STORE_ID}`);
   }
 
@@ -364,11 +472,57 @@ export default function ThemeGallery() {
   // otherwise every draft (and the published theme) all edit the exact same
   // content under the same URL.
   function handleDraftOpen(draftThemeRecord) {
+    if (!checkDraftAvailable()) return;
+    if (simulateEditThemeError) {
+      showSnackbar(t('sectionBuilder:onlineStore.themes.editThemeFailed', 'Failed to open theme editor'), 'red');
+      return;
+    }
     navigate(`/section-builder/${draftThemeRecord.id}`);
   }
 
-  function handleSeePreview(template) {
-    navigate(`/online-store/theme/${template.id}/preview`);
+  // Checked at the top of every draft-row action — represents the draft
+  // record having been deleted from another browser tab/window since this
+  // one last loaded the list, which this demo has no real cross-tab
+  // channel to detect on its own. Applies to every draft row once armed
+  // (there's no per-row picker in the Simulate panel, same as the other
+  // global toggles here).
+  function checkDraftAvailable() {
+    if (simulateDraftDeletedElsewhere) {
+      showSnackbar(t('sectionBuilder:onlineStore.themes.draftNoLongerExists', 'Draft theme no longer exists'), 'red');
+      return false;
+    }
+    return true;
+  }
+
+  // `draftThemeId` is only passed when this preview was opened from a draft
+  // row (see handleDraftPreview) — it's threaded onto the preview URL as
+  // ?draftId=, which ThemePreview.jsx reads to know it's showing a specific
+  // draft's content rather than a template's static illustrative preview,
+  // so its own "deleted in another window" simulate option has something
+  // real to key off.
+  function handleSeePreview(template, draftThemeId) {
+    // "Fails to load" is treated as failing before a preview attempt even
+    // gets underway — straight to the red error snackbar, no loading state
+    // in between (per the simulate spec: fail immediately).
+    if (simulatePreviewLoadError) {
+      showSnackbar(t('sectionBuilder:onlineStore.themes.previewLoadFailed', 'Failed to load preview'), 'red');
+      return;
+    }
+    showSnackbar(t('sectionBuilder:onlineStore.themes.loadingPreview', 'Loading preview...'), 'grey');
+    if (simulatePreviewLoadTimeout) {
+      // Longer than the normal 2000ms loading window so this reads as the
+      // preview timing out rather than the ordinary load — the loading
+      // snackbar just runs out and the preview page never opens.
+      setTimeout(() => {
+        showSnackbar(t('sectionBuilder:onlineStore.themes.previewLoadFailed', 'Failed to load preview'), 'red');
+      }, 5000);
+      return;
+    }
+    setTimeout(() => {
+      hideSnackbar();
+      const suffix = draftThemeId ? `?draftId=${encodeURIComponent(draftThemeId)}` : '';
+      navigate(`/online-store/theme/${template.id}/preview${suffix}`);
+    }, 2000);
   }
 
   // -- Published theme card actions --------------------------------------
@@ -395,37 +549,111 @@ export default function ThemeGallery() {
   // -- Draft theme row actions --------------------------------------------
 
   function handleDraftPreview(draftThemeRecord) {
+    if (!checkDraftAvailable()) return;
     const template = SITE_TEMPLATES.find((tpl) => tpl.id === draftThemeRecord.templateId);
     if (template) {
-      handleSeePreview(template);
+      handleSeePreview(template, draftThemeRecord.id);
       return;
     }
     console.log('Preview (illustrative only, no real template):', draftThemeRecord.name);
   }
 
-  function handleDraftRenameSubmit(draftThemeRecord, newName) {
-    const uniqueName = getUniqueName(
-      draftThemes.filter((d) => d.id !== draftThemeRecord.id).map((d) => d.name),
-      newName
+  function handleDraftRenameStart(draftThemeRecord) {
+    if (!checkDraftAvailable()) return;
+    setRenamingId(draftThemeRecord.id);
+  }
+
+  // Returns true/false to RenameField (see ThemeGalleryCards.jsx) — false
+  // means the save was rejected (its own red snackbar already shown here)
+  // and the field should revert its text and stay open, true means it was
+  // applied and rename mode has already been exited below.
+  function handleDraftRenameSubmit(draftThemeRecord, trimmedName) {
+    if (!checkDraftAvailable()) return false;
+    if (simulateRenameThemeError) {
+      showSnackbar(t('sectionBuilder:onlineStore.themes.renameFailed', 'Failed to save draft theme'), 'red');
+      return false;
+    }
+    const isDuplicate = draftThemes.some(
+      (d) => d.id !== draftThemeRecord.id && d.name.trim().toLowerCase() === trimmedName.toLowerCase()
     );
-    const nextList = draftThemes.map((d) => (d.id === draftThemeRecord.id ? { ...d, name: uniqueName } : d));
+    if (isDuplicate) {
+      showSnackbar(t('sectionBuilder:onlineStore.themes.nameAlreadyExists', 'Draft theme name already exist'), 'red');
+      return false;
+    }
+    const nextList = draftThemes.map((d) => (d.id === draftThemeRecord.id ? { ...d, name: trimmedName } : d));
     setDraftThemes(nextList);
     saveDraftThemes(STORE_ID, nextList);
     setRenamingId(null);
+    showSnackbar(t('sectionBuilder:onlineStore.themes.draftSaved', 'Draft theme successfully saved'), 'green');
+    return true;
   }
 
   function handleDraftDuplicate(draftThemeRecord) {
-    const uniqueName = getUniqueName(draftThemes.map((d) => d.name), draftThemeRecord.name);
-    const newId = `draft-${Date.now()}`;
-    // Copy the source draft's real builder content into the new draft's own
-    // namespace too, not just the bookkeeping row, so the duplicate opens
-    // with the same content instead of an empty/default site.
-    const sourceContent = loadDraft(draftThemeRecord.id);
-    if (sourceContent) saveDraft(newId, sourceContent);
-    const copy = { ...draftThemeRecord, id: newId, name: uniqueName, addedAt: Date.now(), lastSavedAt: Date.now() };
-    const nextList = [...draftThemes, copy];
-    setDraftThemes(nextList);
-    saveDraftThemes(STORE_ID, nextList);
+    // Spam guard — silently ignored (no snackbar) rather than erroring,
+    // since this isn't a failure, just a click that arrived while this
+    // exact row's own copy was already running.
+    if (duplicatingIds.has(draftThemeRecord.id)) return;
+    if (!checkDraftAvailable()) return;
+    if (simulateDuplicateThemeError) {
+      showSnackbar(t('sectionBuilder:onlineStore.themes.duplicateFailed', 'Failed to duplicate theme'), 'red');
+      return;
+    }
+    if (draftThemes.length >= MAX_DRAFT_THEMES) {
+      showSnackbar(t('sectionBuilder:onlineStore.themes.draftFull', 'Draft theme is full'), 'red');
+      return;
+    }
+
+    // Same "installing" placeholder treatment as handleDiscoverAdd (spinner
+    // thumb, disabled actions, not persisted) — just with copy-specific
+    // wording and a 4s delay to actually be visible, matching that flow's
+    // deliberately-slowed-down timing.
+    const baseline = draftThemes;
+    const uniqueName = getUniqueName(baseline.map((d) => d.name), draftThemeRecord.name);
+    const installingId = `installing-${Date.now()}`;
+    const placeholder = {
+      id: installingId,
+      templateId: draftThemeRecord.templateId,
+      name: uniqueName,
+      previewImageUrl: null,
+      addedAt: Date.now(),
+      lastSavedAt: Date.now(),
+      isInstalling: true,
+      installingLabel: t('sectionBuilder:onlineStore.themes.copying', 'Copying your theme'),
+    };
+    setDraftThemes([...baseline, placeholder]);
+    setDuplicatingIds((prev) => new Set(prev).add(draftThemeRecord.id));
+
+    setTimeout(() => {
+      const newId = `draft-${Date.now()}`;
+      // Copy the source draft's real builder content into the new draft's
+      // own namespace too, not just the bookkeeping row, so the duplicate
+      // opens with the same content instead of an empty/default site.
+      const sourceContent = loadDraft(draftThemeRecord.id);
+      if (sourceContent) saveDraft(newId, sourceContent);
+      const copy = { ...draftThemeRecord, id: newId, name: uniqueName, addedAt: Date.now(), lastSavedAt: Date.now() };
+      const nextList = [...baseline, copy];
+      setDraftThemes(nextList);
+      saveDraftThemes(STORE_ID, nextList);
+      setDuplicatingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(draftThemeRecord.id);
+        return next;
+      });
+      showSnackbar(t('sectionBuilder:onlineStore.themes.draftSaved', 'Draft theme successfully saved'), 'green');
+    }, 4000);
+  }
+
+  function handleDraftDeleteClick(draftThemeRecord) {
+    if (!checkDraftAvailable()) return;
+    if (simulateDraftPublishedElsewhere) {
+      showSnackbar(t('sectionBuilder:onlineStore.themes.draftAlreadyPublished', 'Draft theme already published'), 'red');
+      return;
+    }
+    if (simulateDeleteThemeError) {
+      showSnackbar(t('sectionBuilder:onlineStore.themes.deleteThemeFailed', 'Failed to delete theme'), 'red');
+      return;
+    }
+    setDeleteConfirmTheme(draftThemeRecord);
   }
 
   function handleDraftDeleteConfirm() {
@@ -436,6 +664,20 @@ export default function ThemeGallery() {
     setDraftThemes(nextList);
     saveDraftThemes(STORE_ID, nextList);
     setDeleteConfirmTheme(null);
+    showSnackbar(t('sectionBuilder:onlineStore.themes.draftDeleted', 'Draft theme successfully deleted'), 'grey');
+  }
+
+  function handleDraftPublishClick(draftThemeRecord) {
+    if (!checkDraftAvailable()) return;
+    if (simulateDraftPublishedElsewhere) {
+      showSnackbar(t('sectionBuilder:onlineStore.themes.draftAlreadyPublished', 'Draft theme already published'), 'red');
+      return;
+    }
+    if (simulatePublishThemeError) {
+      showSnackbar(t('sectionBuilder:onlineStore.themes.publishThemeFailed', 'Failed to publish theme'), 'red');
+      return;
+    }
+    setPublishConfirmTheme(draftThemeRecord);
   }
 
   function handlePublishConfirm() {
@@ -465,12 +707,44 @@ export default function ThemeGallery() {
     // this should be unreachable, but never apply a stub theme regardless.
     if (item.comingSoon) return;
 
+    if (simulateAddThemeError) {
+      showSnackbar(t('sectionBuilder:onlineStore.themes.addThemeFailed', 'Failed to add theme'), 'red');
+      return;
+    }
+
     if (draftThemes.length >= MAX_DRAFT_THEMES) {
       showSnackbar(t('sectionBuilder:onlineStore.themes.draftFull', 'Draft theme is full'), 'red');
       return;
     }
 
+    // Shopify-style "Installing theme" row — shows up in the Draft themes
+    // list immediately (spinner thumb, disabled actions; see
+    // DraftThemeRow's isInstalling prop) rather than only reflecting in the
+    // Discover card's own "Adding…" button state. `baseline` snapshots the
+    // list as of this click so the setTimeout below (which fires after
+    // React state has moved on) always resolves against the same list the
+    // placeholder was inserted into, instead of a stale/racing closure.
+    const baseline = draftThemes;
+    const installingId = `installing-${Date.now()}`;
+    const placeholder = {
+      id: installingId,
+      templateId: item.id,
+      name: item.name,
+      previewImageUrl: null,
+      addedAt: Date.now(),
+      lastSavedAt: Date.now(),
+      isInstalling: true,
+    };
+    // Deliberately not persisted via saveDraftThemes — an in-progress
+    // install is transient UI state, not something a page refresh mid-way
+    // through should try to resume.
+    setDraftThemes([...baseline, placeholder]);
+
     setAddingDiscoverId(item.id);
+    // Same 4000ms window as the installing placeholder above resolves in
+    // (see the setTimeout below) — the snackbar's lifespan should track the
+    // actual installing process, not run on its own separate clock.
+    showSnackbar(t('sectionBuilder:onlineStore.themes.installingTheme', 'Installing theme...'), 'grey');
     setTimeout(() => {
       // Every draft theme gets its own section-builder storeId namespace
       // (storage.js keys everything off storeId), so each one opens at its
@@ -515,17 +789,20 @@ export default function ThemeGallery() {
       const newDraft = {
         id: newDraftId,
         templateId: item.id,
-        name: getUniqueName(draftThemes.map((d) => d.name), item.name),
+        name: getUniqueName(baseline.map((d) => d.name), item.name),
         previewImageUrl: null,
         addedAt: Date.now(),
         lastSavedAt: Date.now(),
       };
-      const nextList = [...draftThemes, newDraft];
+      // Replaces the installing placeholder in-place against `baseline`
+      // (not the possibly-stale `draftThemes` closure) so this resolves
+      // correctly even if something else touched the list while installing.
+      const nextList = [...baseline, newDraft];
       setDraftThemes(nextList);
       saveDraftThemes(STORE_ID, nextList);
       setAddingDiscoverId(null);
       showSnackbar(t('sectionBuilder:onlineStore.themes.draftSaved', 'Draft theme successfully saved'), 'green');
-    }, 800);
+    }, 4000);
   }
 
   function handleDiscoverPreview(item) {
@@ -543,6 +820,232 @@ export default function ThemeGallery() {
       return;
     }
     console.log('Preview (discover, illustrative only):', item.name);
+  }
+
+  // 'None' choice reused across every select group below — one shared
+  // label/value pair instead of re-declaring it per group.
+  const SIMULATE_NONE_CHOICE = { value: 'none', label: t('sectionBuilder:onlineStore.themes.simulateNone', 'None') };
+
+  const simulateOptions = [
+    {
+      type: 'checkbox',
+      label: t('sectionBuilder:onlineStore.themes.simulateSessionExpired', 'Simulate session expired'),
+      checked: simulateSessionExpired,
+      // Clears the real auth flag the instant this is armed — the modal
+      // below is meant to represent an actually-expired session, not just
+      // a visual overlay sitting on top of a still-logged-in app. Without
+      // this, closing/dismissing the modal any other way (e.g. navigating
+      // away) would leave the merchant still authenticated underneath.
+      onChange: (checked) => {
+        if (checked) sessionStorage.removeItem('lb_mock_auth');
+        setSimulateSessionExpired(checked);
+      },
+    },
+    {
+      type: 'select',
+      label: t('sectionBuilder:onlineStore.themes.simulateThemeDataLabel', 'Theme data'),
+      value: simulateThemeDataState,
+      onChange: setSimulateThemeDataState,
+      choices: [
+        SIMULATE_NONE_CHOICE,
+        { value: 'error', label: t('sectionBuilder:onlineStore.themes.simulateLoadError', 'Load error') },
+        { value: 'timeout', label: t('sectionBuilder:onlineStore.themes.simulateTimeout', 'Timeout') },
+      ],
+    },
+    {
+      type: 'select',
+      label: t('sectionBuilder:onlineStore.themes.simulateCatalogLabel', 'Theme catalog'),
+      value: simulateCatalogState,
+      onChange: setSimulateCatalogState,
+      choices: [
+        SIMULATE_NONE_CHOICE,
+        { value: 'error', label: t('sectionBuilder:onlineStore.themes.simulateLoadError', 'Load error') },
+      ],
+    },
+    {
+      type: 'select',
+      label: t('sectionBuilder:onlineStore.themes.simulatePreviewLabel', 'Preview'),
+      value: simulatePreviewState,
+      onChange: setSimulatePreviewState,
+      choices: [
+        SIMULATE_NONE_CHOICE,
+        { value: 'timeout', label: t('sectionBuilder:onlineStore.themes.simulateTimeout', 'Timeout') },
+        { value: 'error', label: t('sectionBuilder:onlineStore.themes.simulateLoadError', 'Load error') },
+      ],
+    },
+    {
+      type: 'select',
+      // The row itself being stale — deleted or already published from
+      // another tab — as opposed to simulateDraftActionState below, which
+      // is a specific action call failing on an otherwise-still-valid row.
+      label: t('sectionBuilder:onlineStore.themes.simulateDraftRowLabel', 'Draft theme row'),
+      value: simulateDraftRowState,
+      onChange: setSimulateDraftRowState,
+      choices: [
+        SIMULATE_NONE_CHOICE,
+        { value: 'deleted', label: t('sectionBuilder:onlineStore.themes.simulateDeletedElsewhere', 'Deleted in another window') },
+        { value: 'published', label: t('sectionBuilder:onlineStore.themes.simulatePublishedElsewhere', 'Already published in another window') },
+      ],
+    },
+    {
+      type: 'select',
+      label: t('sectionBuilder:onlineStore.themes.simulateDraftActionLabel', 'Draft theme action'),
+      value: simulateDraftActionState,
+      onChange: setSimulateDraftActionState,
+      choices: [
+        SIMULATE_NONE_CHOICE,
+        { value: 'add', label: t('sectionBuilder:onlineStore.themes.simulateAddError', 'Add error') },
+        { value: 'publish', label: t('sectionBuilder:onlineStore.themes.simulatePublishError', 'Publish error') },
+        { value: 'rename', label: t('sectionBuilder:onlineStore.themes.simulateRenameError', 'Rename error') },
+        { value: 'edit', label: t('sectionBuilder:onlineStore.themes.simulateEditError', 'Edit error') },
+        { value: 'duplicate', label: t('sectionBuilder:onlineStore.themes.simulateDuplicateError', 'Duplicate error') },
+        { value: 'delete', label: t('sectionBuilder:onlineStore.themes.simulateDeleteError', 'Delete error') },
+      ],
+    },
+  ];
+
+  // The merchant's session expiring takes over the whole screen — this
+  // should read as "you're logged out", not as this page's own data
+  // failing, so it's a Figma-specced full-bleed prompt to log back in
+  // (design: node 4430:25587) rather than the load-error/timeout cards'
+  // inline banner-with-retry treatment. The decorative rotated-square
+  // background (BgRects) is ported from LoginRevamp.jsx's own copy of the
+  // same design language rather than re-derived from scratch.
+  if (simulateSessionExpired) {
+    // Portaled to document.body and pinned to the full viewport (not just
+    // this route's content area) — Layout.jsx's sidebar/header render
+    // around whatever this component returns, so returning the takeover
+    // normally would leave them visible behind it, looking like the
+    // merchant is still logged in even though the auth flag really was
+    // just cleared. A real /login redirect (see the button below) is the
+    // only way to shed that chrome for good; this portal just makes the
+    // simulated screen look the part in the meantime.
+    return createPortal(
+      <div style={{ position: 'fixed', inset: 0, zIndex: 2000, minHeight: '100vh', background: '#006BFF', overflow: 'hidden', fontFamily: "'Lato', sans-serif" }}>
+        <SessionExpiredBgRects />
+        {/* No close/dismiss control — this represents an actually-expired,
+            logged-out session (see the onChange above), not a dismissable
+            overlay you can close and keep working behind. */}
+        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '375px', maxWidth: 'calc(100vw - 32px)', background: '#FFFFFF', borderRadius: '16px', padding: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <img src={SessionExpiredIllustration} alt="" style={{ width: '181px', height: 'auto', margin: '0 0 32px' }} />
+          <h1 style={{ margin: '0 0 8px', fontSize: '18px', fontWeight: 700, lineHeight: '26px', letterSpacing: '0.1238px', color: '#282828', textAlign: 'center' }}>
+            {t('sectionBuilder:onlineStore.themes.sessionExpiredTitle', 'Session Expired')}
+          </h1>
+          <p style={{ margin: '0 0 32px', fontSize: '12px', lineHeight: '18px', letterSpacing: '0.0825px', color: '#7E7E7E', textAlign: 'center' }}>
+            {t(
+              'sectionBuilder:onlineStore.themes.sessionExpiredDescription',
+              'Your session has ended for security reasons. You’ll be signed out of all Labamu platforms included in your subscription. Sign in again to continue.'
+            )}
+          </p>
+          <MainBtn
+            variant="primary"
+            size="lg"
+            className="w-full"
+            label={t('sectionBuilder:onlineStore.themes.sessionExpiredLogIn', 'Sign In Again')}
+            onClick={() => {
+              // A real logout, not just a redirect — matches Layout.jsx's
+              // own handleLogout, so this genuinely leaves the merchant
+              // signed out (App.jsx's route guard reads this same key)
+              // rather than just visually landing on /login while still
+              // authenticated underneath.
+              sessionStorage.removeItem('lb_mock_auth');
+              navigate('/login', { replace: true });
+            }}
+          />
+        </div>
+        <SimulateTrigger options={simulateOptions} />
+      </div>,
+      document.body
+    );
+  }
+
+  // Scoped to just the Published Theme + Draft Themes cards (the "theme
+  // data" this page loads) — unlike the session-expired/timeout takeovers,
+  // the page chrome (heading, Discover Themes below) stays intact, since
+  // that section has nothing to do with the store's own theme data. A
+  // shared explicit height (rather than `alignSelf: stretch`, which should
+  // equalize identical siblings on paper but didn't hold up in practice —
+  // and rather than .theme-gallery-row's own `align-items: start`,
+  // deliberately *not* stretch there so the real published/draft cards can
+  // size the row from a JS-measured height without a stretched sibling
+  // fighting it) guarantees both cards render at the same height
+  // regardless. Reload genuinely clears the flag and returns to the normal
+  // view — unlike PagesManagement's sticky-while-armed simulateLoadError,
+  // there's no reason to make a merchant re-open the Simulate panel just
+  // to see the recovered state after clicking Reload.
+  function ThemeSectionErrorCard() {
+    // marginTop: 0 overrides ".gallery-card + .gallery-card { margin-top:
+    // 24px }" (meant for this class's other use — vertically-stacked cards
+    // elsewhere on this page) — these two render as adjacent siblings in
+    // the same grid row, so that rule was matching the second one and
+    // pushing it down within its cell, misaligning it against the first
+    // despite both being the same height.
+    return (
+      <div className="gallery-card" style={{ height: '320px', marginTop: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '48px 24px', gap: '4px' }}>
+        <h2 style={{ margin: '0 0 4px', fontSize: '16px', fontWeight: 700, color: '#282828' }}>
+          {t('sectionBuilder:onlineStore.themes.loadErrorTitle', 'Couldn’t load theme data')}
+        </h2>
+        <p style={{ margin: '0 0 16px', fontSize: '13px', color: '#6B7280' }}>
+          {t('sectionBuilder:onlineStore.themes.loadErrorDescription', 'Something went wrong while loading your theme data. Please try again.')}
+        </p>
+        <MainBtn
+          variant="secondary"
+          size="sm"
+          label={t('sectionBuilder:onlineStore.themes.loadErrorReload', 'Reload')}
+          onClick={() => setSimulateThemeDataState('none')}
+        />
+      </div>
+    );
+  }
+
+  // Scoped to just the Discover Themes section — the store's own theme
+  // data (Published Theme + Draft Themes) still renders normally, since
+  // this represents the roster/catalog request failing independently of
+  // that data. Reload clears the flag, same as ThemeSectionErrorCard above.
+  function CatalogSectionErrorCard() {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '48px 24px', gap: '4px' }}>
+        <h2 style={{ margin: '0 0 4px', fontSize: '16px', fontWeight: 700, color: '#282828' }}>
+          {t('sectionBuilder:onlineStore.themes.catalogLoadErrorTitle', 'Couldn’t load theme catalog')}
+        </h2>
+        <p style={{ margin: '0 0 16px', fontSize: '13px', color: '#6B7280' }}>
+          {t('sectionBuilder:onlineStore.themes.catalogLoadErrorDescription', 'Something went wrong while loading Discover Themes. Please try again.')}
+        </p>
+        <MainBtn
+          variant="secondary"
+          size="sm"
+          label={t('sectionBuilder:onlineStore.themes.loadErrorReload', 'Reload')}
+          onClick={() => setSimulateCatalogState('none')}
+        />
+      </div>
+    );
+  }
+
+  // Same full-page takeover as the hard-error case above, and now the same
+  // "Couldn't load this page" / "Reload Page" wording too — the visible
+  // distinction between a timeout and a hard error is left to whatever a
+  // real backend would report (a request that timed out vs. one that
+  // failed outright), not to different copy on this demo screen.
+  if (simulateThemeLoadTimeout) {
+    return (
+      <div style={{ background: '#F4F4F4', minHeight: 'calc(100vh - 56px)', fontFamily: "'Lato', sans-serif" }}>
+        <div className="flex h-full min-h-[calc(100vh-56px)] flex-col items-center justify-center px-6 text-center">
+          <h1 className="mb-1 text-xl font-bold text-gray-800">
+            {t('sectionBuilder:onlineStore.themes.loadTimeoutTitle', 'Couldn’t load this page')}
+          </h1>
+          <p className="mb-4 text-sm text-gray-500">
+            {t('sectionBuilder:onlineStore.themes.loadTimeoutDescription', 'The request took too long to complete. Try reloading the page.')}
+          </p>
+          <MainBtn
+            variant="secondary"
+            size="sm"
+            label={t('sectionBuilder:onlineStore.themes.loadTimeoutReload', 'Reload Page')}
+            onClick={() => {}}
+          />
+        </div>
+        <SimulateTrigger options={simulateOptions} />
+      </div>
+    );
   }
 
   return (
@@ -619,7 +1122,25 @@ export default function ThemeGallery() {
           display: flex; align-items: center; gap: 16px; padding: 14px 16px; border: 1px solid #E9E9E9; border-radius: 12px; background: #FFFFFF;
         }
         .draft-theme-row + .draft-theme-row { margin-top: 12px; }
-        .draft-theme-row__thumb { position: relative; width: 120px; flex-shrink: 0; border-radius: 8px; overflow: hidden; background: #F3F4F6; }
+        /* aspect-ratio matches previewData's own aspect-[16/10] canvas, so
+           the thumb keeps its height even with no normal-flow content
+           inside it — the installing spinner is absolutely positioned and
+           so, unlike previewData, contributes nothing to the parent's
+           height on its own; without this the thumb collapsed to 0 height
+           while installing, making the spinner invisible. */
+        .draft-theme-row__thumb { position: relative; width: 120px; aspect-ratio: 16 / 10; flex-shrink: 0; border-radius: 8px; overflow: hidden; background: #F3F4F6; }
+        /* Shopify-style "Installing theme" placeholder spinner — replaces
+           the preview render entirely while a discover-theme add is in
+           flight (see handleDiscoverAdd's placeholder record). Centered via
+           absolute positioning (not flex) so it doesn't change how the
+           thumb lays out its normal preview-render child. */
+        .theme-install-spinner {
+          position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+          width: 22px; height: 22px; border-radius: 50%;
+          border: 2px solid #E5E7EB; border-top-color: #6B7280;
+          animation: theme-install-spin 0.7s linear infinite;
+        }
+        @keyframes theme-install-spin { to { transform: translate(-50%, -50%) rotate(360deg); } }
 
         .discover-grid {
           display: grid;
@@ -677,17 +1198,24 @@ export default function ThemeGallery() {
           position: absolute; inset: 0; z-index: 5; background: rgba(0, 0, 0, 0.4);
         }
 
-        .more-menu-popover {
-          position: absolute; top: calc(100% + 6px); right: 0; z-index: 20; min-width: 160px;
-          background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,0.12);
-          display: flex; flex-direction: column; padding: 6px; gap: 2px;
+        /* Overrides ce-ui IconBtn's built-in "danger" variant (synced,
+           un-editable — see ce-ui/SYNC_MANIFEST.json), whose hover state
+           flips to a fully solid red fill. The rename Cancel button should
+           behave like the (blue) primary Save button's hover instead — a
+           small in-place shade shift, never a full fill/outline swap —
+           just applied to an outline button rather than a filled one.
+           !important beats the synced component's own Tailwind hover
+           utility regardless of stylesheet injection order. */
+        .rename-cancel-btn {
+          background: #FFFFFF !important;
+          color: #DC2626 !important;
+          border: 1px solid #DC2626 !important;
         }
-        .more-menu-item {
-          text-align: left; background: none; border: none; padding: 8px 10px; border-radius: 6px;
-          font-size: 13px; font-weight: 600; color: #282828; cursor: pointer;
+        .rename-cancel-btn:hover:enabled {
+          background: #FEF2F2 !important;
+          color: #B91C1C !important;
+          border-color: #B91C1C !important;
         }
-        .more-menu-item:hover { background: #F3F4F6; }
-        .more-menu-item:disabled { opacity: 0.5; cursor: not-allowed; }
       `}</style>
 
       <div style={{ padding: '24px' }}>
@@ -696,77 +1224,92 @@ export default function ThemeGallery() {
         </h1>
 
         <div className="theme-gallery-row">
-          {/* Card 1 — published theme. Always rendered when a publishedTheme
-              record exists, regardless of whether it maps to a real
-              SITE_TEMPLATES entry (publishedPreviewElement always resolves to
-              something renderable — a live preview or an illustrative
-              placeholder). */}
-          {publishedTheme && (
-            <div ref={publishedCardRef}>
-              <PublishedThemeCard
-                theme={publishedTheme}
-                domain={STORE_DOMAIN}
-                previewData={publishedPreviewElement}
-                isRenaming={renamingId === 'published'}
-                onEdit={handleOpen}
-                onPreview={handlePublishedPreview}
-                onRenameStart={() => setRenamingId('published')}
-                onRenameSubmit={handlePublishedRenameSubmit}
-                onRenameCancel={() => setRenamingId(null)}
-              />
-            </div>
-          )}
-
-          {/* Card 2 — draft themes */}
-          <div className="gallery-card" style={draftCardMaxHeight ? { height: draftCardMaxHeight } : undefined}>
-          <div className="draft-heading-row">
-            <h2 className="section-heading">{t('sectionBuilder:onlineStore.themes.draftHeading', 'Draft themes')}</h2>
-            <span className={`draft-count${draftThemes.length >= MAX_DRAFT_THEMES ? ' draft-count--full' : ''}`}>{draftThemes.length}/{MAX_DRAFT_THEMES}</span>
-          </div>
-          {draftThemes.length === 0 ? (
-            <div style={{
-              flex: '1 1 auto',
-              padding: '48px 24px',
-              textAlign: 'center',
-              color: '#9CA3AF',
-              fontSize: '15px',
-              background: '#FFFFFF',
-              border: '1.5px dashed #E5E7EB',
-              borderRadius: '16px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              minHeight: '120px',
-            }}>
-              {t('sectionBuilder:onlineStore.themes.draftEmpty', 'No draft themes yet — add one from Discover themes below.')}
-            </div>
+          {simulateThemeLoadError ? (
+            <>
+              <ThemeSectionErrorCard />
+              <ThemeSectionErrorCard />
+            </>
           ) : (
-            <div className="draft-theme-list">
-              {draftThemes.map((d) => (
-                <DraftThemeRow
-                  key={d.id}
-                  theme={d}
-                  previewData={draftPreviewElement(d)}
-                  isRenaming={renamingId === d.id}
-                  isPublishing={false}
-                  onPublish={() => setPublishConfirmTheme(d)}
-                  onEdit={() => handleDraftOpen(d)}
-                  onPreview={() => handleDraftPreview(d)}
-                  onRenameStart={() => setRenamingId(d.id)}
-                  onRenameSubmit={(newName) => handleDraftRenameSubmit(d, newName)}
-                  onRenameCancel={() => setRenamingId(null)}
-                  onDuplicate={() => handleDraftDuplicate(d)}
-                  onDelete={() => setDeleteConfirmTheme(d)}
-                />
-              ))}
-            </div>
+            <>
+              {/* Card 1 — published theme. Always rendered when a publishedTheme
+                  record exists, regardless of whether it maps to a real
+                  SITE_TEMPLATES entry (publishedPreviewElement always resolves to
+                  something renderable — a live preview or an illustrative
+                  placeholder). */}
+              {publishedTheme && (
+                <div ref={publishedCardRef}>
+                  <PublishedThemeCard
+                    theme={publishedTheme}
+                    domain={STORE_DOMAIN}
+                    previewData={<StaticSnapshot>{publishedPreviewElement}</StaticSnapshot>}
+                    isRenaming={renamingId === 'published'}
+                    onEdit={handleOpen}
+                    onPreview={handlePublishedPreview}
+                    onRenameStart={() => setRenamingId('published')}
+                    onRenameSubmit={handlePublishedRenameSubmit}
+                    onRenameCancel={() => setRenamingId(null)}
+                  />
+                </div>
+              )}
+
+              {/* Card 2 — draft themes */}
+              <div className="gallery-card" style={draftCardMaxHeight ? { height: draftCardMaxHeight } : undefined}>
+              <div className="draft-heading-row">
+                <h2 className="section-heading">{t('sectionBuilder:onlineStore.themes.draftHeading', 'Draft Themes')}</h2>
+                <span className={`draft-count${draftThemes.length >= MAX_DRAFT_THEMES ? ' draft-count--full' : ''}`}>{draftThemes.length}/{MAX_DRAFT_THEMES}</span>
+              </div>
+              {draftThemes.length === 0 ? (
+                <div style={{
+                  flex: '1 1 auto',
+                  padding: '48px 24px',
+                  textAlign: 'center',
+                  color: '#9CA3AF',
+                  fontSize: '15px',
+                  background: '#FFFFFF',
+                  border: '1.5px dashed #E5E7EB',
+                  borderRadius: '16px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  minHeight: '120px',
+                }}>
+                  {t('sectionBuilder:onlineStore.themes.draftEmpty', 'No draft themes yet — add one from Discover themes below.')}
+                </div>
+              ) : (
+                <div className="draft-theme-list">
+                  {draftThemes.map((d) => (
+                    <DraftThemeRow
+                      key={d.id}
+                      theme={d}
+                      previewData={d.isInstalling ? null : draftPreviewElement(d)}
+                      isInstalling={d.isInstalling}
+                      installingLabel={d.installingLabel}
+                      isDuplicating={duplicatingIds.has(d.id)}
+                      isRenaming={renamingId === d.id}
+                      isPublishing={false}
+                      onPublish={() => handleDraftPublishClick(d)}
+                      onEdit={() => handleDraftOpen(d)}
+                      onPreview={() => handleDraftPreview(d)}
+                      onRenameStart={() => handleDraftRenameStart(d)}
+                      onRenameSubmit={(newName) => handleDraftRenameSubmit(d, newName)}
+                      onRenameCancel={() => setRenamingId(null)}
+                      onDuplicate={() => handleDraftDuplicate(d)}
+                      onDelete={() => handleDraftDeleteClick(d)}
+                    />
+                  ))}
+                </div>
+              )}
+              </div>
+            </>
           )}
-          </div>
         </div>
 
         {/* Card 3 — discover themes */}
         <div className="gallery-card">
-          <h2 className="section-heading">{t('sectionBuilder:onlineStore.themes.discoverHeading', 'Discover themes')}</h2>
+          <h2 className="section-heading">{t('sectionBuilder:onlineStore.themes.discoverHeading', 'Discover Themes')}</h2>
+          {simulateCatalogLoadError ? (
+            <CatalogSectionErrorCard />
+          ) : (
           <div className="discover-grid">
             {discoverItems.map((item) => (
               <DiscoverCard
@@ -780,6 +1323,7 @@ export default function ThemeGallery() {
               />
             ))}
           </div>
+          )}
         </div>
       </div>
 
@@ -810,6 +1354,8 @@ export default function ThemeGallery() {
         onConfirm={handleDraftDeleteConfirm}
         onCancel={() => setDeleteConfirmTheme(null)}
       />
+
+      <SimulateTrigger options={simulateOptions} />
     </div>
   );
 }

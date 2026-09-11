@@ -131,6 +131,22 @@ export default function Layout() {
         zIndex: 200,
         overflowX: 'hidden',
       }}>
+        {/* Re-themes the nav item rows (top-level + children + the
+            collapsed-state flyout rows below) onto ce-ui SideTabs'
+            (src/ce-ui/ui/side-tabs.tsx) own active/hover tokens —
+            var(--lb-brand), var(--lb-brand-dark), var(--lb-on-surface),
+            var(--lb-surface-grey), the same tokens IconBtn/MainBtn/etc.
+            already use elsewhere — instead of this file's separate
+            feature-brand and neutral variables. Scoped to just the item
+            rows: the header, collapse toggle, and language footer below
+            keep their existing neutral/feature-brand styling.
+            A plain CSS rule (not inline style) since hover has no
+            per-row state to drive it otherwise. */}
+        <style>{`
+          .sidebar-nav-item:not(.sidebar-nav-item--active):hover {
+            background: var(--lb-surface-grey) !important;
+          }
+        `}</style>
         {/* Sidebar Header */}
         <div style={{
           height: '56px',
@@ -161,7 +177,7 @@ export default function Layout() {
             const isParentActive = hasChildren ? isChildActive : isActive(item.path);
             const isExpanded = hasChildren && !isSidebarCollapsed && expandedGroups.includes(item.id);
             const Icon = item.icon;
-            const rowColor = isParentActive ? 'var(--feature-brand-primary)' : 'var(--neutral-on-surface-primary)';
+            const rowColor = isParentActive ? 'var(--lb-brand)' : 'var(--lb-on-surface)';
 
             return (
               <div
@@ -179,10 +195,11 @@ export default function Layout() {
                 <div style={{ padding: isSidebarCollapsed ? '0' : '0 16px' }}>
                   <div style={{ position: 'relative', display: 'flex', justifyContent: isSidebarCollapsed ? 'center' : 'stretch' }}>
                     {isParentActive && (
-                      <div style={{ position: 'absolute', left: isSidebarCollapsed ? 0 : -16, top: '6px', bottom: '6px', width: '5px', borderRadius: '0 999px 999px 0', background: 'var(--feature-brand-primary)' }} />
+                      <div style={{ position: 'absolute', left: isSidebarCollapsed ? 0 : -16, top: '6px', bottom: '6px', width: '5px', borderRadius: '0 999px 999px 0', background: 'var(--lb-brand)' }} />
                     )}
                     <button
                       type="button"
+                      className={`sidebar-nav-item${isParentActive ? ' sidebar-nav-item--active' : ''}`}
                       onClick={() => {
                         if (isSidebarCollapsed) {
                           if (!hasChildren) navigate(item.path);
@@ -196,7 +213,7 @@ export default function Layout() {
                         padding: isSidebarCollapsed ? '0' : '0 16px',
                         border: 'none',
                         borderRadius: isParentActive ? '14px' : '12px',
-                        background: isParentActive ? 'var(--feature-brand-container-lighter)' : 'transparent',
+                        background: isParentActive ? 'var(--lb-brand-dark)' : 'transparent',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: isSidebarCollapsed ? 'center' : 'flex-start',
@@ -230,6 +247,7 @@ export default function Layout() {
                         <button
                           key={child.id}
                           type="button"
+                          className={`sidebar-nav-item${childActive ? ' sidebar-nav-item--active' : ''}`}
                           onClick={() => navigate(child.path)}
                           style={{
                             minHeight: '40px',
@@ -237,11 +255,11 @@ export default function Layout() {
                             margin: 0,
                             border: 'none',
                             borderRadius: '14px',
-                            background: childActive ? 'var(--feature-brand-container-lighter)' : 'transparent',
+                            background: childActive ? 'var(--lb-brand-dark)' : 'transparent',
                             display: 'flex',
                             alignItems: 'center',
                             cursor: 'pointer',
-                            color: childActive ? 'var(--feature-brand-primary)' : 'var(--neutral-on-surface-primary)',
+                            color: childActive ? 'var(--lb-brand)' : 'var(--lb-on-surface)',
                             fontSize: '14px',
                             fontWeight: childActive ? 700 : 500,
                             textAlign: 'left',
@@ -306,6 +324,7 @@ export default function Layout() {
                     <button
                       key={child.id}
                       type="button"
+                      className={`sidebar-nav-item${isActive(child.path) ? ' sidebar-nav-item--active' : ''}`}
                       onClick={() => {
                         navigate(child.path);
                         setHoveredMenuItemId(null);
@@ -313,8 +332,8 @@ export default function Layout() {
                       style={{
                         padding: '12px 16px',
                         border: 'none',
-                        background: isActive(child.path) ? 'var(--feature-brand-container-lighter)' : 'transparent',
-                        color: isActive(child.path) ? 'var(--feature-brand-primary)' : 'var(--neutral-on-surface-primary)',
+                        background: isActive(child.path) ? 'var(--lb-brand-dark)' : 'transparent',
+                        color: isActive(child.path) ? 'var(--lb-brand)' : 'var(--lb-on-surface)',
                         textAlign: 'left',
                         cursor: 'pointer',
                         fontSize: '14px',

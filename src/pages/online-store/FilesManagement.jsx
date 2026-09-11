@@ -1,13 +1,14 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import ReactDOM from 'react-dom';
 import { useTranslation } from 'react-i18next';
-import { Download, Pencil, Plus, Trash2, X } from 'lucide-react';
+import { ChevronDown, Download, Link as LinkIcon, Pencil, Play, Plus, Trash2, UploadCloud, X } from 'lucide-react';
 import { Table, MainBtn, IconBtn, Tooltip, Popup, MediaUploadField, TextField } from '../../ce-ui';
 import { loadOrSeedDemoDraft } from '../section-builder/state/demoBootstrap';
 import { runDraftAction } from '../section-builder/state/runDraftAction';
 import { ACTIONS } from '../section-builder/state/builderReducer';
 import ConfirmDialog from '../section-builder/ui/ConfirmDialog';
-import { matchesSearch, findUsages } from '../section-builder/sections/mediaHelpers';
+import { matchesSearch } from '../section-builder/sections/mediaHelpers';
+import { parseVideoUrl, youtubeThumbnailUrl, embedUrlFor, watchUrlFor, fetchVimeoThumbnail } from '../section-builder/sections/videoUrlHelpers';
 import { formatDateTime } from './timeUtils';
 
 // TODO: replace with the real active store id once multi-store routing
@@ -47,6 +48,32 @@ function uploadedAtMs(item) {
 // ce-ui's file-type-icons.tsx getFileTypeIcon.
 function getFileExt(filename) {
   return (filename.split('.').pop() || '').toLowerCase();
+}
+
+// The one thing every row (image or video) can be grouped/filtered/labeled
+// by — an image's extension, or a video's provider. Used for the File Type
+// column, the File Type filter pill's options, and the filter predicate
+// itself, so all three always agree on what "type" a row has.
+function getFileKind(item) {
+  return item.mediaType === 'video' ? item.provider : getFileExt(item.filename);
+}
+
+function getFileKindLabel(item) {
+  if (item.mediaType === 'video') return item.provider === 'youtube' ? 'YouTube' : 'Vimeo';
+  return getFileExt(item.filename).toUpperCase() || '—';
+}
+
+// Best-effort filename for an image added via "Upload from URL" — its last
+// path segment, decoded, or a generic fallback for a URL with none (e.g.
+// just a bare domain).
+function filenameFromUrl(rawUrl) {
+  try {
+    const { pathname } = new URL(rawUrl);
+    const last = pathname.split('/').filter(Boolean).pop();
+    return last ? decodeURIComponent(last) : 'image';
+  } catch {
+    return 'image';
+  }
 }
 
 function formatBytes(bytes) {
@@ -98,6 +125,8 @@ export default function FilesManagement() {
   const [dateCutoffMs, setDateCutoffMs] = useState(null);
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(25);
+  const [sortKey, setSortKey] = useState(null);
+  const [sortDirection, setSortDirection] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
   const [pendingDeleteId, setPendingDeleteId] = useState(null);
   const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
@@ -113,6 +142,39 @@ export default function FilesManagement() {
   const [pendingPayload, setPendingPayload] = useState(null);
   const [uploadError, setUploadError] = useState(null);
 
+  // "New File" — a primary button (not a form-field-style trigger) that
+  // opens a small popover with the two entry points, Upload file / Upload
+  // from URL, matching Shopify's own two-option "New File" button. Hand-
+  // rolled outside-click popover (same pattern as PagesManagement.jsx's own
+  // bulk-actions menu) rather than ce-ui's `Dropdown` — that component's
+  // trigger always renders as a select-style field box, which doesn't read
+  // as a primary action button the way this one does.
+  const [fileMenuOpen, setFileMenuOpen] = useState(false);
+  const fileMenuRef = useRef(null);
+
+  useEffect(() => {
+    if (!fileMenuOpen) return undefined;
+    const handler = (e) => {
+      if (fileMenuRef.current && !fileMenuRef.current.contains(e.target)) setFileMenuOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [fileMenuOpen]);
+
+  // "Upload from URL" modal — accepts an image URL or a YouTube/Vimeo URL
+  // (see videoUrlHelpers.js), added to mediaLibrary the same way a local
+  // upload is (ACTIONS.ADD_MEDIA_ITEM) once it's confirmed to actually
+  // resolve to something real.
+  const [urlModalOpen, setUrlModalOpen] = useState(false);
+  const [urlValue, setUrlValue] = useState('');
+  const [urlFilenameValue, setUrlFilenameValue] = useState('');
+  const [urlError, setUrlError] = useState(null);
+  // True while either the image-load check or the Vimeo oEmbed fetch is in
+  // flight — disables "Add file" so a double-click can't add the same URL
+  // twice, and MediaUploadField's own convention (uploadError) is mirrored
+  // here as urlError for the inline failure message.
+  const [urlChecking, setUrlChecking] = useState(false);
+
   // Rename modal — the "Edit" row action.
   const [renamingItem, setRenamingItem] = useState(null);
   const [renameValue, setRenameValue] = useState('');
@@ -123,10 +185,10 @@ export default function FilesManagement() {
   const mediaLibrary = useMemo(() => draft.mediaLibrary ?? [], [draft.mediaLibrary]);
 
   const fileTypeOptions = useMemo(() => {
-    const exts = new Set(mediaLibrary.map((item) => getFileExt(item.filename)).filter(Boolean));
-    return Array.from(exts)
+    const kinds = new Set(mediaLibrary.map(getFileKind).filter(Boolean));
+    return Array.from(kinds)
       .sort()
-      .map((ext) => ({ value: ext, label: ext.toUpperCase() }));
+      .map((kind) => ({ value: kind, label: kind === 'youtube' ? 'YouTube' : kind === 'vimeo' ? 'Vimeo' : kind.toUpperCase() }));
   }, [mediaLibrary]);
 
   const dateFilterOptions = [
@@ -138,7 +200,7 @@ export default function FilesManagement() {
   const filtered = useMemo(() => {
     return mediaLibrary.filter((item) => {
       if (search.trim() && !matchesSearch(item, search)) return false;
-      if (fileTypeFilters.length > 0 && !fileTypeFilters.includes(getFileExt(item.filename))) return false;
+      if (fileTypeFilters.length > 0 && !fileTypeFilters.includes(getFileKind(item))) return false;
       if (customDateFrom || customDateTo) {
         const ms = uploadedAtMs(item);
         if (!ms) return false;
@@ -152,10 +214,17 @@ export default function FilesManagement() {
     });
   }, [mediaLibrary, search, fileTypeFilters, customDateFrom, customDateTo, dateCutoffMs]);
 
+  const sorted = useMemo(() => {
+    if (!sortKey || !sortDirection) return filtered;
+    const factor = sortDirection === 'asc' ? 1 : -1;
+    const valueOf = (item) => (sortKey === 'uploadedAt' ? uploadedAtMs(item) ?? 0 : item.size ?? 0);
+    return [...filtered].sort((a, b) => (valueOf(a) - valueOf(b)) * factor);
+  }, [filtered, sortKey, sortDirection]);
+
   const paged = useMemo(() => {
     const start = (page - 1) * perPage;
-    return filtered.slice(start, start + perPage);
-  }, [filtered, page, perPage]);
+    return sorted.slice(start, start + perPage);
+  }, [sorted, page, perPage]);
 
   // ── Upload modal ──────────────────────────────────────────────────────────
 
@@ -198,6 +267,85 @@ export default function FilesManagement() {
     const next = runDraftAction(STORE_ID, { type: ACTIONS.ADD_MEDIA_ITEM, item });
     setDraft(next);
     closeUploadModal();
+  };
+
+  // ── Upload from URL ──────────────────────────────────────────────────────
+
+  const closeUrlModal = () => {
+    setUrlModalOpen(false);
+    setUrlValue('');
+    setUrlFilenameValue('');
+    setUrlError(null);
+    setUrlChecking(false);
+  };
+
+  const addMediaItem = (item) => {
+    const next = runDraftAction(STORE_ID, { type: ACTIONS.ADD_MEDIA_ITEM, item });
+    setDraft(next);
+  };
+
+  // Detects a YouTube/Vimeo URL first (videoUrlHelpers.parseVideoUrl);
+  // anything else is treated as an image and validated the same
+  // `new Image()` onload/onerror way SelectImageModal.jsx's own
+  // handleAddFromUrl does — there's no backend here to fetch/verify an
+  // arbitrary cross-origin URL's bytes, so "does it actually render" is the
+  // most this app can check. The File Name field is optional either way —
+  // a blank one falls back to the same auto-derived name this flow always
+  // used (the URL's last path segment for an image, "YouTube/Vimeo video"
+  // for a video).
+  const handleAddFromUrlConfirm = async () => {
+    const raw = urlValue.trim();
+    if (!raw) return;
+    setUrlError(null);
+    setUrlChecking(true);
+    const customFilename = urlFilenameValue.trim();
+
+    const video = parseVideoUrl(raw);
+    if (video) {
+      const thumbnailUrl = video.provider === 'youtube' ? youtubeThumbnailUrl(video.videoId) : await fetchVimeoThumbnail(video.videoId);
+      if (!thumbnailUrl) {
+        setUrlChecking(false);
+        setUrlError(t('sectionBuilder:onlineStore.files.urlInvalidVideo', 'That URL doesn’t point to a valid video.'));
+        return;
+      }
+      addMediaItem({
+        id: crypto.randomUUID(),
+        filename: customFilename || (video.provider === 'youtube' ? 'YouTube video' : 'Vimeo video'),
+        mediaType: 'video',
+        provider: video.provider,
+        videoId: video.videoId,
+        url: watchUrlFor(video.provider, video.videoId),
+        thumbnailUrl,
+        width: null,
+        height: null,
+        size: null,
+        uploadedAt: new Date().toISOString(),
+      });
+      setUrlChecking(false);
+      closeUrlModal();
+      return;
+    }
+
+    const img = new Image();
+    img.onload = () => {
+      addMediaItem({
+        id: crypto.randomUUID(),
+        filename: customFilename || filenameFromUrl(raw),
+        mediaType: 'image',
+        url: raw,
+        width: img.naturalWidth,
+        height: img.naturalHeight,
+        size: null,
+        uploadedAt: new Date().toISOString(),
+      });
+      setUrlChecking(false);
+      closeUrlModal();
+    };
+    img.onerror = () => {
+      setUrlChecking(false);
+      setUrlError(t('sectionBuilder:onlineStore.files.urlInvalidImage', 'That URL doesn’t point to a valid image.'));
+    };
+    img.src = raw;
   };
 
   // ── Rename modal ──────────────────────────────────────────────────────────
@@ -260,11 +408,32 @@ export default function FilesManagement() {
       key: 'url',
       header: t('sectionBuilder:onlineStore.files.columnPreview', 'Preview'),
       render: (_value, row) => (
-        <img
-          src={row.url}
-          alt={row.filename}
-          style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 6, border: '1px solid #E9E9E9' }}
-        />
+        <div style={{ position: 'relative', width: 40, height: 40 }}>
+          <img
+            src={row.mediaType === 'video' ? row.thumbnailUrl : row.url}
+            alt={row.filename}
+            style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 6, border: '1px solid #E9E9E9' }}
+          />
+          {/* Video badge — a small play-circle overlay so a video row reads
+              as "video" at a glance in every grid this shows up in (Files
+              table here; SelectImageModal/MediaLibraryPanel's own thumbnail
+              grids mirror this same badge). */}
+          {row.mediaType === 'video' && (
+            <span
+              style={{
+                position: 'absolute',
+                inset: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: 'rgba(0,0,0,0.25)',
+                borderRadius: 6,
+              }}
+            >
+              <Play size={16} color="#fff" fill="#fff" />
+            </span>
+          )}
+        </div>
       ),
     },
     {
@@ -275,11 +444,12 @@ export default function FilesManagement() {
     {
       key: 'fileType',
       header: t('sectionBuilder:onlineStore.files.columnFileType', 'File Type'),
-      render: (_value, row) => getFileExt(row.filename).toUpperCase() || '—',
+      render: (_value, row) => getFileKindLabel(row),
     },
     {
       key: 'uploadedAt',
       header: t('sectionBuilder:onlineStore.files.columnDateAdded', 'Date Added'),
+      sortable: true,
       render: (_value, row) => {
         const ms = uploadedAtMs(row);
         return ms ? formatDateTime(ms) : '—';
@@ -288,6 +458,7 @@ export default function FilesManagement() {
     {
       key: 'size',
       header: t('sectionBuilder:onlineStore.files.columnFileSize', 'File Size'),
+      sortable: true,
       render: (_value, row) => formatBytes(row.size),
     },
     {
@@ -299,18 +470,22 @@ export default function FilesManagement() {
       // buttons should act on their own, not also open/select the row.
       render: (_value, row) => (
         <div className="flex items-center gap-1">
-          <Tooltip content={t('sectionBuilder:onlineStore.files.downloadTooltip', 'Download')}>
-            <IconBtn
-              variant="ghost"
-              size="sm"
-              icon={<Download size={16} />}
-              aria-label={t('sectionBuilder:onlineStore.files.downloadTooltip', 'Download')}
-              onClick={(e) => {
-                e.stopPropagation();
-                handleDownload(row);
-              }}
-            />
-          </Tooltip>
+          {/* No Download for a video row — there's nothing to download, it's
+              just a YouTube/Vimeo URL, not a hosted file. */}
+          {row.mediaType !== 'video' && (
+            <Tooltip content={t('sectionBuilder:onlineStore.files.downloadTooltip', 'Download')}>
+              <IconBtn
+                variant="ghost"
+                size="sm"
+                icon={<Download size={16} />}
+                aria-label={t('sectionBuilder:onlineStore.files.downloadTooltip', 'Download')}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDownload(row);
+                }}
+              />
+            </Tooltip>
+          )}
           <Tooltip content={t('sectionBuilder:onlineStore.files.editTooltip', 'Edit')}>
             <IconBtn
               variant="ghost"
@@ -347,13 +522,79 @@ export default function FilesManagement() {
           <h1 style={{ margin: 0, fontSize: '26px', fontWeight: 700, color: '#282828' }}>
             {t('sectionBuilder:onlineStore.files.heading', 'Files')}
           </h1>
-          <MainBtn
-            variant="primary"
-            size="sm"
-            leftIcon={<Plus size={16} />}
-            label={t('sectionBuilder:onlineStore.files.newFile', 'New File')}
-            onClick={() => setUploadModalOpen(true)}
-          />
+          <div style={{ position: 'relative' }} ref={fileMenuRef}>
+            <MainBtn
+              variant="primary"
+              size="sm"
+              leftIcon={<Plus size={16} />}
+              rightIcon={<ChevronDown size={14} />}
+              label={t('sectionBuilder:onlineStore.files.newFile', 'New File')}
+              onClick={() => setFileMenuOpen((open) => !open)}
+            />
+            {fileMenuOpen && (
+              <div
+                style={{
+                  position: 'absolute',
+                  right: 0,
+                  top: 'calc(100% + 4px)',
+                  zIndex: 30,
+                  background: '#fff',
+                  border: '1px solid #E5E7EB',
+                  borderRadius: 8,
+                  boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+                  minWidth: 200,
+                  padding: '4px 0',
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFileMenuOpen(false);
+                    setUploadModalOpen(true);
+                  }}
+                  style={{
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    padding: '8px 12px',
+                    fontSize: 13,
+                    color: '#282828',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                  }}
+                >
+                  <UploadCloud size={14} />
+                  {t('sectionBuilder:onlineStore.files.uploadFile', 'Upload file')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFileMenuOpen(false);
+                    setUrlModalOpen(true);
+                  }}
+                  style={{
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    padding: '8px 12px',
+                    fontSize: 13,
+                    color: '#282828',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                  }}
+                >
+                  <LinkIcon size={14} />
+                  {t('sectionBuilder:onlineStore.files.uploadFromUrl', 'Upload from URL')}
+                </button>
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="files-table-wrapper" style={{ background: '#FFFFFF', borderRadius: '12px', border: '1px solid #E9E9E9', position: 'relative' }}>
@@ -366,6 +607,13 @@ export default function FilesManagement() {
             perPage={perPage}
             onPageChange={setPage}
             hidePaginationOnSinglePage
+            sortKey={sortKey}
+            sortDirection={sortDirection}
+            onSortChange={(key, direction) => {
+              setSortKey(key);
+              setSortDirection(direction);
+              setPage(1);
+            }}
             selectable
             selectedIds={selectedIds}
             onSelectionChange={setSelectedIds}
@@ -468,6 +716,43 @@ export default function FilesManagement() {
       </Popup>
 
       <Popup
+        open={urlModalOpen}
+        onClose={closeUrlModal}
+        title={t('sectionBuilder:onlineStore.files.addFromUrlTitle', 'Add file from URL')}
+        platform="desktop"
+        align="left"
+        primaryAction={{
+          label: t('sectionBuilder:onlineStore.files.addFile', 'Add file'),
+          onClick: handleAddFromUrlConfirm,
+          disabled: !urlValue.trim() || urlChecking,
+          loading: urlChecking,
+        }}
+        secondaryAction={{ label: t('sectionBuilder:editor.common.cancel', 'Cancel'), onClick: closeUrlModal }}
+      >
+        <div className="flex flex-col gap-4">
+          <TextField
+            label={t('sectionBuilder:onlineStore.files.urlFieldLabel', 'Image, YouTube, or Vimeo URL')}
+            value={urlValue}
+            onChange={(e) => {
+              setUrlValue(e.target.value);
+              if (urlError) setUrlError(null);
+            }}
+            placeholder="https://"
+            autoFocus
+            errorText={urlError}
+          />
+          {/* Optional — left blank, it falls back to the same auto-derived
+              name this flow always used (see handleAddFromUrlConfirm). */}
+          <TextField
+            label={t('sectionBuilder:onlineStore.files.renameFilenameLabel', 'File Name')}
+            value={urlFilenameValue}
+            onChange={(e) => setUrlFilenameValue(e.target.value)}
+            placeholder={t('sectionBuilder:onlineStore.files.urlFilenamePlaceholder', 'e.g. hero-banner')}
+          />
+        </div>
+      </Popup>
+
+      <Popup
         open={Boolean(renamingItem)}
         onClose={closeRename}
         title={t('sectionBuilder:onlineStore.files.renameFileTitle', 'Rename file')}
@@ -481,7 +766,7 @@ export default function FilesManagement() {
         secondaryAction={{ label: t('sectionBuilder:editor.common.cancel', 'Cancel'), onClick: closeRename }}
       >
         <TextField
-          label={t('sectionBuilder:onlineStore.files.renameFilenameLabel', 'Filename')}
+          label={t('sectionBuilder:onlineStore.files.renameFilenameLabel', 'File Name')}
           required
           value={renameValue}
           onChange={(e) => setRenameValue(e.target.value)}
@@ -513,7 +798,6 @@ export default function FilesManagement() {
         <FilePreviewOverlay
           key={previewItem.id}
           item={previewItem}
-          usages={findUsages(draft, previewItem.id)}
           onClose={() => setPreviewItem(null)}
           onDownload={() => handleDownload(previewItem)}
         />
@@ -525,13 +809,13 @@ export default function FilesManagement() {
 /**
  * Shopify-style full-screen file detail view, opened by clicking a table
  * row (US ask: "preview and file details like in Shopify"). View-only —
- * Filename/Details/Used in are read-only and the only action is Download;
+ * Filename/Details are read-only and the only action is Download;
  * renaming/deleting stay on the row's own Edit/Delete actions instead.
  * There's also no crop/resize/draw tooling in this app to back those
  * Shopify buttons, so they're left out rather than added as non-functional
  * decoration.
  */
-function FilePreviewOverlay({ item, usages, onClose, onDownload }) {
+function FilePreviewOverlay({ item, onClose, onDownload }) {
   const { t } = useTranslation();
 
   useEffect(() => {
@@ -546,9 +830,9 @@ function FilePreviewOverlay({ item, usages, onClose, onDownload }) {
 
   const ms = Date.parse(item.uploadedAt);
   const addedLabel = Number.isNaN(ms) ? '—' : formatDateTime(ms);
-  const ext = getFileExt(item.filename).toUpperCase() || '—';
+  const isVideo = item.mediaType === 'video';
+  const kindLabel = getFileKindLabel(item);
   const dimensions = item.width && item.height ? `${item.width}×${item.height}` : '—';
-  const usageLabels = [...new Set(usages)];
 
   return ReactDOM.createPortal(
     // z-[300] clears Layout.jsx's sidebar (position: sticky, zIndex: 200) —
@@ -563,7 +847,18 @@ function FilePreviewOverlay({ item, usages, onClose, onDownload }) {
           same backdrop convention as ce-ui's Popup overlay, rather than
           solid black or solid white. */}
       <div className="flex-1 min-w-0 flex items-center justify-center p-8 bg-black/50">
-        <img src={item.url} alt={item.filename} className="max-w-full max-h-full object-contain" />
+        {isVideo ? (
+          <iframe
+            key={item.id}
+            src={embedUrlFor(item.provider, item.videoId)}
+            title={item.filename}
+            allow="autoplay; fullscreen; picture-in-picture"
+            allowFullScreen
+            className="aspect-video w-full max-w-4xl border-0"
+          />
+        ) : (
+          <img src={item.url} alt={item.filename} className="max-w-full max-h-full object-contain" />
+        )}
       </div>
 
       {/* Drawer — carries its own header (filename + close) since the image
@@ -588,7 +883,7 @@ function FilePreviewOverlay({ item, usages, onClose, onDownload }) {
 
           <div className="flex flex-col gap-1">
             <span className="text-lb-on-surface-3 font-lb text-[12px]">
-              {t('sectionBuilder:onlineStore.files.renameFilenameLabel', 'Filename')}
+              {t('sectionBuilder:onlineStore.files.renameFilenameLabel', 'File Name')}
             </span>
             <span className="text-lb-on-surface font-lb text-[13px]">{item.filename}</span>
           </div>
@@ -597,22 +892,28 @@ function FilePreviewOverlay({ item, usages, onClose, onDownload }) {
             <span className="text-lb-on-surface-3 font-lb text-[12px]">
               {t('sectionBuilder:onlineStore.files.columnFileType', 'File Type')}
             </span>
-            <span className="text-lb-on-surface font-lb text-[13px]">{ext}</span>
+            <span className="text-lb-on-surface font-lb text-[13px]">{kindLabel}</span>
           </div>
 
-          <div className="flex flex-col gap-1">
-            <span className="text-lb-on-surface-3 font-lb text-[12px]">
-              {t('sectionBuilder:onlineStore.files.previewDimensions', 'Dimensions')}
-            </span>
-            <span className="text-lb-on-surface font-lb text-[13px]">{dimensions}</span>
-          </div>
+          {/* Dimensions/File Size don't apply to a video entry — it's a
+              YouTube/Vimeo URL, not a hosted image with real bytes/pixels. */}
+          {!isVideo && (
+            <>
+              <div className="flex flex-col gap-1">
+                <span className="text-lb-on-surface-3 font-lb text-[12px]">
+                  {t('sectionBuilder:onlineStore.files.previewDimensions', 'Dimensions')}
+                </span>
+                <span className="text-lb-on-surface font-lb text-[13px]">{dimensions}</span>
+              </div>
 
-          <div className="flex flex-col gap-1">
-            <span className="text-lb-on-surface-3 font-lb text-[12px]">
-              {t('sectionBuilder:onlineStore.files.columnFileSize', 'File Size')}
-            </span>
-            <span className="text-lb-on-surface font-lb text-[13px]">{formatBytes(item.size)}</span>
-          </div>
+              <div className="flex flex-col gap-1">
+                <span className="text-lb-on-surface-3 font-lb text-[12px]">
+                  {t('sectionBuilder:onlineStore.files.columnFileSize', 'File Size')}
+                </span>
+                <span className="text-lb-on-surface font-lb text-[13px]">{formatBytes(item.size)}</span>
+              </div>
+            </>
+          )}
 
           <div className="flex flex-col gap-1">
             <span className="text-lb-on-surface-3 font-lb text-[12px]">
@@ -621,26 +922,27 @@ function FilePreviewOverlay({ item, usages, onClose, onDownload }) {
             <span className="text-lb-on-surface font-lb text-[13px]">{addedLabel}</span>
           </div>
 
-          <div className="flex flex-col gap-1">
-            <span className="text-lb-on-surface-3 font-lb text-[12px]">
-              {t('sectionBuilder:onlineStore.files.previewUsedIn', 'Used in')}
-            </span>
-            <span className="text-lb-on-surface font-lb text-[13px]">
-              {usageLabels.length > 0
-                ? usageLabels.join(', ')
-                : t('sectionBuilder:onlineStore.files.previewNotUsed', 'Not referenced in your store')}
-            </span>
-          </div>
-
           <div className="mt-auto pt-3 border-t border-lb-line-1">
-            <MainBtn
-              variant="secondary"
-              size="md"
-              className="w-full"
-              leftIcon={<Download size={16} />}
-              label={t('sectionBuilder:onlineStore.files.downloadTooltip', 'Download')}
-              onClick={onDownload}
-            />
+            {isVideo ? (
+              <MainBtn
+                variant="secondary"
+                size="md"
+                className="w-full"
+                label={t('sectionBuilder:onlineStore.files.watchOnProvider', 'Watch on {{provider}}', {
+                  provider: kindLabel,
+                })}
+                onClick={() => window.open(item.url, '_blank', 'noopener,noreferrer')}
+              />
+            ) : (
+              <MainBtn
+                variant="secondary"
+                size="md"
+                className="w-full"
+                leftIcon={<Download size={16} />}
+                label={t('sectionBuilder:onlineStore.files.downloadTooltip', 'Download')}
+                onClick={onDownload}
+              />
+            )}
           </div>
         </div>
       </div>

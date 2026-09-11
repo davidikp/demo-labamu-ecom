@@ -11,6 +11,7 @@ import { matchStorefrontPage, parsePathQuery } from '../section-builder/state/pa
 import ProductDetailPage from '../section-builder/ui/ProductDetailPage';
 import EditorialCollectionDetailPage from '../section-builder/ui/EditorialCollectionDetailPage';
 import { StorefrontCartProvider } from '../section-builder/sections/shared/storefrontCart';
+import SimulateTrigger from './SimulateTrigger';
 
 /**
  * Full-page "See Preview" for a theme card on the Theme gallery (Online
@@ -38,6 +39,14 @@ export default function ThemePreview() {
   const [viewport, setViewport] = useState(DEFAULT_BREAKPOINT);
   const [searchParams, setSearchParams] = useSearchParams();
   const path = searchParams.get('path');
+  // Present only when this preview was opened from a specific draft theme
+  // row (see ThemeGallery.jsx's handleDraftPreview/handleSeePreview) — a
+  // preview opened from the published-theme card or Discover has no
+  // draftId, so the "deleted in another window" simulate option below has
+  // nothing real to key off and stays inert for those.
+  const draftId = searchParams.get('draftId');
+  const [simulateDraftDeletedElsewhere, setSimulateDraftDeletedElsewhere] = useState(false);
+  const [draftDeleted, setDraftDeleted] = useState(false);
 
   const template = useMemo(() => siteTemplateById(templateId), [templateId]);
   const previewData = useMemo(() => (template ? defaultPreviewDataFor(template) : null), [template]);
@@ -59,6 +68,39 @@ export default function ThemePreview() {
     },
     [setSearchParams]
   );
+
+  const simulateOptions = [
+    {
+      type: 'checkbox',
+      label: t('sectionBuilder:onlineStore.themes.simulateDraftDeletedElsewherePreview', 'Simulate draft theme deleted in another window'),
+      checked: simulateDraftDeletedElsewhere,
+      onChange: setSimulateDraftDeletedElsewhere,
+    },
+  ];
+
+  // Full-bleed takeover, same convention as ThemeGallery.jsx's own
+  // simulated-failure screens — this represents the draft this preview was
+  // opened for no longer existing at all, so nothing of the normal preview
+  // chrome (toolbar, viewport toggle) makes sense to keep showing under it.
+  if (draftDeleted) {
+    return (
+      <div className="flex h-screen flex-col items-center justify-center gap-4 bg-black text-center text-white">
+        <p className="text-sm">
+          {t(
+            'sectionBuilder:onlineStore.themes.draftDeletedPreviewMessage',
+            'This draft theme has been deleted and is no longer available to preview.'
+          )}
+        </p>
+        <button
+          type="button"
+          onClick={() => navigate('/online-store/theme')}
+          className="text-sm text-white underline hover:text-gray-300"
+        >
+          {t('sectionBuilder:templates.gallery.backToThemes')}
+        </button>
+      </div>
+    );
+  }
 
   if (!template || !previewData) {
     return (
@@ -89,6 +131,10 @@ export default function ThemePreview() {
   const collectionHandle = match?.page?.systemType === 'collection' ? match.params?.handle ?? null : null;
 
   const handleNavigate = (url) => {
+    if (simulateDraftDeletedElsewhere && draftId) {
+      setDraftDeleted(true);
+      return;
+    }
     const targetMatch = matchStorefrontPage(pages, url);
     if (!targetMatch) return;
     navigateToPath(url);
@@ -190,6 +236,7 @@ export default function ThemePreview() {
         )}
         </div>
       </div>
+      <SimulateTrigger options={simulateOptions} />
     </StorefrontCartProvider>
   );
 }

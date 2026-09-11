@@ -1,17 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  DndContext,
-  closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  TouchSensor,
-  useSensor,
-  useSensors,
-} from '@dnd-kit/core';
-import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, arrayMove, useSortable } from '@dnd-kit/sortable';
+import { DndContext, closestCenter, PointerSensor, TouchSensor, useSensor, useSensors, useDraggable, useDroppable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
-import { Trash2, Plus, GripVertical, Pencil } from 'lucide-react';
+import { Trash2, Plus, GripVertical, Pencil, ChevronDown, ChevronRight } from 'lucide-react';
 import { Table, MainBtn, TextField, Popup, IconBtn, Tooltip } from '../../ce-ui';
 import { loadOrSeedDemoDraft } from '../section-builder/state/demoBootstrap';
 import { runDraftAction } from '../section-builder/state/runDraftAction';
@@ -20,6 +11,19 @@ import { slugify } from '../section-builder/sections/pageHelpers';
 import PageLinkCombobox from '../section-builder/ui/fields/PageLinkCombobox';
 import ConfirmDialog from '../section-builder/ui/ConfirmDialog';
 import { useSnackbar } from '../../contexts/SnackbarContext';
+import {
+  MAX_DEPTH,
+  INDENT_WIDTH,
+  flattenTree,
+  buildTree,
+  removeChildrenOf,
+  getProjection,
+  moveItemAfter,
+  updateNodeInTree,
+  removeNodeFromTree,
+  addChildToTree,
+  validateTree,
+} from './menuTree';
 
 // TODO: replace with the real active store id once multi-store routing
 // exists — matches the hardcoded id used by Layout.jsx's builder entry and
@@ -27,47 +31,151 @@ import { useSnackbar } from '../../contexts/SnackbarContext';
 const STORE_ID = 'demo';
 
 /**
- * One draggable, inline-editable row of the menu items table — drag handle
- * + Label input + link combobox + delete, columns matching the header row
- * in MenuFormDrawer below exactly. Uses the same `useSortable` pattern as
- * RepeaterField.jsx/SectionListItem.jsx (this codebase's only existing
- * drag-reorder mechanism) rather than a bespoke DnD implementation.
+ * A horizontal insertion-point marker (circle + line), shown just above the
+ * row currently being hovered over during a drag — the visual equivalent of
+ * Shopify's own drop indicator, so the merchant sees exactly where (and at
+ * what nesting depth) the dragged item will land before releasing it.
  */
-function MenuItemRow({ item, pages, error, onChange, onRemove }) {
+function DropIndicatorLine({ depth }) {
+  return (
+    <div className="flex items-center py-1 pr-4" style={{ paddingLeft: 16 + depth * INDENT_WIDTH }} aria-hidden="true">
+      <span className="h-2 w-2 shrink-0 rounded-full border-2 border-blue-500 bg-white" />
+      <span className="h-[2px] flex-1 bg-blue-500" />
+    </div>
+  );
+}
+
+/**
+ * One draggable, inline-editable row of the menu items tree — drag handle +
+ * expand/collapse chevron + Label input + link combobox + delete, columns
+ * matching the header row in MenuFormDrawer below exactly.
+ *
+ * Unlike RepeaterField.jsx/SectionListItem.jsx's flat `useSortable` rows,
+ * this list is a tree (up to MAX_DEPTH levels) whose items can be dragged
+ * both to reorder *and* to re-nest under a different parent — a shape
+ * `@dnd-kit/sortable`'s SortableContext doesn't model. So this uses plain
+ * `@dnd-kit/core` `useDraggable`/`useDroppable` instead (one flat DndContext
+ * over every visible row, see MenuFormDrawer), with MenuFormDrawer computing
+ * each row's live drag depth via menuTree.js's getProjection — the same
+ * "flatten, project depth from horizontal drag distance, rebuild" recipe
+ * dnd-kit's own sortable-tree example uses.
+ */
+function MenuItemRow({ item, pages, error, depth, nextDepth, isDragging, expanded, onToggleExpand, onChange, onRemove }) {
   const { t } = useTranslation();
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id });
+  const { attributes, listeners, setNodeRef: setDragRef, transform } = useDraggable({ id: item.id });
+  const { setNodeRef: setDropRef } = useDroppable({ id: item.id });
+  const setNodeRef = (node) => {
+    setDragRef(node);
+    setDropRef(node);
+  };
   const requiredText = t('sectionBuilder:onlineStore.menus.itemFieldRequired', 'Field cannot be empty');
+  const childCount = item.children?.length ?? 0;
+  // Items at MAX_DEPTH (grandchildren, when 3 levels are in play) can't have
+  // children of their own — no chevron/expand affordance for them, just an
+  // inert spacer so their Label/Link fields still line up with rows above.
+  const canExpand = depth < MAX_DEPTH;
 
   return (
     <div
       ref={setNodeRef}
-      style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 }}
+      style={{
+        transform: isDragging ? CSS.Translate.toString(transform) : undefined,
+        opacity: isDragging ? 0.4 : 1,
+        position: 'relative',
+        zIndex: isDragging ? 10 : undefined,
+      }}
       // `min-h` (not a fixed `h-[49px]`) + `items-start` — a row grows to fit
       // its inline error text (below) instead of clipping it; the drag
       // handle/delete button get a small top margin so they still align
       // with the fields' first line once the row is no longer a fixed
-      // single-line height.
+      // single-line height. Fixed `px-4` here (not depth-dependent) — only
+      // the Label cluster below indents; the Link column and delete button
+      // stay put so they line up with the header regardless of nesting.
+      // `position: relative` is what the ancestor guide lines below anchor
+      // to.
       className="flex min-h-[49px] items-start gap-2 border-b border-lb-line-1 bg-lb-surface px-4 py-2 last:border-b-0"
     >
-      <span
-        aria-label={t('sectionBuilder:fields.repeaterField.dragToReorder', 'Drag to reorder')}
-        className="mt-1.5 w-5 shrink-0 cursor-grab touch-none text-lb-on-surface-3 hover:text-lb-on-surface"
-        {...attributes}
-        {...listeners}
-      >
-        <GripVertical size={16} />
-      </span>
-      <div className="flex w-1/2 flex-col gap-1">
-        <input
-          type="text"
-          value={item.label}
-          onChange={(e) => onChange({ label: e.target.value })}
-          placeholder={t('sectionBuilder:onlineStore.menus.labelPlaceholder', 'e.g. About us')}
-          className={`w-full rounded-md border px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-blue-500/30 ${
-            error?.label ? 'border-red-400 focus:border-red-400' : 'border-gray-200 focus:border-blue-400'
-          }`}
-        />
-        {error?.label && <p className="text-xs text-red-600">{requiredText}</p>}
+      {/* One guide line per ancestor level, each aligned under that
+          ancestor's own drag-handle column. The row's *immediate* parent
+          level (the last one, `depth - 1`) gets a Shopify-style elbow — a
+          horizontal tick running from that ancestor's column into this
+          row's own drag handle — so the connection reads as "this row
+          specifically" rather than just a generic vertical rule; levels
+          further out (grandparent+) stay plain vertical rules. Every
+          level's vertical segment stops at this row's own center instead of
+          running its full height once this is the last row anywhere inside
+          that ancestor's block (`nextDepth <= level`, i.e. whatever comes
+          next has exited it) — otherwise the line would keep running past
+          where that ancestor's children actually end. */}
+      {Array.from({ length: depth }).map((_, level) => {
+        const isImmediateParent = level === depth - 1;
+        const isLastInBlock = nextDepth <= level;
+        const x = 16 + level * INDENT_WIDTH + 10;
+        // A `Fragment`, not a wrapping `<span>` — every direct child of this
+        // row is a flex item, and a `<span>` here (even with only
+        // absolutely-positioned children of its own, so *it* renders with
+        // zero visible size) still counts as one, adding one extra `gap-2`
+        // gap per ancestor level before the Label cluster below. That was
+        // the real cause of the Link column creeping rightward with depth —
+        // a Fragment renders no DOM node at all, so it can't.
+        return (
+          <Fragment key={level}>
+            <span
+              aria-hidden="true"
+              className="absolute w-px bg-lb-line-2"
+              style={{ left: x, top: 0, bottom: isLastInBlock ? 'calc(50% - 0.5px)' : 0 }}
+            />
+            {isImmediateParent && (
+              <span
+                aria-hidden="true"
+                className="absolute h-px bg-lb-line-2"
+                style={{ left: x, top: 'calc(50% - 0.5px)', width: 16 + depth * INDENT_WIDTH - x }}
+              />
+            )}
+          </Fragment>
+        );
+      })}
+      <div className="flex w-1/2 items-start gap-2" style={{ paddingLeft: depth * INDENT_WIDTH }}>
+        <span
+          aria-label={t('sectionBuilder:fields.repeaterField.dragToReorder', 'Drag to reorder')}
+          className="mt-1.5 w-5 shrink-0 cursor-grab touch-none text-lb-on-surface-3 hover:text-lb-on-surface"
+          {...attributes}
+          {...listeners}
+        >
+          <GripVertical size={16} />
+        </span>
+        {canExpand ? (
+          <button
+            type="button"
+            onClick={onToggleExpand}
+            aria-label={
+              expanded
+                ? t('sectionBuilder:onlineStore.menus.collapseItem', 'Collapse')
+                : t('sectionBuilder:onlineStore.menus.expandItem', 'Expand')
+            }
+            className="mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded text-lb-on-surface-3 hover:bg-lb-surface-2 hover:text-lb-on-surface"
+          >
+            {childCount > 0 ? (
+              expanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />
+            ) : (
+              <span className="inline-block h-4 w-4" aria-hidden="true" />
+            )}
+          </button>
+        ) : (
+          <span className="mt-1 h-6 w-6 shrink-0" aria-hidden="true" />
+        )}
+        <div className="flex flex-1 flex-col gap-1">
+          <input
+            type="text"
+            value={item.label}
+            onChange={(e) => onChange({ label: e.target.value })}
+            placeholder={t('sectionBuilder:onlineStore.menus.labelPlaceholder', 'e.g. About us')}
+            className={`w-full rounded-md border px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-blue-500/30 ${
+              error?.label ? 'border-red-400 focus:border-red-400' : 'border-gray-200 focus:border-blue-400'
+            }`}
+          />
+          {error?.label && <p className="text-xs text-red-600">{requiredText}</p>}
+        </div>
       </div>
       <div className="flex w-1/2 flex-col gap-1">
         <PageLinkCombobox
@@ -139,6 +247,20 @@ function MenuFormDrawer({ menu, isNew, pages, onSave, onClose }) {
   // instead" convention as PageEditor.jsx's own Title field) — this holds
   // the inline error text shown under Name once a blank Save attempt fires.
   const [nameError, setNameError] = useState(null);
+  // Which items currently show their children — starts with every item that
+  // already has children expanded, so editing an existing nested menu
+  // doesn't open with its submenus hidden. Seeded from the full tree (not
+  // just top-level items) since a saved menu can already be 3 levels deep.
+  const [expandedIds, setExpandedIds] = useState(
+    () => new Set(flattenTree(menu?.items ?? []).filter((item) => item.children?.length).map((item) => item.id))
+  );
+  // Drag state for the flattened tree drag-and-drop below — `activeId` is
+  // the item being dragged, `overId` whichever row it's currently hovering,
+  // and `offsetX` how far it's been dragged horizontally (drives the depth
+  // projection, i.e. re-nesting under a different parent).
+  const [activeId, setActiveId] = useState(null);
+  const [overId, setOverId] = useState(null);
+  const [offsetX, setOffsetX] = useState(0);
   const handle = slugify(name);
   const fieldRequiredText = t('sectionBuilder:onlineStore.menus.itemFieldRequired', 'Field cannot be empty');
 
@@ -160,8 +282,26 @@ function MenuFormDrawer({ menu, isNew, pages, onSave, onClose }) {
     setItems((prev) => [...prev, { id: crypto.randomUUID(), label: '', url: '' }]);
   };
 
+  // Adds a brand-new child under `parentId` (at any depth up to MAX_DEPTH -
+  // 1) and makes sure that parent is expanded so the new (blank) row is
+  // immediately visible/editable — same blank-url convention as the
+  // top-level addItem above.
+  const addChildItem = (parentId) => {
+    setItems((prev) => addChildToTree(prev, parentId, { id: crypto.randomUUID(), label: '', url: '' }));
+    setExpandedIds((prev) => new Set(prev).add(parentId));
+  };
+
+  const toggleExpand = (id) => {
+    setExpandedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
   const removeItem = (id) => {
-    setItems((prev) => prev.filter((item) => item.id !== id));
+    setItems((prev) => removeNodeFromTree(prev, id));
     setItemErrors((prev) => {
       if (!prev[id]) return prev;
       const { [id]: _removed, ...rest } = prev;
@@ -170,7 +310,7 @@ function MenuFormDrawer({ menu, isNew, pages, onSave, onClose }) {
   };
 
   const updateItem = (id, patch) => {
-    setItems((prev) => prev.map((item) => (item.id === id ? { ...item, ...patch } : item)));
+    setItems((prev) => updateNodeInTree(prev, id, patch));
     // Clear only the field(s) just edited — the other field's error (if any)
     // stays until it's fixed too, so fixing the label alone doesn't also
     // silently drop a still-blank link's error.
@@ -187,48 +327,172 @@ function MenuFormDrawer({ menu, isNew, pages, onSave, onClose }) {
     });
   };
 
-  // Every present row's Label and Link are mandatory — returns the
-  // `{ [itemId]: { label, url } }` error map (empty when everything's
-  // filled in).
-  const validateItems = () => {
-    const errors = {};
-    items.forEach((item) => {
-      const labelBad = !item.label?.trim();
-      const urlBad = !item.url?.trim();
-      if (labelBad || urlBad) errors[item.id] = { label: labelBad, url: urlBad };
-    });
-    return errors;
-  };
-
   const handleSaveClick = () => {
     const nameBad = !name.trim();
     setNameError(nameBad ? fieldRequiredText : null);
 
-    const errors = validateItems();
+    const errors = validateTree(items);
     setItemErrors(errors);
 
     if (nameBad || Object.keys(errors).length > 0) return;
     onSave({ name: name.trim(), items });
   };
 
-  // Same dnd-kit sensor set as RepeaterField.jsx/SectionListItem.jsx (the
-  // only existing drag-reorder mechanism in this codebase) so this list's
-  // drag handle behaves identically — pointer with a small activation
-  // distance (so a plain click into an input doesn't start a drag), touch
-  // with a short delay, and keyboard support for free.
+  // Pointer/touch only (same activation constraints as
+  // RepeaterField.jsx/SectionListItem.jsx's flat drag lists) — no keyboard
+  // sensor here since re-nesting via horizontal drag distance (below) has no
+  // keyboard-equivalent gesture yet.
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 5 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+    useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 5 } })
   );
 
-  const handleDragEnd = ({ active, over }) => {
-    if (!over || active.id === over.id) return;
-    setItems((prev) => {
-      const ids = prev.map((item) => item.id);
-      return arrayMove(prev, ids.indexOf(active.id), ids.indexOf(over.id));
-    });
+  // The full tree flattened into display order — `depth`/`parentId` per row
+  // drive both indentation and the drag projection below (see menuTree.js).
+  const flatItems = useMemo(() => flattenTree(items), [items]);
+
+  // Rows hidden by a collapsed ancestor, plus (while dragging) the dragged
+  // item's own children — they move as one block with their parent, so they
+  // don't need to render as separate rows mid-drag.
+  const collapsedIds = useMemo(
+    () => flatItems.filter((item) => item.children?.length && !expandedIds.has(item.id)).map((item) => item.id),
+    [flatItems, expandedIds]
+  );
+  const visibleItems = useMemo(
+    () => removeChildrenOf(flatItems, activeId ? [...collapsedIds, activeId] : collapsedIds),
+    [flatItems, collapsedIds, activeId]
+  );
+
+  // Where the dragged item would land — depth + new parent — if dropped on
+  // `overId` right now; recomputed continuously from onDragMove below.
+  const projected = useMemo(
+    () => (activeId && overId ? getProjection(visibleItems, activeId, overId, offsetX) : null),
+    [visibleItems, activeId, overId, offsetX]
+  );
+
+  const handleDragStart = ({ active }) => {
+    setActiveId(active.id);
+    setOverId(active.id);
+    setOffsetX(0);
   };
+
+  const handleDragMove = ({ delta, over }) => {
+    setOffsetX(delta.x);
+    setOverId(over?.id ?? null);
+  };
+
+  // Recomputes the projection fresh from the drag event's own final `delta`
+  // (rather than trusting the `projected` memo above, which reflects the
+  // last onDragMove-driven render) — the pointerup that ends a drag can fire
+  // before React has re-rendered from that last onDragMove's setState calls,
+  // so relying on that memo here risked committing a one-tick-stale depth/
+  // parent. Recomputing from `active`/`over`/`delta` directly (all provided
+  // fresh on the end event itself) makes the commit correct regardless of
+  // that render timing.
+  const handleDragEnd = ({ active, over, delta }) => {
+    setActiveId(null);
+    setOverId(null);
+    setOffsetX(0);
+    if (!over || active.id === over.id) return;
+    // Computed directly against this render's `items`/`expandedIds` (not
+    // inside the setItems functional-updater form) so the just-computed
+    // `parentId` is available right here to also drive the expandedIds
+    // update below, with no risk of the two falling out of sync.
+    const flat = flattenTree(items);
+    const collapsed = flat.filter((item) => item.children?.length && !expandedIds.has(item.id)).map((item) => item.id);
+    const visible = removeChildrenOf(flat, [...collapsed, active.id]);
+    const proj = getProjection(visible, active.id, over.id, delta.x);
+    if (!proj) return;
+    setItems(buildTree(moveItemAfter(flat, active.id, over.id, proj.parentId)));
+    // The item just became (or stayed) a child of `proj.parentId` — auto-open
+    // that parent so the drop's result is immediately visible instead of
+    // looking like the drag silently did nothing (its new child collapsed
+    // out of view under an unopened chevron).
+    if (proj.parentId) {
+      setExpandedIds((prev) => (prev.has(proj.parentId) ? prev : new Set(prev).add(proj.parentId)));
+    }
+  };
+
+  const handleDragCancel = () => {
+    setActiveId(null);
+    setOverId(null);
+    setOffsetX(0);
+  };
+
+  // Builds the row list, deferring each expanded item's "Add menu item to
+  // X" affordance until *after* its full subtree instead of right beneath
+  // its own row — `visibleItems` is in contiguous depth-first order, so an
+  // item's descendants are exactly the run of rows immediately following it
+  // with a greater depth; `pending` is a stack (innermost/deepest first) of
+  // expanded items still waiting on that button, flushed whenever the next
+  // row's depth shows their subtree has closed.
+  function renderMenuItemRows() {
+    const rows = [];
+    const pending = [];
+    const flushDueBefore = (nextDepth) => {
+      while (pending.length && nextDepth <= pending[pending.length - 1].depth) {
+        const closed = pending.pop();
+        rows.push(
+          <div
+            key={`add-child-${closed.id}`}
+            className="border-b border-lb-line-1 bg-lb-surface py-2 pr-4"
+            style={{ paddingLeft: 16 + (closed.depth + 1) * INDENT_WIDTH }}
+          >
+            <button
+              type="button"
+              onClick={() => addChildItem(closed.id)}
+              className="inline-flex items-center gap-1.5 text-sm font-semibold text-lb-brand hover:underline"
+            >
+              <Plus size={14} />
+              {t('sectionBuilder:onlineStore.menus.addChildItem', 'Add menu item to {{label}}', {
+                label: closed.label?.trim() || t('sectionBuilder:onlineStore.menus.thisItem', 'this item'),
+              })}
+            </button>
+          </div>
+        );
+      }
+    };
+
+    visibleItems.forEach((item, index) => {
+      const isActive = item.id === activeId;
+      // The active row's own indentation previews the depth it would land
+      // at if dropped right now — every other row keeps its actual depth,
+      // only reordering (via the indicator line below) rather than
+      // re-indenting.
+      const depth = isActive && projected ? projected.depth : item.depth;
+      // The indicator renders directly under whichever row is currently
+      // hovered (`overId`) — matching getProjection's "drop lands right
+      // after the hovered row" placement (menuTree.js), so a rightward drag
+      // while hovering over a row visibly previews nesting *under* that row.
+      const showIndicator = activeId != null && overId === item.id && item.id !== activeId;
+      // Used both to decide whether this is the last row inside its own
+      // ancestors' blocks (guide-line termination, see MenuItemRow) and to
+      // close out any pending "Add menu item to X" buttons below.
+      const nextDepth = visibleItems[index + 1]?.depth ?? -1;
+
+      rows.push(
+        <MenuItemRow
+          key={item.id}
+          item={item}
+          pages={pages}
+          depth={depth}
+          nextDepth={nextDepth}
+          isDragging={isActive}
+          error={itemErrors[item.id]}
+          expanded={expandedIds.has(item.id)}
+          onToggleExpand={() => toggleExpand(item.id)}
+          onChange={(patch) => updateItem(item.id, patch)}
+          onRemove={() => removeItem(item.id)}
+        />
+      );
+      if (showIndicator) rows.push(<DropIndicatorLine key={`indicator-${item.id}`} depth={projected?.depth ?? depth} />);
+      if (expandedIds.has(item.id) && item.depth < MAX_DEPTH) pending.push(item);
+
+      flushDueBefore(nextDepth);
+    });
+
+    return rows;
+  }
 
   return (
     <Popup
@@ -296,28 +560,34 @@ function MenuFormDrawer({ menu, isNew, pages, onSave, onClose }) {
                     Hidden entirely in the empty state above — a header with nothing under it
                     reads oddly next to the dashed placeholder box. */}
                 <div className="flex h-[49px] items-center gap-2 border-b border-lb-line-2 bg-lb-surface px-4">
-                  <span className="w-5 shrink-0" aria-hidden="true" />
-                  <span className="w-1/2 font-lb font-lb-bold text-[14px] leading-[20px] text-lb-on-surface">
-                    {t('sectionBuilder:onlineStore.menus.itemLabelField', 'Menu Item')}
-                  </span>
+                  {/* Mirrors MenuItemRow's own top-level widths exactly — a
+                      w-1/2 cluster holding the drag-handle (w-5) + chevron
+                      (w-6) spacers ahead of the "Menu Item" label, then a
+                      second w-1/2 for "Link" — so the Link column stays
+                      aligned under this header at every nesting depth (only
+                      the cluster's *inside* indents per row, never this
+                      header or the Link column itself). */}
+                  <div className="flex w-1/2 items-center gap-2">
+                    <span className="w-5 shrink-0" aria-hidden="true" />
+                    <span className="w-6 shrink-0" aria-hidden="true" />
+                    <span className="font-lb font-lb-bold text-[14px] leading-[20px] text-lb-on-surface">
+                      {t('sectionBuilder:onlineStore.menus.itemLabelField', 'Menu Item')}
+                    </span>
+                  </div>
                   <span className="w-1/2 font-lb font-lb-bold text-[14px] leading-[20px] text-lb-on-surface">
                     {t('sectionBuilder:onlineStore.menus.itemLinkField', 'Link')}
                   </span>
                   <span className="w-5 shrink-0" aria-hidden="true" />
                 </div>
-                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-                  <SortableContext items={items.map((item) => item.id)} strategy={verticalListSortingStrategy}>
-                    {items.map((item) => (
-                      <MenuItemRow
-                        key={item.id}
-                        item={item}
-                        pages={pages}
-                        error={itemErrors[item.id]}
-                        onChange={(patch) => updateItem(item.id, patch)}
-                        onRemove={() => removeItem(item.id)}
-                      />
-                    ))}
-                  </SortableContext>
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragStart={handleDragStart}
+                  onDragMove={handleDragMove}
+                  onDragEnd={handleDragEnd}
+                  onDragCancel={handleDragCancel}
+                >
+                  {renderMenuItemRows()}
                 </DndContext>
               </>
             )}
@@ -430,7 +700,7 @@ export default function MenusManagement() {
       // dropped from the list rather than showing as an empty entry between
       // two commas.
       render: (value) => {
-        const labels = value.map((item) => item.label?.trim()).filter(Boolean);
+        const labels = value.flatMap((item) => [item.label?.trim(), ...(item.children ?? []).map((child) => child.label?.trim())]).filter(Boolean);
         return labels.length ? (
           <span className="block truncate" title={labels.join(', ')}>
             {labels.join(', ')}

@@ -18,6 +18,14 @@ function HeaderRenderer({ data, isMobile, onNavigate, theme, mediaLibrary, curre
   const [overflowOpen, setOverflowOpen] = useState(false);
   const [langOpen, setLangOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  // Which top-level nav item's submenu dropdown (desktop) is open — at most
+  // one at a time, closed by clicking elsewhere via the same pattern as
+  // overflowOpen/langOpen above.
+  const [openSubmenuId, setOpenSubmenuId] = useState(null);
+  // Which top-level nav item's children are expanded in the mobile panel —
+  // a Set (not a single id) since, unlike the desktop dropdown, more than
+  // one section can be open at once in an accordion.
+  const [openMobileSubmenus, setOpenMobileSubmenus] = useState(() => new Set());
   // Reads a safe no-op (count: 0) when no StorefrontCartProvider is mounted
   // above this header (the interactive builder canvas) — see
   // storefrontCart.js — so the badge just never appears there.
@@ -81,6 +89,42 @@ function HeaderRenderer({ data, isMobile, onNavigate, theme, mediaLibrary, curre
     // only passed there, see Canvas.jsx's GlobalBlock) — inside the
     // interactive builder these stay plain text so clicking selects the
     // header instead of jumping the merchant to another page.
+    const children = link.children ?? [];
+    if (children.length > 0) {
+      // Submenu item (Content > Menus, one level deep — see
+      // MenusManagement.jsx) — a hover/click dropdown on desktop, matching
+      // the existing overflow "⋯" dropdown's own look, rather than a plain
+      // link/span.
+      const isOpen = openSubmenuId === link.id;
+      return (
+        <div
+          key={link.id ?? link.label}
+          className="relative"
+          onMouseEnter={() => setOpenSubmenuId(link.id)}
+          onMouseLeave={() => setOpenSubmenuId((current) => (current === link.id ? null : current))}
+        >
+          <button
+            type="button"
+            onClick={() => setOpenSubmenuId((current) => (current === link.id ? null : link.id))}
+            className={className + ' inline-flex items-center gap-1'}
+            style={style}
+          >
+            {link.label || t('sectionBuilder:sections.common.link')}
+            <ChevronDown size={14} aria-hidden className={isOpen ? 'rotate-180 transition-transform' : 'transition-transform'} />
+          </button>
+          {isOpen && (
+            <div className="absolute left-0 top-full z-20 mt-2 min-w-[10rem] rounded-xl border border-gray-100 bg-white p-2 text-gray-900 shadow-lg">
+              {children.map((child) =>
+                renderLink(child, 'block rounded-lg px-4 py-2.5 text-sm hover:bg-gray-50', () => {
+                  onClick?.();
+                  setOpenSubmenuId(null);
+                })
+              )}
+            </div>
+          )}
+        </div>
+      );
+    }
     return onNavigate ? (
       <a
         key={link.id ?? link.label}
@@ -242,7 +286,40 @@ function HeaderRenderer({ data, isMobile, onNavigate, theme, mediaLibrary, curre
     if (!isMobile || !mobileOpen) return null;
     return (
       <div className="absolute inset-x-0 top-full z-30 flex flex-col gap-1 border-t border-gray-100 bg-white px-6 py-4 text-gray-900 shadow-lg">
-        {links.map((l) => renderLink(l, 'block rounded-lg px-2 py-2.5 text-sm', () => setMobileOpen(false)))}
+        {links.map((l) => {
+          const children = l.children ?? [];
+          if (children.length === 0) {
+            return renderLink(l, 'block rounded-lg px-2 py-2.5 text-sm', () => setMobileOpen(false));
+          }
+          // Accordion row — tapping the label toggles its children open/
+          // closed instead of navigating, same "own section, independent of
+          // the others" model as renderLanguageSwitcher's dropdown.
+          const isExpanded = openMobileSubmenus.has(l.id);
+          return (
+            <div key={l.id ?? l.label}>
+              <button
+                type="button"
+                onClick={() =>
+                  setOpenMobileSubmenus((prev) => {
+                    const next = new Set(prev);
+                    if (next.has(l.id)) next.delete(l.id);
+                    else next.add(l.id);
+                    return next;
+                  })
+                }
+                className="flex w-full items-center justify-between rounded-lg px-2 py-2.5 text-left text-sm"
+              >
+                <span>{l.label || t('sectionBuilder:sections.common.link')}</span>
+                <ChevronDown size={14} aria-hidden className={isExpanded ? 'rotate-180 transition-transform' : 'transition-transform'} />
+              </button>
+              {isExpanded && (
+                <div className="flex flex-col gap-1 pl-4">
+                  {children.map((child) => renderLink(child, 'block rounded-lg px-2 py-2 text-sm', () => setMobileOpen(false)))}
+                </div>
+              )}
+            </div>
+          );
+        })}
         {data.show_language_switcher && (
           <>
             <hr className="my-2 border-gray-100" />

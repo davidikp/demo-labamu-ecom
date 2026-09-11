@@ -417,10 +417,14 @@ export const SITE_TEMPLATES = [
       show_social_icons: true,
     },
     media: media('xinear', [
-      // logo-mark.svg's real intrinsic size, per its own viewBox/width/
-      // height attributes (28x28) — the abstract "X" glyph next to the
-      // "Xinear" wordmark in both header and footer.
-      { key: 'logo', filename: 'logo-mark.svg', width: 28, height: 28, size: 885 },
+      // Dimensions (28x28) are logo-mark.svg's real intrinsic size, per its
+      // own viewBox/width/height attributes — the abstract "X" glyph next
+      // to the "Xinear" wordmark in both header and footer. `size` is
+      // nudged up from the file's actual ~885 bytes to stay above
+      // SelectImageModal's 1KB minimum (MIN_BYTES) — no real media-library
+      // mock entry should trip that check on its own; only the Simulate
+      // panel's "Simulate image under 1KB" toggle should ever surface it.
+      { key: 'logo', filename: 'logo-mark.svg', width: 28, height: 28, size: 1024 },
       { key: 'hero', filename: 'hero-banner.png', width: 1440, height: 620, size: 557480 },
       { key: 'appointment', filename: 'appointment-banner.png', width: 1440, height: 331, size: 749102 },
       { key: 'quote', filename: 'quote-banner.png', width: 1440, height: 524, size: 1150671 },

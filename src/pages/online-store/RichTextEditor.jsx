@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useEditor, EditorContent } from '@tiptap/react';
+import { useEditor, EditorContent, ReactNodeViewRenderer } from '@tiptap/react';
 import { Extension } from '@tiptap/core';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
@@ -42,10 +42,21 @@ import {
 } from 'lucide-react';
 import { Tooltip } from '../../ce-ui';
 import { VideoEmbed } from './videoEmbedExtension';
+import { ImageNodeView } from './richTextNodeViews';
 import SelectImageModal from './SelectImageModal';
 import InsertVideoModal, { extractIframeSrc } from './InsertVideoModal';
 import InsertLinkModal from './InsertLinkModal';
 import GenerateTextModal from './GenerateTextModal';
+
+// The stock extension has no hover-to-delete affordance of its own (see
+// richTextNodeViews.jsx's module doc) — `.extend` swaps in ImageNodeView
+// for the live editor only, `getHTML()`'s output (and re-parsing it) stay
+// exactly the stock extension's own, unchanged.
+const ImageWithDelete = Image.extend({
+  addNodeView() {
+    return ReactNodeViewRenderer(ImageNodeView);
+  },
+});
 
 function paragraphStyles(t) {
   return [
@@ -576,6 +587,7 @@ export default function RichTextEditor({
   onUploadMedia,
   simulateGenFail,
   simulateUnavailable,
+  simulateSmallImage,
 }) {
   const { t } = useTranslation();
   const [imageModalOpen, setImageModalOpen] = useState(false);
@@ -603,7 +615,7 @@ export default function RichTextEditor({
       Color,
       Highlight.configure({ multicolor: true }),
       Link.configure({ openOnClick: false, autolink: true }),
-      Image,
+      ImageWithDelete,
       VideoEmbed,
       Table.configure({ resizable: true }),
       TableRow,
@@ -910,6 +922,7 @@ export default function RichTextEditor({
         onUpload={(item) => onUploadMedia?.(item)}
         onPick={(url) => editor?.chain().focus().setImage({ src: url }).run()}
         onClose={() => setImageModalOpen(false)}
+        simulateSmallImage={simulateSmallImage}
       />
 
       <InsertLinkModal

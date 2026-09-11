@@ -225,6 +225,10 @@ export default function PageEditor() {
   // in this same Simulate panel instead of a separate floating button.
   const [simulateGenFail, setSimulateGenFail] = useState(false);
   const [simulateUnavailable, setSimulateUnavailable] = useState(false);
+  // Also shared with the Rich Text Editor's Insert Image modal — forces the
+  // next upload there to show the "Image must be at least 1 KB" error,
+  // regardless of the file actually picked (see SelectImageModal.jsx).
+  const [simulateSmallImage, setSimulateSmallImage] = useState(false);
 
   // Edit Search Engine Listing — only meaningful once a handle already
   // exists to redirect *from* (a brand-new page has no prior URL yet).
@@ -533,6 +537,12 @@ export default function PageEditor() {
       checked: simulateUnavailable,
       onChange: setSimulateUnavailable,
     },
+    {
+      type: 'checkbox',
+      label: t('sectionBuilder:onlineStore.pageEditor.simulateSmallImage', 'Simulate image under 1KB'),
+      checked: simulateSmallImage,
+      onChange: setSimulateSmallImage,
+    },
   ];
 
   // Retries the (simulated) load — re-reads the draft from local storage.
@@ -671,6 +681,7 @@ export default function PageEditor() {
                 onUploadMedia={handleUploadMedia}
                 simulateGenFail={simulateGenFail}
                 simulateUnavailable={simulateUnavailable}
+                simulateSmallImage={simulateSmallImage}
               />
             </div>
 

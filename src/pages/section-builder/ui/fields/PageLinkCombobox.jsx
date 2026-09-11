@@ -1,16 +1,24 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { Home, Search, Tag, ShoppingBag, FileText, NotebookText, FileEdit, ScrollText, ChevronRight, ArrowLeft } from 'lucide-react';
 
 /**
  * @module section-builder/ui/fields/PageLinkCombobox
  * @description A "search or paste a link" combobox for menu item URLs
- * (Content > Menus), mirroring Shopify's link picker: typing filters the
- * current store's pages by name and offers them as selectable suggestions
- * (picking one fills the field with that page's relative `slug`, the same
- * value RepeaterField's `autofillUrlFromActivePage` already uses for an
- * internal link — see that file). Anything that doesn't match a page —
- * a raw path or an external URL — is accepted as free text, exactly like the
- * field it replaces; there is no validation step.
+ * (Content > Menus), mirroring Shopify's own link picker: a default view
+ * grouped under one "Online store" heading — Home page/Search as direct
+ * picks, then Collections/Products/Pages/Blogs/Blog posts/Policies as
+ * drill-down rows (`>`) into that category's own list, with a back arrow to
+ * return — plus free-text search across everything once the merchant types.
+ * Anything that doesn't match a suggestion — a raw path or an external URL —
+ * is still accepted as free text, exactly like the field it replaces.
+ *
+ * This app has no real product/collection/blog catalog behind it today —
+ * only `pages` (via the `pages` prop, `state.pages`) is real data. Pages is
+ * the one category built from that; Collections/Products/Blogs/Blog posts/
+ * Policies are static placeholder catalogs below (MOCK_CATALOG) so the
+ * picker's *shape* matches Shopify's now, ready to swap each list for a real
+ * fetch later without touching the picker itself.
  *
  * The suggestion list is rendered through a portal to `document.body`
  * (same technique as components/ui/Dropdown.jsx) rather than absolutely
@@ -19,24 +27,96 @@ import { createPortal } from 'react-dom';
  * in-flow absolutely-positioned list gets clipped by that same scroll
  * boundary (and by the Popup's own scrollable body) once it would render
  * near the bottom of either. Portaling escapes both.
- *
- * Kept intentionally small and scoped to what MenusManagement.jsx needs
- * (a flat, keyboard-free click list) rather than a general-purpose
- * combobox — reuse from elsewhere is welcome, but this isn't trying to be
- * one.
  */
+
+// Static placeholder catalogs for the categories this app doesn't otherwise
+// model (see module doc above) — shaped so each entry's `url` is exactly
+// what Shopify itself would generate for that kind of resource.
+const MOCK_COLLECTIONS = [
+  { id: 'col-all', name: 'All', url: '/collections/all' },
+  { id: 'col-featured', name: 'Featured', url: '/collections/featured' },
+  { id: 'col-new-arrivals', name: 'New arrivals', url: '/collections/new-arrivals' },
+  { id: 'col-best-sellers', name: 'Best sellers', url: '/collections/best-sellers' },
+  { id: 'col-sale', name: 'Sale', url: '/collections/sale' },
+];
+
+const MOCK_PRODUCTS = [
+  { id: 'prod-classic-tee', name: 'Classic tee', url: '/products/classic-tee' },
+  { id: 'prod-denim-jacket', name: 'Denim jacket', url: '/products/denim-jacket' },
+  { id: 'prod-canvas-tote', name: 'Canvas tote', url: '/products/canvas-tote' },
+  { id: 'prod-leather-wallet', name: 'Leather wallet', url: '/products/leather-wallet' },
+  { id: 'prod-wool-scarf', name: 'Wool scarf', url: '/products/wool-scarf' },
+];
+
+const MOCK_BLOGS = [
+  { id: 'blog-news', name: 'News', url: '/blogs/news' },
+  { id: 'blog-journal', name: 'Journal', url: '/blogs/journal' },
+];
+
+const MOCK_BLOG_POSTS = [
+  { id: 'post-our-story', name: 'Our story', url: '/blogs/news/our-story' },
+  { id: 'post-style-guide', name: 'Style guide', url: '/blogs/journal/style-guide' },
+  { id: 'post-behind-the-scenes', name: 'Behind the scenes', url: '/blogs/news/behind-the-scenes' },
+];
+
+// Shopify's own fixed set — every store gets exactly these five.
+const MOCK_POLICIES = [
+  { id: 'policy-refund', name: 'Refund policy', url: '/policies/refund-policy' },
+  { id: 'policy-privacy', name: 'Privacy policy', url: '/policies/privacy-policy' },
+  { id: 'policy-terms', name: 'Terms of service', url: '/policies/terms-of-service' },
+  { id: 'policy-shipping', name: 'Shipping policy', url: '/policies/shipping-policy' },
+  { id: 'policy-contact', name: 'Contact information', url: '/policies/contact-information' },
+];
+
 export default function PageLinkCombobox({ value, onChange, pages, placeholder, className = 'w-1/2', error = false }) {
   const [open, setOpen] = useState(false);
   const [placement, setPlacement] = useState({ top: 0, left: 0, width: 0 });
+  // null = top-level "Online store" view; otherwise the key of whichever
+  // category the merchant drilled into (see CATEGORIES below).
+  const [activeCategoryKey, setActiveCategoryKey] = useState(null);
   const blurTimeout = useRef(null);
   const inputRef = useRef(null);
 
   const query = value ?? '';
-  const matches = useMemo(() => {
+
+  // Real data (`pages`) alongside the static placeholder catalogs — each
+  // entry normalized to the same `{id, name, url}` shape so search/render
+  // below don't need to special-case Pages.
+  const pageEntries = useMemo(() => pages.map((p) => ({ id: p.id, name: p.name, url: p.slug ?? '/' })), [pages]);
+
+  const CATEGORIES = useMemo(
+    () => [
+      { key: 'collections', label: 'Collections', icon: Tag, entries: MOCK_COLLECTIONS },
+      { key: 'products', label: 'Products', icon: ShoppingBag, entries: MOCK_PRODUCTS },
+      { key: 'pages', label: 'Pages', icon: FileText, entries: pageEntries },
+      { key: 'blogs', label: 'Blogs', icon: NotebookText, entries: MOCK_BLOGS },
+      { key: 'blog_posts', label: 'Blog posts', icon: FileEdit, entries: MOCK_BLOG_POSTS },
+      { key: 'policies', label: 'Policies', icon: ScrollText, entries: MOCK_POLICIES },
+    ],
+    [pageEntries]
+  );
+
+  const activeCategory = CATEGORIES.find((c) => c.key === activeCategoryKey) ?? null;
+
+  // Once the merchant types anything, search wins over drill-down — a flat,
+  // grouped-by-category list of matches across every category (including
+  // the two static "Home page"/"Search" entries), same as Shopify's own
+  // picker falling back to search results once there's a query.
+  const searchGroups = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return pages.slice(0, 8);
-    return pages.filter((p) => p.name?.toLowerCase().includes(q)).slice(0, 8);
-  }, [pages, query]);
+    if (!q) return null;
+    const staticMatches = [
+      { id: 'home', name: 'Home page', url: '/' },
+      { id: 'search', name: 'Search', url: '/search' },
+    ].filter((entry) => entry.name.toLowerCase().includes(q));
+    const groups = [];
+    if (staticMatches.length) groups.push({ label: 'Online store', icon: Home, entries: staticMatches });
+    CATEGORIES.forEach((cat) => {
+      const matches = cat.entries.filter((entry) => entry.name?.toLowerCase().includes(q)).slice(0, 5);
+      if (matches.length) groups.push({ label: cat.label, icon: cat.icon, entries: matches });
+    });
+    return groups;
+  }, [query, CATEGORIES]);
 
   const updatePlacement = useCallback(() => {
     if (!inputRef.current) return;
@@ -59,9 +139,10 @@ export default function PageLinkCombobox({ value, onChange, pages, placeholder, 
     };
   }, [open, updatePlacement]);
 
-  const selectPage = (page) => {
-    onChange(page.slug ?? '/');
+  const selectEntry = (entry) => {
+    onChange(entry.url ?? '/');
     setOpen(false);
+    setActiveCategoryKey(null);
   };
 
   return (
@@ -74,7 +155,10 @@ export default function PageLinkCombobox({ value, onChange, pages, placeholder, 
         onFocus={() => setOpen(true)}
         onBlur={() => {
           // Delay so a click on a suggestion registers before the list unmounts.
-          blurTimeout.current = window.setTimeout(() => setOpen(false), 150);
+          blurTimeout.current = window.setTimeout(() => {
+            setOpen(false);
+            setActiveCategoryKey(null);
+          }, 150);
         }}
         placeholder={placeholder}
         className={`w-full rounded-md border px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-blue-500/30 ${
@@ -82,28 +166,77 @@ export default function PageLinkCombobox({ value, onChange, pages, placeholder, 
         }`}
       />
       {open &&
-        matches.length > 0 &&
         createPortal(
-          <ul
+          <div
             style={{ position: 'fixed', top: placement.top, left: placement.left, width: placement.width, zIndex: 9999 }}
-            className="max-h-48 overflow-y-auto rounded-md border border-gray-200 bg-white shadow-lg"
+            className="max-h-64 overflow-y-auto rounded-md border border-gray-200 bg-white py-1 shadow-lg"
           >
-            {matches.map((page) => (
-              <li key={page.id}>
+            {searchGroups ? (
+              searchGroups.length > 0 ? (
+                searchGroups.map((group) => (
+                  <div key={group.label}>
+                    <p className="px-3 pb-1 pt-2 text-xs font-semibold text-gray-400">{group.label}</p>
+                    {group.entries.map((entry) => (
+                      <SuggestionRow key={entry.id} icon={group.icon} label={entry.name} onSelect={() => selectEntry(entry)} />
+                    ))}
+                  </div>
+                ))
+              ) : (
+                <p className="px-3 py-2 text-sm text-gray-400">No matches</p>
+              )
+            ) : activeCategory ? (
+              <div>
                 <button
                   type="button"
                   onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => selectPage(page)}
-                  className="flex w-full flex-col items-start px-3 py-1.5 text-left text-sm hover:bg-gray-50"
+                  onClick={() => setActiveCategoryKey(null)}
+                  className="flex w-full items-center gap-1.5 border-b border-gray-100 px-3 py-2 text-left text-sm font-semibold text-gray-900 hover:bg-gray-50"
                 >
-                  <span className="text-gray-900">{page.name}</span>
-                  <span className="text-xs text-gray-400">{page.slug}</span>
+                  <ArrowLeft size={14} aria-hidden />
+                  {activeCategory.label}
                 </button>
-              </li>
-            ))}
-          </ul>,
+                {activeCategory.entries.length > 0 ? (
+                  activeCategory.entries.map((entry) => (
+                    <SuggestionRow key={entry.id} label={entry.name} onSelect={() => selectEntry(entry)} />
+                  ))
+                ) : (
+                  <p className="px-3 py-2 text-sm text-gray-400">No {activeCategory.label.toLowerCase()} yet</p>
+                )}
+              </div>
+            ) : (
+              <div>
+                <p className="px-3 pb-1 pt-2 text-xs font-semibold text-gray-400">Online store</p>
+                <SuggestionRow icon={Home} label="Home page" onSelect={() => selectEntry({ url: '/' })} />
+                <SuggestionRow icon={Search} label="Search" onSelect={() => selectEntry({ url: '/search' })} />
+                {CATEGORIES.map((cat) => (
+                  <SuggestionRow
+                    key={cat.key}
+                    icon={cat.icon}
+                    label={cat.label}
+                    trailing={<ChevronRight size={14} aria-hidden className="text-gray-400" />}
+                    onSelect={() => setActiveCategoryKey(cat.key)}
+                  />
+                ))}
+              </div>
+            )}
+          </div>,
           document.body
         )}
     </div>
+  );
+}
+
+function SuggestionRow({ icon: Icon, label, trailing, onSelect }) {
+  return (
+    <button
+      type="button"
+      onMouseDown={(e) => e.preventDefault()}
+      onClick={onSelect}
+      className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-gray-900 hover:bg-gray-50"
+    >
+      {Icon && <Icon size={16} aria-hidden className="shrink-0 text-gray-500" />}
+      <span className="flex-1 truncate">{label}</span>
+      {trailing}
+    </button>
   );
 }
