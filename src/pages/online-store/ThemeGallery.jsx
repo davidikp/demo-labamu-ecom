@@ -24,9 +24,10 @@ import SessionExpiredIllustration from '../../assets/illustrations/session-expir
 // exists — matches the hardcoded id used by Layout.jsx's builder entry.
 const STORE_ID = 'demo';
 
-// No store-domain field exists anywhere in this codebase yet (grepped for
-// myshopify/storeDomain) — hardcode a plausible one matching STORE_ID.
-const STORE_DOMAIN = `${STORE_ID}.myshopify.com`;
+// This screen's own placeholder — the real per-company domain
+// (storeDomain.js's `storeDomainFor`, `<slug>.labamu.co.id`) isn't wired
+// through here, so this stays a hardcoded value matching STORE_ID.
+const STORE_DOMAIN = `${STORE_ID}.etoko.labamu.co.id`;
 
 // Cap shown next to "Draft themes" as a running "n/20" counter.
 const MAX_DRAFT_THEMES = 20;

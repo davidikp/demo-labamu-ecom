@@ -34,8 +34,8 @@ const MENU_ITEMS = [
   {
     id: 'website-studio', icon: Store, labelKey: 'dashboard:sidebar.websiteStudio', label: 'Website Studio',
     children: [
-      { id: 'site-builder', path: '/online-store/theme', labelKey: 'dashboard:sidebar.siteBuilder', label: 'Website Builder' },
-      { id: 'page-list', path: '/online-store/pages', labelKey: 'dashboard:sidebar.pageList', label: 'Page List' },
+      { id: 'site-builder', path: '/online-store/theme', labelKey: 'dashboard:sidebar.siteBuilder', label: 'Theme' },
+      { id: 'page-list', path: '/online-store/pages', labelKey: 'dashboard:sidebar.pageList', label: 'Pages' },
       { id: 'preferences', path: '/online-store/preferences', labelKey: 'dashboard:sidebar.preferences', label: 'Preferences' },
     ],
   },
@@ -62,9 +62,13 @@ export default function Layout() {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [isLanguageMenuOpen, setIsLanguageMenuOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [expandedGroups, setExpandedGroups] = useState(() =>
-    MENU_ITEMS.filter((item) => item.children?.some((c) => location.pathname.startsWith(c.path))).map((item) => item.id)
-  );
+  // At most one entry — same accordion rule toggleGroup enforces below —
+  // so seeding this from whichever group contains the current route never
+  // starts with more than one group already open.
+  const [expandedGroups, setExpandedGroups] = useState(() => {
+    const match = MENU_ITEMS.find((item) => item.children?.some((c) => location.pathname.startsWith(c.path)));
+    return match ? [match.id] : [];
+  });
   const [hoveredMenuItemId, setHoveredMenuItemId] = useState(null);
   const [hoveredItemRect, setHoveredItemRect] = useState(null);
 
@@ -84,8 +88,12 @@ export default function Layout() {
     return () => document.removeEventListener('mousedown', handleOutsideClick);
   }, [isLanguageMenuOpen]);
 
+  // Accordion — only one top-level group open at a time, so expanding
+  // Website Studio while Content is already open closes Content instead of
+  // stacking both. Clicking the currently-open group still just collapses
+  // it (back to `[]`), same toggle-off behavior as before.
   const toggleGroup = (id) => {
-    setExpandedGroups((prev) => (prev.includes(id) ? prev.filter((g) => g !== id) : [...prev, id]));
+    setExpandedGroups((prev) => (prev.includes(id) ? [] : [id]));
   };
 
   function handleLogout() {
@@ -205,7 +213,19 @@ export default function Layout() {
                           if (!hasChildren) navigate(item.path);
                           return;
                         }
-                        hasChildren ? toggleGroup(item.id) : navigate(item.path);
+                        if (!hasChildren) {
+                          navigate(item.path);
+                          return;
+                        }
+                        // Opening a still-collapsed group also navigates to
+                        // its first submenu — clicking "Website Studio"
+                        // lands on Theme rather than just revealing the
+                        // list with nothing selected yet. Collapsing an
+                        // already-open group (the toggle-off case) stays a
+                        // pure expand/collapse with no navigation.
+                        const wasExpanded = expandedGroups.includes(item.id);
+                        toggleGroup(item.id);
+                        if (!wasExpanded && item.children[0]) navigate(item.children[0].path);
                       }}
                       style={{
                         width: isSidebarCollapsed ? '44px' : '100%',
@@ -213,7 +233,16 @@ export default function Layout() {
                         padding: isSidebarCollapsed ? '0' : '0 16px',
                         border: 'none',
                         borderRadius: isParentActive ? '14px' : '12px',
-                        background: isParentActive ? 'var(--lb-brand-dark)' : 'transparent',
+                        // A parent with children only ever counts as
+                        // "active" because one of its submenu rows is the
+                        // current route (see isParentActive above) — the
+                        // fill belongs on that actual active child row
+                        // (below), not here too, or both read as "active"
+                        // with no visual distinction between the group and
+                        // the specific page within it. The bold/brand-color
+                        // text and left accent bar still mark the parent as
+                        // "this group is open/current".
+                        background: isParentActive && !hasChildren ? 'var(--lb-brand-dark)' : 'transparent',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: isSidebarCollapsed ? 'center' : 'flex-start',

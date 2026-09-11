@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Home, Search, Tag, ShoppingBag, FileText, NotebookText, FileEdit, ScrollText, ChevronRight, ArrowLeft } from 'lucide-react';
+import { Home, Search, Tag, ShoppingBag, FileText, ScrollText, ChevronRight, ArrowLeft } from 'lucide-react';
 
 /**
  * @module section-builder/ui/fields/PageLinkCombobox
@@ -48,17 +48,6 @@ const MOCK_PRODUCTS = [
   { id: 'prod-wool-scarf', name: 'Wool scarf', url: '/products/wool-scarf' },
 ];
 
-const MOCK_BLOGS = [
-  { id: 'blog-news', name: 'News', url: '/blogs/news' },
-  { id: 'blog-journal', name: 'Journal', url: '/blogs/journal' },
-];
-
-const MOCK_BLOG_POSTS = [
-  { id: 'post-our-story', name: 'Our story', url: '/blogs/news/our-story' },
-  { id: 'post-style-guide', name: 'Style guide', url: '/blogs/journal/style-guide' },
-  { id: 'post-behind-the-scenes', name: 'Behind the scenes', url: '/blogs/news/behind-the-scenes' },
-];
-
 // Shopify's own fixed set — every store gets exactly these five.
 const MOCK_POLICIES = [
   { id: 'policy-refund', name: 'Refund policy', url: '/policies/refund-policy' },
@@ -89,8 +78,10 @@ export default function PageLinkCombobox({ value, onChange, pages, placeholder, 
       { key: 'collections', label: 'Collections', icon: Tag, entries: MOCK_COLLECTIONS },
       { key: 'products', label: 'Products', icon: ShoppingBag, entries: MOCK_PRODUCTS },
       { key: 'pages', label: 'Pages', icon: FileText, entries: pageEntries },
-      { key: 'blogs', label: 'Blogs', icon: NotebookText, entries: MOCK_BLOGS },
-      { key: 'blog_posts', label: 'Blog posts', icon: FileEdit, entries: MOCK_BLOG_POSTS },
+      // Both blog categories ("Blogs" the blog list, "Blog posts" the
+      // individual posts) are hidden here — same idea as
+      // InsertVideoModal.jsx's own "From your Files" pull-back: nothing
+      // deleted, just not offered as a category for now.
       { key: 'policies', label: 'Policies', icon: ScrollText, entries: MOCK_POLICIES },
     ],
     [pageEntries]
