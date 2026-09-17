@@ -39,7 +39,15 @@ export const BLOCK_TYPES = {
       text: { type: 'text', label: 'Text', maxLength: 200, default: 'Heading', group: 'content' },
       size: {
         type: 'select', label: 'Size', default: 'medium', group: 'content',
-        options: [{ value: 'small', label: 'Small' }, { value: 'medium', label: 'Medium' }, { value: 'large', label: 'Large' }],
+        options: [
+          { value: 'small', label: 'Small' }, { value: 'medium', label: 'Medium' }, { value: 'large', label: 'Large' },
+          // Big, above-the-fold hero headline size — see blockRenderers.jsx's HEADING_SIZE.
+          { value: 'xlarge', label: 'Extra large' },
+        ],
+      },
+      weight: {
+        type: 'select', label: 'Weight', default: 'bold', group: 'content',
+        options: [{ value: 'normal', label: 'Normal' }, { value: 'bold', label: 'Bold' }],
       },
       alignment: {
         type: 'select', label: 'Alignment', default: 'left', group: 'content',

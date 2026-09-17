@@ -47,7 +47,23 @@ export const defaultTheme = {
  * the delete-guard in builderReducer.js) — Cart/Checkout/Collection aren't
  * required yet, so they aren't in this list (no behavior change for them).
  */
-export const REQUIRED_SYSTEM_TYPES = ['shop', 'product'];
+/** Written-policy page kinds (Settings > Policies). Each is a reserved,
+ * always-present system page whose `content` (rich-text HTML) is authored
+ * from Settings > Policies (and, badged "Policy", from Online Store > Pages)
+ * — name and slug are locked (see UPDATE_PAGE's guard in builderReducer.js),
+ * only `content` is editable. Included in REQUIRED_SYSTEM_TYPES so they are
+ * both auto-seeded (mergeRequiredSystemPages, same call sites as Shop/
+ * Product) and delete-protected for free. */
+export const POLICY_SYSTEM_TYPES = [
+  'policy_refund',
+  'policy_privacy',
+  'policy_terms',
+  'policy_shipping',
+  'policy_legal',
+  'policy_contact',
+];
+
+export const REQUIRED_SYSTEM_TYPES = ['shop', 'product', ...POLICY_SYSTEM_TYPES];
 
 export function createDefaultPages() {
   // Every default page also gets the Pages panel's page-level visibility
@@ -149,6 +165,27 @@ export function createDefaultPages() {
       ...visibilityDefaults,
       sections: [defaultSection('checkout-default-summary', 'checkout_summary')],
     },
+    // Written policies (Settings > Policies). No sections — just a rich-text
+    // `content` body, rendered the same way PagePreview.jsx renders any
+    // merchant page's content. Hidden from nav by default: they're surfaced
+    // via the footer/Menus, not the main nav, same as Cart/Checkout. Edited
+    // through PolicyEditorModal.jsx's per-row modal (not the full Page
+    // editor) from Settings > Policies; still reachable/editable from
+    // Online Store > Pages (badged "Policy") via the full Page editor too.
+    { id: 'policy-refund', name: 'Return & refund policy', type: 'system', systemType: 'policy_refund', slug: '/policies/refund-policy', seo: {}, hiddenFromNav: true, sections: [], ...visibilityDefaults },
+    // `automated: true` — Privacy defaults to an auto-generated policy (see
+    // policyTemplates.js's buildAutomatedPrivacyPolicy), matching Shopify's
+    // own default. Toggling "Use automated policy" off in the modal flips
+    // this to false and the content becomes freely editable, same as every
+    // other policy.
+    { id: 'policy-privacy', name: 'Privacy policy', type: 'system', systemType: 'policy_privacy', slug: '/policies/privacy-policy', seo: {}, hiddenFromNav: true, sections: [], automated: true, ...visibilityDefaults },
+    { id: 'policy-terms', name: 'Terms of service', type: 'system', systemType: 'policy_terms', slug: '/policies/terms-of-service', seo: {}, hiddenFromNav: true, sections: [], ...visibilityDefaults },
+    { id: 'policy-shipping', name: 'Shipping policy', type: 'system', systemType: 'policy_shipping', slug: '/policies/shipping-policy', seo: {}, hiddenFromNav: true, sections: [], ...visibilityDefaults },
+    { id: 'policy-legal', name: 'Legal notice', type: 'system', systemType: 'policy_legal', slug: '/policies/legal-notice', seo: {}, hiddenFromNav: true, sections: [], ...visibilityDefaults },
+    // Contact information — a written policy like the other five (rich-text
+    // body, same modal), not a link out to Business Information; Shopify's
+    // own Settings > Policies treats it identically to Refund/Privacy/etc.
+    { id: 'policy-contact', name: 'Contact information', type: 'system', systemType: 'policy_contact', slug: '/policies/contact-information', seo: {}, hiddenFromNav: true, sections: [], ...visibilityDefaults },
   ];
 }
 
@@ -215,7 +252,7 @@ export function createDefaultGlobals(pages = []) {
     header: { id: 'header', type: 'header', hidden: false, data: defaultsForSchema(headerSchema) },
     footer: { id: 'footer', type: 'footer', hidden: false, data: defaultsForSchema(footerSchema) },
     menus: {
-      'main-menu': { id: 'main-menu', name: 'Main menu', items: navLinks },
+      'main-menu': { id: 'main-menu', name: 'Header Menu', items: navLinks },
       'footer-menu': { id: 'footer-menu', name: 'Footer menu', items: [] },
     },
   };

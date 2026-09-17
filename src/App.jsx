@@ -32,6 +32,8 @@ const DashboardPage = React.lazy(() => import('./pages/Dashboard'));
 const PublicStorefront = React.lazy(() => import('./pages/PublicStorefront'));
 const WebsiteTemplates = React.lazy(() => import('./pages/WebsiteTemplates'));
 const CompanyProfile = React.lazy(() => import('./pages/CompanyProfile'));
+const SettingsIndex = React.lazy(() => import('./pages/SettingsIndex'));
+const PoliciesSettings = React.lazy(() => import('./pages/settings/PoliciesSettings'));
 const CatalogProducts = React.lazy(() => import('./pages/CatalogProducts'));
 const ProductDetail = React.lazy(() => import('./pages/ProductDetail'));
 const ConnectedModifiers = React.lazy(() => import('./pages/ConnectedModifiers'));
@@ -122,6 +124,8 @@ export default function App() {
             <Route path="/domain/tracking" element={<ComingSoon />} />
             <Route path="/role-management" element={<ComingSoon />} />
             <Route path="/profile" element={<CompanyProfile />} />
+            <Route path="/settings" element={<SettingsIndex />} />
+            <Route path="/settings/policies" element={<PoliciesSettings />} />
           </Route>
 
           <Route path="/storefront" element={<PublicStorefront />} />

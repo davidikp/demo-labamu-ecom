@@ -5,6 +5,7 @@ import {
   ExternalLink, Bell, Pencil,
   LayoutDashboard, BookOpen, Store, ShoppingCart, FileText, Calendar,
   MessageSquare, Truck, Globe, UserCog, ChevronDown, ChevronLeft, ChevronRight, Check, Folder,
+  Settings,
 } from 'lucide-react';
 import Button from './ui/Button';
 import labamuMark from '../assets/labamu-mark.svg';
@@ -34,7 +35,7 @@ const MENU_ITEMS = [
   {
     id: 'website-studio', icon: Store, labelKey: 'dashboard:sidebar.websiteStudio', label: 'Website Studio',
     children: [
-      { id: 'site-builder', path: '/online-store/theme', labelKey: 'dashboard:sidebar.siteBuilder', label: 'Theme' },
+      { id: 'site-builder', path: '/online-store/theme', labelKey: 'dashboard:sidebar.siteBuilder', label: 'Themes' },
       { id: 'page-list', path: '/online-store/pages', labelKey: 'dashboard:sidebar.pageList', label: 'Pages' },
       { id: 'preferences', path: '/online-store/preferences', labelKey: 'dashboard:sidebar.preferences', label: 'Preferences' },
     ],
@@ -52,6 +53,14 @@ const MENU_ITEMS = [
     ],
   },
   { id: 'role-management', path: '/role-management', icon: UserCog, labelKey: 'dashboard:sidebar.roleManagement', label: 'Role Management' },
+  {
+    // Settings hub (docs/plans/09-settings-policies.md) — deliberately
+    // minimal: Policies is the only child for now, matching SettingsIndex.jsx.
+    id: 'settings', icon: Settings, labelKey: 'dashboard:sidebar.settings', label: 'Settings',
+    children: [
+      { id: 'settings-policies', path: '/settings/policies', labelKey: 'settings:sidebar.policies', label: 'Policies' },
+    ],
+  },
 ];
 
 export default function Layout() {
@@ -531,7 +540,7 @@ export default function Layout() {
             leftIcon={<Pencil size={16} />}
             onClick={() => navigate('/section-builder/demo')}
           >
-            {t('dashboard:header.editWebsite', 'Edit website')}
+            {t('dashboard:header.editWebsite', 'Edit Website')}
           </Button>
 
           {/* View Website Button */}

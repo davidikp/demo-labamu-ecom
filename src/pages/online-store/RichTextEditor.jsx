@@ -588,6 +588,11 @@ export default function RichTextEditor({
   simulateGenFail,
   simulateUnavailable,
   simulateSmallImage,
+  // View-only mode (e.g. Settings > Policies' automated Privacy policy,
+  // PolicyEditorModal.jsx) — content is still rendered through the real
+  // Tiptap editor (so it looks/scrolls identically to the editable case),
+  // just non-editable with the toolbar visually disabled.
+  editable = true,
 }) {
   const { t } = useTranslation();
   const [imageModalOpen, setImageModalOpen] = useState(false);
@@ -625,6 +630,7 @@ export default function RichTextEditor({
       CellFocusHighlight,
     ],
     content: value || '',
+    editable,
     editorProps: {
       attributes: {
         class: 'rich-text-editor-content prose prose-sm max-w-none min-h-[160px] px-4 py-3 outline-none',
@@ -634,16 +640,29 @@ export default function RichTextEditor({
     onUpdate: ({ editor: ed }) => onChange?.(ed.getHTML()),
   });
 
-  // Keep the editor in sync when `value` is replaced from outside (e.g. a
-  // fresh page load) without fighting the user's own typing.
+  // Keep the editor in sync when `value` is replaced from outside — either
+  // a fresh page load, or a programmatic replace like "Insert template"
+  // (PolicyEditorModal.jsx) / toggling Privacy's automated content off —
+  // without fighting the user's own typing. `value` is in the dependency
+  // list (not just `editor`) so those later external replacements actually
+  // reach the editor; this is safe against feedback loops because when the
+  // change *originated* from the editor itself (via onUpdate -> onChange),
+  // editor.getHTML() already equals the new `value` by the time this runs,
+  // so the condition below is false and setContent is skipped.
   useEffect(() => {
     if (!editor) return;
     const current = editor.getHTML();
     if (value !== current && (value || '') !== current) {
       editor.commands.setContent(value || '', { emitUpdate: false });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editor]);
+  }, [editor, value]);
+
+  // useEditor's `editable` option is only read on creation — flip it
+  // imperatively so toggling the prop (e.g. the automated-policy toggle)
+  // doesn't require recreating the whole editor instance.
+  useEffect(() => {
+    editor?.setEditable(editable);
+  }, [editor, editable]);
 
   const existingLinkUrl = editor?.isActive('link') ? editor.getAttributes('link').href : null;
 
@@ -739,8 +758,11 @@ export default function RichTextEditor({
   const listIcon = editor?.isActive('orderedList') ? ListOrdered : List;
 
   return (
-    <div className="border border-gray-200 rounded-lg overflow-hidden bg-white">
-      <div className="flex flex-wrap items-center gap-0.5 border-b border-gray-200 px-2 py-1.5 bg-gray-50">
+    <div className={`border border-gray-200 rounded-lg overflow-hidden bg-white ${editable ? '' : 'opacity-60'}`}>
+      <div
+        className="flex flex-wrap items-center gap-0.5 border-b border-gray-200 px-2 py-1.5 bg-gray-50"
+        style={editable ? undefined : { pointerEvents: 'none' }}
+      >
         <ToolbarButton title={t('sectionBuilder:onlineStore.pageEditor.richText.generateText', 'Generate text with Labamu AI')} onClick={() => setGenerateOpen(true)}>
           <Sparkles size={16} className="text-[#8A3FFC]" />
         </ToolbarButton>

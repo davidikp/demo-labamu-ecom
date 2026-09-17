@@ -1,8 +1,8 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
-import { Check, MoreVertical, X } from 'lucide-react';
-import { MainBtn, IconBtn, StatusBadge, Tooltip } from '../../ce-ui';
+import { Check, ChevronDown, Eye, Lock, MoreVertical, X } from 'lucide-react';
+import { MainBtn, IconBtn, Tooltip } from '../../ce-ui';
 import { formatRelativeTime } from './timeUtils';
 
 // Shopify itself caps theme names at 40 chars — matched here for the same
@@ -267,8 +267,113 @@ function TruncatedName({ name, style }) {
   );
 }
 
+/**
+ * Published theme's Public/Private badge — a clickable trigger (icon +
+ * label + chevron) instead of a plain StatusBadge, opening a small popover
+ * of the two visibility options. Selecting the option that's already
+ * active is a no-op (no confirm dialog, no snackbar) since nothing would
+ * actually change; the parent (ThemeGallery.jsx) owns confirming and
+ * persisting an actual change. Popover mechanics (portal, outside-click/
+ * Escape to close, fixed-position coords from the trigger's own rect) are
+ * the same approach MoreMenu above already uses, just with a badge-shaped
+ * trigger instead of an icon-only "⋮" button and two fixed items instead
+ * of an arbitrary list.
+ */
+export function PublishedVisibilityBadge({ visibility, onSelect }) {
+  const { t } = useTranslation();
+  const [open, setOpen] = useState(false);
+  const [coords, setCoords] = useState(null);
+  const triggerRef = useRef(null);
+  const menuRef = useRef(null);
+
+  useLayoutEffect(() => {
+    if (!open || !triggerRef.current) return;
+    const rect = triggerRef.current.getBoundingClientRect();
+    setCoords({ top: rect.bottom + 6, left: rect.left });
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    function handleClick(e) {
+      if (
+        triggerRef.current && !triggerRef.current.contains(e.target)
+        && menuRef.current && !menuRef.current.contains(e.target)
+      ) setOpen(false);
+    }
+    function handleKey(e) {
+      if (e.key === 'Escape') setOpen(false);
+    }
+    document.addEventListener('mousedown', handleClick);
+    document.addEventListener('keydown', handleKey);
+    return () => {
+      document.removeEventListener('mousedown', handleClick);
+      document.removeEventListener('keydown', handleKey);
+    };
+  }, [open]);
+
+  // Records that predate this field (or a stale/unknown value) read as
+  // Public — the same default a freshly published theme gets (see
+  // ThemeGallery.jsx's handlePublishConfirm).
+  const isPrivate = visibility === 'private';
+  const options = [
+    { value: 'public', label: t('sectionBuilder:onlineStore.themes.visibilityPublic', 'Public'), icon: Eye },
+    { value: 'private', label: t('sectionBuilder:onlineStore.themes.visibilityPrivate', 'Private'), icon: Lock },
+  ];
+  const TriggerIcon = isPrivate ? Lock : Eye;
+
+  return (
+    <div ref={triggerRef} style={{ display: 'inline-block', position: 'relative' }}>
+      <button
+        type="button"
+        onClick={(e) => { e.stopPropagation(); setOpen((v) => !v); }}
+        style={{
+          display: 'inline-flex', alignItems: 'center', gap: '6px',
+          padding: '2px 8px', borderRadius: '4px', border: 'none', cursor: 'pointer',
+          fontFamily: 'inherit', fontSize: '14px', fontWeight: 400, lineHeight: '18px', letterSpacing: '0.0825px',
+          background: isPrivate ? '#E5E7EB' : '#006BFF',
+          color: isPrivate ? '#374151' : '#FFFFFF',
+        }}
+      >
+        <TriggerIcon size={14} />
+        {isPrivate
+          ? t('sectionBuilder:onlineStore.themes.visibilityPrivate', 'Private')
+          : t('sectionBuilder:onlineStore.themes.visibilityPublic', 'Public')}
+        <ChevronDown size={14} />
+      </button>
+      {open && coords && createPortal(
+        <div
+          ref={menuRef}
+          className="bg-lb-surface border border-lb-line-2 rounded-lb-sm shadow-lb-filter flex flex-col p-1 min-w-[160px]"
+          style={{ position: 'fixed', top: coords.top, left: coords.left, zIndex: 1000 }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {options.map((opt) => {
+            const active = opt.value === (isPrivate ? 'private' : 'public');
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => {
+                  setOpen(false);
+                  if (!active) onSelect(opt.value);
+                }}
+                className="w-full flex items-center gap-2 rounded-lb-sm font-lb text-left px-3 py-2.5 min-h-10 text-[14px] leading-[20px] border-none cursor-pointer transition-colors duration-[120ms] bg-transparent text-lb-on-surface font-lb-regular hover:bg-lb-surface-grey"
+              >
+                <opt.icon size={14} />
+                <span style={{ flex: 1 }}>{opt.label}</span>
+                {active && <Check size={14} />}
+              </button>
+            );
+          })}
+        </div>,
+        document.body
+      )}
+    </div>
+  );
+}
+
 export function PublishedThemeCard({
-  theme, domain, previewData, isRenaming, onEdit, onPreview, onRenameStart, onRenameSubmit, onRenameCancel,
+  theme, domain, previewData, isRenaming, onEdit, onPreview, onRenameStart, onRenameSubmit, onRenameCancel, onVisibilityChange,
 }) {
   const { t } = useTranslation();
   const renameFormId = useId();
@@ -281,7 +386,7 @@ export function PublishedThemeCard({
         <div style={{ minWidth: 0, flex: 1 }}>
           <p style={{ margin: '0 0 4px 0', fontSize: '15px', fontWeight: 700, color: '#282828', display: 'flex', alignItems: 'center', gap: '10px' }}>
             <span>{domain}</span>
-            <StatusBadge label={t('sectionBuilder:onlineStore.themes.publishedBadge', 'Published Theme')} color="blue" tone="solid" />
+            <PublishedVisibilityBadge visibility={theme.visibility} onSelect={onVisibilityChange} />
           </p>
           {isRenaming ? (
             <RenameField formId={renameFormId} value={theme.name} onSubmit={onRenameSubmit} onCancel={onRenameCancel} />

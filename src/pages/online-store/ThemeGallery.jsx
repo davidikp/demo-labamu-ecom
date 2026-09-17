@@ -268,12 +268,26 @@ export default function ThemeGallery() {
       previewImageUrl: null,
       publishedAt: existing?.publishedAt ?? Date.now(),
       lastSavedAt: Date.now(),
+      visibility: existing?.visibility ?? 'public',
     };
     savePublishedTheme(STORE_ID, seeded);
     try { localStorage.setItem(XINEAR_DEFAULT_MIGRATION_KEY, '1'); } catch { /* storage unavailable */ }
     return seeded;
   });
-  const [draftThemes, setDraftThemes] = useState(() => loadDraftThemes(STORE_ID));
+  const [draftThemes, setDraftThemes] = useState(() => {
+    const loaded = loadDraftThemes(STORE_ID);
+    // Defensive one-time cleanup: an `isInstalling` row is always meant to
+    // be transient in-memory-only state (see handleDiscoverAdd/
+    // handleDraftDuplicate — neither persists it while installing/copying),
+    // so one showing up here at all is leftover corrupted data from before
+    // a since-fixed race where an overlapping install/duplicate could get
+    // its stale placeholder written to storage permanently, stuck forever
+    // on "Installing…"/"Copying…" since nothing is left to ever resolve
+    // it. Strip any such rows and persist the cleaned list immediately.
+    const cleaned = loaded.filter((d) => !d.isInstalling);
+    if (cleaned.length !== loaded.length) saveDraftThemes(STORE_ID, cleaned);
+    return cleaned;
+  });
   // Fixed, stable order — the roster is now a real, finite catalog (Xinear +
   // 7 "coming soon" stubs), not a random "suggested" sample, so show all of
   // it rather than sampling a subset.
@@ -283,6 +297,7 @@ export default function ThemeGallery() {
   const [publishConfirmTheme, setPublishConfirmTheme] = useState(null); // draft theme pending publish
   const [deleteConfirmTheme, setDeleteConfirmTheme] = useState(null); // draft theme pending delete
   const [addingDiscoverId, setAddingDiscoverId] = useState(null);
+  const [pendingVisibility, setPendingVisibility] = useState(null); // 'public' | 'private' | null
   const { showSnackbar, hideSnackbar } = useSnackbar();
 
   // Simulate trigger — there's no real backend for this screen's theme data
@@ -386,6 +401,30 @@ export default function ThemeGallery() {
   // bug being fixed here). Always resolves to something renderable, so the
   // card's render guard no longer needs to gate on this.
   const publishedPreviewElement = useMemo(() => {
+    // Prefer the published record's own persisted builder content — same
+    // as draftPreviewElement does for draft rows below — over the
+    // templateId-match/activeTemplateId logic further down. A theme
+    // promoted from the draft list (see handlePublishConfirm) keeps its own
+    // section-builder namespace (draftThemeRecord.id) with whatever the
+    // merchant actually edited there; without this, the card would instead
+    // show either the shared STORE_ID draft (only right by coincidence, if
+    // that happens to be on the same template) or the template's generic
+    // illustrative default — neither of which is a real "snapshot" of what
+    // was just published.
+    const liveContent = publishedTheme?.id ? loadDraft(publishedTheme.id) : null;
+    if (liveContent) {
+      const activePage = liveContent.pages.find((p) => p.id === liveContent.activePageId) ?? liveContent.pages[0];
+      return (
+        <FillWidthPreviewCanvas
+          header={liveContent.header}
+          footer={liveContent.footer}
+          sections={activePage?.sections ?? []}
+          theme={liveContent.theme}
+          mediaLibrary={liveContent.mediaLibrary}
+          menus={liveContent.menus}
+        />
+      );
+    }
     const publishedTemplate = SITE_TEMPLATES.find((tpl) => tpl.id === publishedTheme?.templateId);
     if (publishedTemplate) {
       const data = publishedTemplate.id === activeTemplateId
@@ -405,7 +444,7 @@ export default function ThemeGallery() {
     // defensive fallback so this never throws or renders blank.
     return <PreviewPlaceholder name={publishedTheme?.name} />;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [publishedTheme?.templateId, publishedTheme?.name, activeTemplateId, draft]);
+  }, [publishedTheme?.id, publishedTheme?.templateId, publishedTheme?.name, activeTemplateId, draft]);
 
   function draftPreviewElement(draftThemeRecord) {
     // Each draft theme now has its own persisted builder content, keyed by
@@ -547,6 +586,22 @@ export default function ThemeGallery() {
     setRenamingId(null);
   }
 
+  // Opens the confirm dialog for a visibility change picked from the badge's
+  // popover (see PublishedVisibilityBadge) — the popover itself already
+  // no-ops a re-selection of the current value, so `next` here is always an
+  // actual change.
+  function handleVisibilitySelect(next) {
+    setPendingVisibility(next);
+  }
+
+  function handleVisibilityConfirm() {
+    const updated = { ...publishedTheme, visibility: pendingVisibility };
+    setPublishedTheme(updated);
+    savePublishedTheme(STORE_ID, updated);
+    setPendingVisibility(null);
+    showSnackbar(t('sectionBuilder:onlineStore.themes.visibilityUpdated', 'Theme visibility updated'), 'green');
+  }
+
   // -- Draft theme row actions --------------------------------------------
 
   function handleDraftPreview(draftThemeRecord) {
@@ -608,8 +663,18 @@ export default function ThemeGallery() {
     // thumb, disabled actions, not persisted) — just with copy-specific
     // wording and a 4s delay to actually be visible, matching that flow's
     // deliberately-slowed-down timing.
-    const baseline = draftThemes;
-    const uniqueName = getUniqueName(baseline.map((d) => d.name), draftThemeRecord.name);
+    //
+    // Both the insert below and the resolve inside the timeout use the
+    // *functional* setDraftThemes(prev => ...) form and patch the specific
+    // placeholder by id, rather than snapshotting `draftThemes` once into a
+    // `baseline` and rebuilding the whole list from it later. A snapshot
+    // taken at click time goes stale the moment a second duplicate/install
+    // starts before this one's 4s timer fires — its own later resolve would
+    // then overwrite the list from its own older baseline, silently
+    // dropping (or resurrecting an already-finished) placeholder from a
+    // still-in-flight sibling operation. Patching by id is safe regardless
+    // of how many of these overlap or in what order they resolve.
+    const uniqueName = getUniqueName(draftThemes.map((d) => d.name), draftThemeRecord.name);
     const installingId = `installing-${Date.now()}`;
     const placeholder = {
       id: installingId,
@@ -621,7 +686,7 @@ export default function ThemeGallery() {
       isInstalling: true,
       installingLabel: t('sectionBuilder:onlineStore.themes.copying', 'Copying your theme'),
     };
-    setDraftThemes([...baseline, placeholder]);
+    setDraftThemes((prev) => [...prev, placeholder]);
     setDuplicatingIds((prev) => new Set(prev).add(draftThemeRecord.id));
 
     setTimeout(() => {
@@ -632,9 +697,11 @@ export default function ThemeGallery() {
       const sourceContent = loadDraft(draftThemeRecord.id);
       if (sourceContent) saveDraft(newId, sourceContent);
       const copy = { ...draftThemeRecord, id: newId, name: uniqueName, addedAt: Date.now(), lastSavedAt: Date.now() };
-      const nextList = [...baseline, copy];
-      setDraftThemes(nextList);
-      saveDraftThemes(STORE_ID, nextList);
+      setDraftThemes((prev) => {
+        const next = prev.map((d) => (d.id === installingId ? copy : d));
+        saveDraftThemes(STORE_ID, next);
+        return next;
+      });
       setDuplicatingIds((prev) => {
         const next = new Set(prev);
         next.delete(draftThemeRecord.id);
@@ -684,21 +751,40 @@ export default function ThemeGallery() {
   function handlePublishConfirm() {
     const promoted = publishConfirmTheme;
     if (!promoted) return;
-
-    // Demote the currently published record into the draft list, deduping
-    // its name against the existing draft names.
-    const remainingDrafts = draftThemes.filter((d) => d.id !== promoted.id);
-    const demotedName = getUniqueName(remainingDrafts.map((d) => d.name), publishedTheme.name);
-    const demoted = { ...publishedTheme, id: publishedTheme.id ?? `draft-${Date.now()}`, name: demotedName, addedAt: Date.now() };
-
-    const nextDraftThemes = [...remainingDrafts, demoted];
-    const nextPublished = { ...promoted, publishedAt: Date.now(), lastSavedAt: Date.now() };
-
-    setDraftThemes(nextDraftThemes);
-    saveDraftThemes(STORE_ID, nextDraftThemes);
-    setPublishedTheme(nextPublished);
-    savePublishedTheme(STORE_ID, nextPublished);
+    // Close the confirm dialog immediately (the merchant already
+    // confirmed) — the grey "Publishing…" snackbar below stands in for the
+    // publish actually happening, same convention as the Discover "Add"/
+    // duplicate flows' own installing-delay snackbars.
     setPublishConfirmTheme(null);
+    showSnackbar(t('sectionBuilder:onlineStore.themes.publishingTheme', 'Publishing theme...'), 'grey');
+
+    setTimeout(() => {
+      // Demote the currently published record into the draft list, deduping
+      // its name against the existing draft names.
+      const remainingDrafts = draftThemes.filter((d) => d.id !== promoted.id);
+      const demotedName = getUniqueName(remainingDrafts.map((d) => d.name), publishedTheme.name);
+      const demoted = { ...publishedTheme, id: publishedTheme.id ?? `draft-${Date.now()}`, name: demotedName, addedAt: Date.now() };
+
+      const nextDraftThemes = [...remainingDrafts, demoted];
+      // Visibility is a property of the *store*, not of whichever theme
+      // happens to be published — swapping which theme is live must never
+      // silently flip a store that was deliberately set Private back to
+      // Public. Carries the outgoing publishedTheme's own visibility
+      // forward onto the new record (defaulting to 'public' only if that's
+      // somehow missing, e.g. a pre-visibility-field record).
+      const nextPublished = {
+        ...promoted,
+        publishedAt: Date.now(),
+        lastSavedAt: Date.now(),
+        visibility: publishedTheme?.visibility ?? 'public',
+      };
+
+      setDraftThemes(nextDraftThemes);
+      saveDraftThemes(STORE_ID, nextDraftThemes);
+      setPublishedTheme(nextPublished);
+      savePublishedTheme(STORE_ID, nextPublished);
+      showSnackbar(t('sectionBuilder:onlineStore.themes.themePublished', 'Theme published successfully'), 'green');
+    }, 2000);
   }
 
   // -- Discover section actions --------------------------------------------
@@ -721,16 +807,21 @@ export default function ThemeGallery() {
     // Shopify-style "Installing theme" row — shows up in the Draft themes
     // list immediately (spinner thumb, disabled actions; see
     // DraftThemeRow's isInstalling prop) rather than only reflecting in the
-    // Discover card's own "Adding…" button state. `baseline` snapshots the
-    // list as of this click so the setTimeout below (which fires after
-    // React state has moved on) always resolves against the same list the
-    // placeholder was inserted into, instead of a stale/racing closure.
-    const baseline = draftThemes;
+    // Discover card's own "Adding…" button state.
+    //
+    // Both the insert below and the resolve inside the timeout use the
+    // *functional* setDraftThemes(prev => ...) form and patch the specific
+    // placeholder by id, rather than snapshotting `draftThemes` once into a
+    // `baseline` and rebuilding the whole list from it 4s later — a
+    // snapshot taken at click time goes stale the moment a second
+    // install/duplicate starts before this one resolves (see
+    // handleDraftDuplicate's own version of this fix for the full story).
+    const uniqueName = getUniqueName(draftThemes.map((d) => d.name), item.name);
     const installingId = `installing-${Date.now()}`;
     const placeholder = {
       id: installingId,
       templateId: item.id,
-      name: item.name,
+      name: uniqueName,
       previewImageUrl: null,
       addedAt: Date.now(),
       lastSavedAt: Date.now(),
@@ -739,7 +830,7 @@ export default function ThemeGallery() {
     // Deliberately not persisted via saveDraftThemes — an in-progress
     // install is transient UI state, not something a page refresh mid-way
     // through should try to resume.
-    setDraftThemes([...baseline, placeholder]);
+    setDraftThemes((prev) => [...prev, placeholder]);
 
     setAddingDiscoverId(item.id);
     // Same 4000ms window as the installing placeholder above resolves in
@@ -790,17 +881,19 @@ export default function ThemeGallery() {
       const newDraft = {
         id: newDraftId,
         templateId: item.id,
-        name: getUniqueName(baseline.map((d) => d.name), item.name),
+        name: uniqueName,
         previewImageUrl: null,
         addedAt: Date.now(),
         lastSavedAt: Date.now(),
       };
-      // Replaces the installing placeholder in-place against `baseline`
-      // (not the possibly-stale `draftThemes` closure) so this resolves
-      // correctly even if something else touched the list while installing.
-      const nextList = [...baseline, newDraft];
-      setDraftThemes(nextList);
-      saveDraftThemes(STORE_ID, nextList);
+      // Replaces the installing placeholder in-place by id — see the note
+      // above the placeholder insert for why this reads/writes off the
+      // functional `prev` rather than a stale click-time snapshot.
+      setDraftThemes((prev) => {
+        const next = prev.map((d) => (d.id === installingId ? newDraft : d));
+        saveDraftThemes(STORE_ID, next);
+        return next;
+      });
       setAddingDiscoverId(null);
       showSnackbar(t('sectionBuilder:onlineStore.themes.draftSaved', 'Draft theme successfully saved'), 'green');
     }, 4000);
@@ -1242,13 +1335,25 @@ export default function ThemeGallery() {
                   <PublishedThemeCard
                     theme={publishedTheme}
                     domain={STORE_DOMAIN}
-                    previewData={<StaticSnapshot>{publishedPreviewElement}</StaticSnapshot>}
+                    previewData={(
+                      // Keyed by id+publishedAt so a new publish (see
+                      // handlePublishConfirm) remounts StaticSnapshot fresh
+                      // instead of reusing the old instance — StaticSnapshot
+                      // freezes its children into static HTML exactly once
+                      // on mount and never re-captures on a prop change, so
+                      // without this the card would keep showing whatever
+                      // was frozen before the previous theme was replaced.
+                      <StaticSnapshot key={`${publishedTheme.id}-${publishedTheme.publishedAt}`}>
+                        {publishedPreviewElement}
+                      </StaticSnapshot>
+                    )}
                     isRenaming={renamingId === 'published'}
                     onEdit={handleOpen}
                     onPreview={handlePublishedPreview}
                     onRenameStart={() => setRenamingId('published')}
                     onRenameSubmit={handlePublishedRenameSubmit}
                     onRenameCancel={() => setRenamingId(null)}
+                    onVisibilityChange={handleVisibilitySelect}
                   />
                 </div>
               )}
@@ -1332,11 +1437,26 @@ export default function ThemeGallery() {
         open={Boolean(publishConfirmTheme)}
         onClose={() => setPublishConfirmTheme(null)}
         title={t('sectionBuilder:onlineStore.themes.publishConfirmTitle', 'Publish this theme?')}
-        description={t(
-          'sectionBuilder:onlineStore.themes.publishConfirmDescription',
-          "Publishing '{{name}}' will replace your current published theme. Your current published theme will be moved to drafts.",
-          { name: publishConfirmTheme?.name }
-        )}
+        description={
+          // Publishing swaps *which theme* is live, but never changes the
+          // store's own visibility on its own — a store already set Private
+          // (see PublishedVisibilityBadge) stays Private through a publish,
+          // same as handlePublishConfirm below carries the current
+          // publishedTheme.visibility forward onto the new record instead
+          // of resetting it. The copy calls that out explicitly so this
+          // doesn't read as silently reverting to Public.
+          publishedTheme?.visibility === 'private'
+            ? t(
+                'sectionBuilder:onlineStore.themes.publishConfirmDescriptionPrivate',
+                "This will replace '{{currentName}}' as your current theme. Your store will remain private.",
+                { currentName: publishedTheme?.name }
+              )
+            : t(
+                'sectionBuilder:onlineStore.themes.publishConfirmDescription',
+                "Publishing '{{name}}' will replace your current published theme. Your current published theme will be moved to drafts.",
+                { name: publishConfirmTheme?.name }
+              )
+        }
         platform="desktop"
         primaryAction={{ label: t('sectionBuilder:onlineStore.themes.publish', 'Publish'), onClick: handlePublishConfirm }}
         secondaryAction={{ label: t('sectionBuilder:editor.common.cancel'), onClick: () => setPublishConfirmTheme(null) }}
@@ -1354,6 +1474,29 @@ export default function ThemeGallery() {
         confirmLabel={t('sectionBuilder:onlineStore.themes.delete', 'Delete')}
         onConfirm={handleDraftDeleteConfirm}
         onCancel={() => setDeleteConfirmTheme(null)}
+      />
+
+      <ConfirmDialog
+        open={Boolean(pendingVisibility)}
+        title={
+          pendingVisibility === 'private'
+            ? t('sectionBuilder:onlineStore.themes.visibilityConfirmPrivateTitle', 'Make this theme Private?')
+            : t('sectionBuilder:onlineStore.themes.visibilityConfirmPublicTitle', 'Make this theme Public?')
+        }
+        description={
+          pendingVisibility === 'private'
+            ? t(
+                'sectionBuilder:onlineStore.themes.visibilityConfirmPrivateDescription',
+                'Visitors won’t be able to view your storefront while it’s Private.'
+              )
+            : t(
+                'sectionBuilder:onlineStore.themes.visibilityConfirmPublicDescription',
+                'Your storefront will become visible to everyone.'
+              )
+        }
+        confirmLabel={t('sectionBuilder:onlineStore.themes.visibilityConfirm', 'Confirm')}
+        onConfirm={handleVisibilityConfirm}
+        onCancel={() => setPendingVisibility(null)}
       />
 
       <SimulateTrigger options={simulateOptions} />

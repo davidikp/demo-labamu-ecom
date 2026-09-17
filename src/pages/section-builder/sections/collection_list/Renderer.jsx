@@ -67,19 +67,54 @@ function CollectionListRenderer({ data, onEdit, isMobile, breakpoint, mediaLibra
   return (
     <section className="px-6">
       {data.show_heading !== false && (
+        // No `text-gray-900` — see featured_products/Renderer.jsx's
+        // identical fix; this section renders inside the same SectionShell-
+        // provided inherited text color.
         onEdit ? (
           <EditableText
             as="h2"
-            className={`mb-6 font-semibold text-gray-900 ${headingSizeClass}`}
+            className={`mb-6 font-semibold ${headingSizeClass}`}
             value={data.heading}
             placeholder={t('sectionBuilder:sections.collectionList.defaultHeading')}
             onCommit={(v) => onEdit('heading', v)}
           />
         ) : (
-          <h2 className={`mb-6 font-semibold text-gray-900 ${headingSizeClass}`}>{data.heading || t('sectionBuilder:sections.collectionList.defaultHeading')}</h2>
+          <h2 className={`mb-6 font-semibold ${headingSizeClass}`}>{data.heading || t('sectionBuilder:sections.collectionList.defaultHeading')}</h2>
         )
       )}
-      {data.display_style === 'circular' ? (
+      {data.display_style === 'pills' ? (
+        // Rounded-rectangle bar of text-only labels (24px corners, NOT a
+        // full stadium/pill shape) — Barger's Figma category strip (node
+        // 96:114743's "Border" row is literally `rounded-[24px]` on an 86px
+        // bar, read directly off the design-context export). `justify-between`
+        // unconditionally (not a `sm:` breakpoint, which — same pitfall as
+        // every other Renderer's own doc comments — never reflects the
+        // builder's simulated device frame) spreads the items edge-to-edge
+        // on wide layouts; `mobile` collapses to wrapped/centered instead.
+        // Explicit theme-resolved bg/text (not inherited `color:
+        // scheme.text`), since this bar is its own visually distinct
+        // surface against the section's own background.
+        <div
+          className={`flex flex-wrap items-center gap-2 rounded-3xl px-6 py-7 ${mobile ? 'justify-center' : 'justify-between'}`}
+          style={{ backgroundColor: theme?.colors?.surface }}
+        >
+          {collections.map((collection) => (
+            <a
+              key={collection.id}
+              href={collection.url || undefined}
+              onClick={
+                onNavigate && collection.url
+                  ? (e) => { e.preventDefault(); onNavigate(collection.url); }
+                  : (e) => e.preventDefault()
+              }
+              className="whitespace-nowrap px-4 py-2 text-base font-semibold"
+              style={{ color: theme?.colors?.text_primary }}
+            >
+              {collection.name}
+            </a>
+          ))}
+        </div>
+      ) : data.display_style === 'circular' ? (
         // Xinear-style compact icon-shortcut row — a single edge-to-edge
         // row of rounded-square thumbnails (not full circles; Figma's
         // reference uses 190x190 rounded squares). columns_desktop,
@@ -107,9 +142,12 @@ function CollectionListRenderer({ data, onEdit, isMobile, breakpoint, mediaLibra
               }
               className={`flex flex-col items-center gap-2 ${mobile ? 'w-20' : 'w-auto flex-1'}`}
             >
+              {/* Theme-resolved, not hardcoded `bg-gray-100 text-gray-300`/
+                  `text-gray-900` — same fix as ProductCard's image
+                  placeholder / featured_products' heading. */}
               <div
-                className={`flex aspect-square items-center justify-center overflow-hidden bg-gray-100 text-gray-300 ${mobile ? 'w-20' : 'w-full'}`}
-                style={{ borderRadius: circularImageRadius }}
+                className={`flex aspect-square items-center justify-center overflow-hidden ${theme?.colors?.surface ? '' : 'bg-gray-100 text-gray-300'} ${mobile ? 'w-20' : 'w-full'}`}
+                style={{ borderRadius: circularImageRadius, backgroundColor: theme?.colors?.surface, color: theme?.colors?.text_secondary }}
               >
                 {collection.image ? (
                   <img src={collection.image} alt={collection.name} className="h-full w-full object-cover" />
@@ -118,7 +156,7 @@ function CollectionListRenderer({ data, onEdit, isMobile, breakpoint, mediaLibra
                 )}
               </div>
               {data.show_collection_title !== false && (
-                <p className="text-center text-sm font-medium text-gray-900">{collection.name}</p>
+                <p className={`text-center text-sm font-medium ${theme?.colors?.text_primary ? '' : 'text-gray-900'}`} style={{ color: theme?.colors?.text_primary }}>{collection.name}</p>
               )}
             </a>
           ))}
@@ -136,7 +174,10 @@ function CollectionListRenderer({ data, onEdit, isMobile, breakpoint, mediaLibra
               }
               className="block"
             >
-              <div className={`mb-2 flex items-center justify-center overflow-hidden rounded-md bg-gray-100 text-gray-300 ${aspectClass}`}>
+              <div
+                className={`mb-2 flex items-center justify-center overflow-hidden rounded-md ${theme?.colors?.surface ? '' : 'bg-gray-100 text-gray-300'} ${aspectClass}`}
+                style={{ backgroundColor: theme?.colors?.surface, color: theme?.colors?.text_secondary }}
+              >
                 {collection.image ? (
                   <img src={collection.image} alt={collection.name} className="h-full w-full object-cover" />
                 ) : (
@@ -144,7 +185,7 @@ function CollectionListRenderer({ data, onEdit, isMobile, breakpoint, mediaLibra
                 )}
               </div>
               {data.show_collection_title !== false && (
-                <p className="text-sm font-medium text-gray-900">{collection.name}</p>
+                <p className={`text-sm font-medium ${theme?.colors?.text_primary ? '' : 'text-gray-900'}`} style={{ color: theme?.colors?.text_primary }}>{collection.name}</p>
               )}
             </a>
           ))}

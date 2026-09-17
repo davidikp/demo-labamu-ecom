@@ -115,7 +115,7 @@ function SplitPanelHero({ blocks, theme, mediaLibrary, blockCtx, activeImage, is
   );
 }
 
-function HeroBannerRenderer({ data, blocks = [], theme, mediaLibrary, blockCtx, isMobile }) {
+function HeroBannerRenderer({ data, blocks = [], theme, mediaLibrary, blockCtx, isMobile, breakpoint }) {
   const mobile = useResponsiveMobile(isMobile);
   const slides = useMemo(() => {
     const images = [data.background_image, ...(data.extra_slides ?? []).map((slide) => slide.image)];
@@ -221,13 +221,22 @@ function HeroBannerRenderer({ data, blocks = [], theme, mediaLibrary, blockCtx, 
         </div>
       )}
       {activeImage && <BackgroundOverlay data={data} theme={theme} mobile={mobile} />}
-      <div className={`relative z-10 flex ${isCtaBanner ? 'max-w-3xl' : 'max-w-lg'} flex-col ${position}`}>
+      {/* max-w-2xl (not the previous max-w-lg/512px) — too narrow for the
+          heading block's own 'xlarge' size option (up to 96px desktop,
+          see blockRenderers.jsx's HEADING_SIZE), which would otherwise wrap
+          onto several lines regardless of how wide the source photo/section
+          actually is. Widening this is a no-op for any heading short enough
+          to already fit in 512px (Xinear/Houzez's own hero headings at
+          their 'medium' default) — it only gives long or large-size
+          headings more room before wrapping. */}
+      <div className={`relative z-10 flex ${isCtaBanner ? 'max-w-3xl' : 'max-w-2xl'} flex-col ${position}`}>
         <BlockStream
           sectionType="hero_banner"
           blocks={blocks}
           theme={theme}
           mediaLibrary={mediaLibrary}
           blockCtx={blockCtx}
+          breakpoint={breakpoint}
           className={`flex flex-col gap-4 ${align}`}
           isMobile={isMobile}
           context={isCtaBanner ? 'hero_cta' : undefined}

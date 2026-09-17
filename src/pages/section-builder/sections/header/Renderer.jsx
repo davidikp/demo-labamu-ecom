@@ -3,6 +3,7 @@ import { Search, ShoppingBag, Globe, ChevronDown, MoreHorizontal, Menu, X } from
 import { useTranslation } from 'react-i18next';
 import { resolveMedia } from '../../ui/fields/imageValue';
 import { resolveNavRecipe } from '../shared/navRecipes';
+import { resolveSectionScheme } from '../shared/sectionChrome';
 import { useStorefrontCart } from '../shared/storefrontCartContext';
 
 /**
@@ -350,7 +351,19 @@ function HeaderRenderer({ data, isMobile, onNavigate, theme, mediaLibrary, curre
   // header z-index at or above that overlaps/paints over the builder's own
   // toolbar while scrolling instead of staying tucked beneath it.
   const stickyStyle = data.sticky !== false ? { position: 'sticky', top: 0, zIndex: 50 } : undefined;
+  // `color_scheme` (schema.js's SECTION_CHROME_FIELDS field, default
+  // 'background') was previously defined but never actually applied to a
+  // background/text color here — every header rendered with the browser's
+  // transparent/inherited default regardless of the field's value, which
+  // happened to look right for themes whose intended scheme is a plain
+  // white page background (Houzez/Xinear), but is wrong for a theme like
+  // Barger whose Figma header is a solid dark bar (color_scheme:
+  // 'background' resolving to a dark `background` token). Same resolver
+  // regular page sections already use (see ui/SectionShell.jsx).
+  const scheme = resolveSectionScheme(data.color_scheme, theme?.colors);
   const borderStyle = {
+    ...(scheme.background ? { backgroundColor: scheme.background } : {}),
+    ...(scheme.text ? { color: scheme.text } : {}),
     ...(data.show_border ? { borderBottomWidth: 1, borderBottomStyle: 'solid', borderBottomColor: theme?.colors?.border || undefined } : {}),
     ...stickyStyle,
   };

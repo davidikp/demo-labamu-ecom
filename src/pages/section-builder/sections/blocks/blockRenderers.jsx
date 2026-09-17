@@ -14,7 +14,24 @@ import { resolveFormRecipe } from '../shared/formRecipes';
  * commits a change to this block's own data (present only in builder mode).
  */
 
-const HEADING_SIZE = { small: 'text-xl', medium: 'text-3xl', large: 'text-5xl' };
+// 'xlarge' — a big, above-the-fold hero headline size (Barger's Figma hero
+// heading is 120px), bigger than 'large' had any option for; responsive
+// (48px mobile / 72px tablet / 96px desktop) rather than one fixed size, so
+// it stays legible on narrow viewports. Generic/reusable, same as the other
+// three sizes — not a Barger-only block.
+//
+// The Tailwind `md:`/`lg:` prefixes here are a real-browser progressive
+// enhancement ONLY — they never fire correctly for the builder/preview's
+// simulated device frame (a fixed-width div inside the real, usually much
+// wider, browser window; `md:`/`lg:` evaluate against that real width, not
+// the frame's — same root cause useResponsiveMobile's own doc comment
+// describes for `sm:`). Whenever a `breakpoint` is explicitly known (the
+// builder canvas/preview always passes one), XLARGE_SIZE_PX below overrides
+// this via inline style instead, which wins over the class regardless of
+// what the real window width happens to be.
+const HEADING_SIZE = { small: 'text-xl', medium: 'text-3xl', large: 'text-5xl', xlarge: 'text-5xl md:text-7xl lg:text-8xl' };
+const XLARGE_SIZE_PX = { mobile: '48px', tablet: '72px', desktop: '96px', largeDesktop: '96px', fit: '96px' };
+const HEADING_WEIGHT = { normal: 'font-normal', bold: 'font-bold' };
 const ALIGN = { left: 'text-left', center: 'text-center', right: 'text-right' };
 
 // Two opt-in hero typography contexts, each keyed to its own slot in the
@@ -38,7 +55,7 @@ const HERO_TYPOGRAPHY_SLOT = { hero: 'hero', hero_cta: 'heroCta' };
 const SECTION_HEADING_STYLE = { fontSize: '32px', fontWeight: 800, marginBottom: '16px' };
 const SECTION_SUBTITLE_STYLE = { fontSize: '15px', marginBottom: '32px' };
 
-export function HeadingBlock({ block, onEdit, onSelect, theme, context, isMobile }) {
+export function HeadingBlock({ block, onEdit, onSelect, theme, context, isMobile, breakpoint }) {
   const d = block.data ?? {};
   const mobile = useResponsiveMobile(isMobile);
   const slot = HERO_TYPOGRAPHY_SLOT[context];
@@ -65,11 +82,24 @@ export function HeadingBlock({ block, onEdit, onSelect, theme, context, isMobile
       <h2 style={style} className={theme?.colors?.text_primary ? '' : 'text-gray-900'}>{d.text || 'Heading'}</h2>
     );
   }
-  const cls = `${HEADING_SIZE[d.size] ?? HEADING_SIZE.medium} ${ALIGN[d.alignment] ?? ''} font-bold`;
+  // `weight` defaults to 'bold' — every existing heading block predates
+  // this field and rendered bold unconditionally, so omitting it (the
+  // common case) stays byte-identical to before.
+  const cls = `${HEADING_SIZE[d.size] ?? HEADING_SIZE.medium} ${ALIGN[d.alignment] ?? ''} ${HEADING_WEIGHT[d.weight] ?? HEADING_WEIGHT.bold}`;
+  // 'xlarge' + an explicit `breakpoint` (the builder canvas/preview always
+  // passes one — see BlockStream.jsx) -> inline style wins over the
+  // (real-browser-only) Tailwind md:/lg: classes above, so the builder's
+  // mobile/tablet/desktop device toggle actually resizes the text instead
+  // of it staying stuck at whatever the real window width resolves to.
+  // Single-line only from 'tablet' up — mobile keeps free wrapping so a
+  // long headline never overflows/clips a narrow frame.
+  const xlargeStyle = d.size === 'xlarge' && breakpoint
+    ? { fontSize: XLARGE_SIZE_PX[breakpoint] ?? XLARGE_SIZE_PX.desktop, whiteSpace: breakpoint === 'mobile' ? 'normal' : 'nowrap' }
+    : undefined;
   return onEdit ? (
-    <EditableText as="h2" className={cls} value={d.text} placeholder="Heading" onCommit={(v) => onEdit('text', v)} onFocusSelect={onSelect} />
+    <EditableText as="h2" className={cls} style={xlargeStyle} value={d.text} placeholder="Heading" onCommit={(v) => onEdit('text', v)} onFocusSelect={onSelect} />
   ) : (
-    <h2 className={cls}>{d.text || 'Heading'}</h2>
+    <h2 className={cls} style={xlargeStyle}>{d.text || 'Heading'}</h2>
   );
 }
 
@@ -384,7 +414,7 @@ function withLegacyDefaults(d) {
   return { ...d, direction: 'horizontal', direction_mobile: 'vertical', wrap: true, gap: 16, gap_mobile: 8 };
 }
 
-export function GroupBlock({ block, theme, mediaLibrary, childCtx, isMobile }) {
+export function GroupBlock({ block, theme, mediaLibrary, childCtx, isMobile, breakpoint }) {
   const d = withLegacyDefaults(block.data ?? {});
   const children = block.blocks ?? [];
   const empty = children.length === 0;
@@ -440,6 +470,7 @@ export function GroupBlock({ block, theme, mediaLibrary, childCtx, isMobile }) {
           gated={false}
           className="contents"
           isMobile={isMobile}
+          breakpoint={breakpoint}
           // Easyblocks-style hover "+" between items instead of one
           // end-of-list Add button (see BlockStream.jsx/InsertZone.jsx).
           // `direction` matches this group's own current (possibly

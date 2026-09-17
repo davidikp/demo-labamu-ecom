@@ -158,18 +158,23 @@ function FeaturedProductsRenderer({ data, onEdit, isMobile, breakpoint, mediaLib
       {(data.show_heading !== false || (!groups && showViewAll)) && (
         <div className="mb-6 flex items-center justify-between gap-4">
           {data.show_heading !== false ? (
+            // No `text-gray-900` here (unlike before) — SectionShell already
+            // sets an inherited `color: scheme.text` on this section's own
+            // wrapper (see ui/SectionShell.jsx/resolveSectionScheme), which
+            // a hardcoded gray class would otherwise override and render
+            // illegibly dark on a dark-background theme like Barger.
             collectionMatch ? (
-              <h2 className={`font-semibold text-gray-900 ${headingSizeClass}`}>{collectionMatch.collection.name}</h2>
+              <h2 className={`font-semibold ${headingSizeClass}`}>{collectionMatch.collection.name}</h2>
             ) : onEdit ? (
               <EditableText
                 as="h2"
-                className={`font-semibold text-gray-900 ${headingSizeClass}`}
+                className={`font-semibold ${headingSizeClass}`}
                 value={data.heading}
                 placeholder={t('sectionBuilder:sections.featuredProducts.defaultHeading')}
                 onCommit={(v) => onEdit('heading', v)}
               />
             ) : (
-              <h2 className={`font-semibold text-gray-900 ${headingSizeClass}`}>{data.heading || t('sectionBuilder:sections.featuredProducts.defaultHeading')}</h2>
+              <h2 className={`font-semibold ${headingSizeClass}`}>{data.heading || t('sectionBuilder:sections.featuredProducts.defaultHeading')}</h2>
             )
           ) : (
             <span />
@@ -190,7 +195,8 @@ function FeaturedProductsRenderer({ data, onEdit, isMobile, breakpoint, mediaLib
           {groups.map((group) => (
             <div key={group.category}>
               <div className="mb-4 flex items-center justify-between">
-                <h3 className="text-base font-semibold text-gray-900">{group.category}</h3>
+                {/* No `text-gray-900` — see the section heading's comment above. */}
+                <h3 className="text-base font-semibold">{group.category}</h3>
                 {data.show_view_all !== false && (
                   <ViewAllLink label={viewAllLabel} theme={theme} onClick={onNavigate ? () => onNavigate(buildShopPath(group.category)) : undefined} />
                 )}

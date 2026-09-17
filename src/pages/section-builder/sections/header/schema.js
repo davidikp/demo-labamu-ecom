@@ -78,5 +78,16 @@ export const schema = {
     ],
   },
   ...SECTION_CHROME_FIELDS_NO_PADDING,
-  color_scheme: { ...SECTION_CHROME_FIELDS_NO_PADDING.color_scheme, default: 'primary' },
+  // Default 'background' (not the generic SECTION_CHROME_FIELDS 'primary'
+  // default every other section starts from) — now that Renderer.jsx
+  // actually applies `color_scheme` to a real background/text color (it
+  // previously did nothing, so this default's value had no visible effect
+  // for any header, including the several site templates that never set it
+  // explicitly), 'primary' would paint every un-overridden header as a
+  // solid theme-color bar — wrong for the plain page-background look most
+  // existing templates (Xinear, and others with no explicit header
+  // color_scheme) were actually designed around and already visually had.
+  // Templates that do want a solid-color bar (or Houzez/Barger's own
+  // deliberate 'background' choice) still set this explicitly.
+  color_scheme: { ...SECTION_CHROME_FIELDS_NO_PADDING.color_scheme, default: 'background' },
 };

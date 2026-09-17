@@ -8,6 +8,9 @@ import { HOUZEZ_HERO_RECIPE } from '../sections/shared/heroRecipes';
 import { HOUZEZ_FORM_RECIPE } from '../sections/shared/formRecipes';
 import { HOUZEZ_NAV_RECIPE } from '../sections/shared/navRecipes';
 import { HOUZEZ_HIGH_RISE_PRODUCTS, HOUZEZ_SAFETY_PRODUCTS, HOUZEZ_PRODUCTS } from '../mocks/houzezProducts';
+import { BARGER_BEST_SELLER_PRODUCTS, BARGER_PRODUCTS } from '../mocks/bargerProducts';
+import { BARGER_CARD_RECIPE } from '../sections/shared/cardRecipes';
+import { BARGER_FORM_RECIPE } from '../sections/shared/formRecipes';
 
 /**
  * @module section-builder/state/siteTemplates
@@ -115,6 +118,24 @@ const XINEAR_CATEGORY_ITEMS = [
   { id: 'xinear-cat-shoes', source: 'custom', title: 'Shoes', image: '/assets/catalog/categories/shoes.png', url: '/shop?category=Shoes' },
   { id: 'xinear-cat-bags', source: 'custom', title: 'Bags', image: '/assets/catalog/categories/bags.png', url: '/shop?category=Bags' },
   { id: 'xinear-cat-perfumes', source: 'custom', title: 'Perfumes', image: '/assets/catalog/categories/perfumes.png', url: '/shop?category=Perfumes' },
+];
+
+// Barger's 5 menu categories (Figma footer's "Category" column: Best
+// Seller, Burger, Side Dish, Chicken, Drinks, Dessert — "Best Seller" is
+// the homepage's own `featured_products` heading below, not a filterable
+// category — shown in the homepage's own `collection_list` pill bar below
+// the hero (Figma node 96:114743's "Border" row: Best Seller, Burger, Side
+// Dish, Chicken, Drinks, Dessert). `display_style: 'pills'` (see
+// collection_list/schema.js) ignores `image` entirely — text-only labels,
+// so these carry no image field at all, unlike XINEAR_CATEGORY_ITEMS/
+// HOUZEZ_CATEGORY_ITEMS (whose 'cards'/'circular' styles need one).
+const BARGER_CATEGORY_ITEMS = [
+  { id: 'barger-cat-bestseller', source: 'custom', title: 'Best Seller', url: '/shop' },
+  { id: 'barger-cat-burger', source: 'custom', title: 'Burger', url: '/shop?category=Burger' },
+  { id: 'barger-cat-side-dish', source: 'custom', title: 'Side Dish', url: '/shop?category=Side%20Dish' },
+  { id: 'barger-cat-chicken', source: 'custom', title: 'Chicken', url: '/shop?category=Chicken' },
+  { id: 'barger-cat-drinks', source: 'custom', title: 'Drinks', url: '/shop?category=Drinks' },
+  { id: 'barger-cat-dessert', source: 'custom', title: 'Dessert', url: '/shop?category=Dessert' },
 ];
 
 export const SITE_TEMPLATES = [
@@ -1128,6 +1149,334 @@ export const SITE_TEMPLATES = [
         id: 'product', name: 'Product', type: 'system', systemType: 'product', slug: '/products/:handle', seo: {}, hiddenFromNav: true,
         sections: [
           defaultSection('product-default-detail', 'product_detail', { show_stock_status: false }),
+        ],
+      },
+    ],
+  },
+  {
+    id: 'barger',
+    name: 'Barger',
+    // Sourced from the Barger Figma design (Labamu E-Commerce MVP 2, node
+    // 171:76095 light / 171:69357 dark — see themes/barger.js for the
+    // matching --theme-* color/typography layer), the Barger component set
+    // (node 165:84351, e.g. "Button - Barger" / "[New] Text Field -
+    // Barger" — 12px/10px radii, Lato typography), and the Barger homepage
+    // (node 96:114687). Like Houzez and Xinear, this is a single home-page
+    // storefront — every section lives on one anchor-navigated homepage; no
+    // real menu photography was sourced yet, so hero/appointment/contact
+    // photos are free-license stock (loremflickr, downloaded once into
+    // public/assets/templates/barger/) rather than actual Barger branding —
+    // swap in real photography once available, same follow-up noted in
+    // docs/plans/10-barger-theme.md.
+    theme: {
+      typography: { heading_font: 'Lato', body_font: 'Lato', heading_size: 'medium', body_size: 'medium', letter_spacing: 'normal', heading_transform: 'none' },
+      // Read directly off themes/barger.js's `dark` token set — Barger's
+      // default/golden-reference look is dark (Figma's dark-mode frame,
+      // node 171:69357, is the one actually used across the Home/Shop/PDP
+      // reference screens: dark header bar, dark hero overlays), not the
+      // light frame, so `theme.colors` (the fixed, non-mode-aware palette
+      // every section's `color_scheme` field resolves against — see
+      // sections/shared/sectionChrome.js's resolveSectionScheme) uses the
+      // dark swatch set as Barger's actual default: background (surface1),
+      // surface (surface2), primary/accent (primary1 — a flat white, not a
+      // color accent), primary_text/accent_text (onPrimary), text_primary
+      // (onSurface1). Figma's dark swatch set has onSurface2 equal to
+      // onSurface1 (pure white, no dimming) — using it verbatim for
+      // text_secondary would give secondary text no visual distinction from
+      // primary, so text_secondary instead uses onSurface3 (#a9a9a9), the
+      // muted grey both light and dark swatch sets already use for
+      // tertiary/placeholder-weight text. border (outline1), rating
+      // (otherRating, mode-independent). The separate `storefrontThemeId`/
+      // `storefrontThemeMode` toggle (ThemePanel.jsx) still lets a merchant
+      // switch to the light palette later — see themes/barger.js's `light`
+      // block for those values.
+      colors: {
+        background: '#1b1916', surface: '#262522', primary: '#ffffff', primary_text: '#1b1916',
+        accent: '#ffffff', accent_text: '#1b1916', text_primary: '#ffffff', text_secondary: '#a9a9a9', border: '#333333',
+        rating: '#f2ce17',
+      },
+      // container_width/gutter match Houzez/Xinear's shared 1280px layout
+      // card_corners/image_corners match node 932:119167's own product-card
+      // "Image 1:1" surface exactly (`rounded-[8px]`) — the Best Seller row
+      // is a flat rounded-square photo tile with no border or drop shadow
+      // (`card_border: false`/`card_shadow: 'none'`), not a bordered/shadowed
+      // box like Houzez's own reference card.
+      // `image_fit: 'contain'` — the Best Seller row's own cutout product
+      // photos (see mocks/bargerProducts.js) sit inset on their surface
+      // tile rather than cropped edge-to-edge (see ProductCard.jsx's own
+      // `imageFit` comment).
+      layout: { container_width: '1280', container_gutter: 'spacious', card_corners: 8, card_shadow: 'none', card_border: false, image_corners: 8, image_fit: 'contain' },
+      // Button - Barger (node 125:51506): h-51 (51px = 16px vertical
+      // padding), px-24 py-16, rounded-[12px], Lato Regular 16px label —
+      // matches themes/barger.js's shape.radiusMd (12px) exactly.
+      buttons: {
+        corner_radius: 12, padding_horizontal: 24, padding_vertical: 16, font_weight: '400', font_size: 16,
+        letter_spacing: 'normal', text_transform: 'none', border_width: 0, hover_effect: 'darken',
+      },
+      // No heroRecipe/navRecipe override — Barger's Figma hero/nav
+      // treatments don't diverge from the generic DEFAULT_HERO_RECIPE/
+      // DEFAULT_NAV_RECIPE the way Houzez's split-panel hero or custom nav
+      // weight do (see sections/shared/{heroRecipes,navRecipes}.js).
+      // formRecipe *does* diverge — see BARGER_FORM_RECIPE's own comment.
+      formRecipe: BARGER_FORM_RECIPE,
+      //
+      // Barger's Figma card (node 96:114743) reads its title/price at 16px,
+      // bigger than ProductCard's generic 13px/15px default — see
+      // sections/shared/cardRecipes.js.
+      cardRecipe: BARGER_CARD_RECIPE,
+      // Barger's own storefront product catalog (fast-food/F&B menu) —
+      // resolved by storefront features that need "the current template's
+      // products" (see sections/shared/productSource.js), same data as the
+      // homepage's own featured_products section below.
+      productCatalog: BARGER_PRODUCTS,
+    },
+    header: {
+      layout_variant: 'inline',
+      // Plain-text logo (Figma's "Barger" wordmark is a vector, no
+      // downloadable logo asset sourced yet) — same convention Xinear's
+      // 'Horizon & Co.' plain-text logo uses.
+      logo_text: 'Barger',
+      show_border: true,
+      // Figma header (node 96:114689) is a solid dark bar
+      // (`neutral/bg-&-surface/surface-1`, #1b1916) with white nav/logo
+      // text — 'background' resolves to exactly that against Barger's dark
+      // `theme.colors` above (see header/Renderer.jsx's color_scheme wiring).
+      color_scheme: 'background',
+      nav_color: 'primary',
+      // Figma header shows a flag + "EN" + chevron language pill.
+      show_language_switcher: true,
+      languages: [
+        { id: 'barger-lang-en', code: 'EN', label: 'English', flag: 'us' },
+        { id: 'barger-lang-id', code: 'ID', label: 'Bahasa Indonesia', flag: 'id' },
+      ],
+      show_search_icon: false,
+      // Figma header shows a cart/bag icon with a badge count.
+      show_cart_icon: true,
+      // Figma nav (Home, Shop, Make an Appoinment, Reviews, Contact Us,
+      // Location, Request Quote) is the same 7-item reference nav Houzez
+      // uses in this Figma file — same overflow threshold.
+      nav_overflow_after: 5,
+    },
+    menus: {
+      'main-menu': {
+        items: [
+          { id: 'barger-nav-home', label: 'Home', url: '/' },
+          { id: 'barger-nav-shop', label: 'Shop', url: '/shop' },
+          { id: 'barger-nav-service', label: 'Service', url: '/service' },
+          { id: 'barger-nav-collection', label: 'Collection', url: '/collection' },
+          { id: 'barger-nav-appointment', label: 'Make an Appoinment', url: '#appointment' },
+          { id: 'barger-nav-reservation', label: 'Reservation', url: '#reservation' },
+          { id: 'barger-nav-waitlist', label: 'Waitlist', url: '#waitlist' },
+          { id: 'barger-nav-reviews', label: 'Reviews', url: '#review' },
+          { id: 'barger-nav-contact', label: 'Contact Us', url: '#contact' },
+          { id: 'barger-nav-location', label: 'Location', url: '#location' },
+          { id: 'barger-nav-quote', label: 'Request Quote', url: '#quote' },
+        ],
+      },
+    },
+    footer: {
+      layout_variant: 'columns',
+      logo_text: 'Barger',
+      show_border: true,
+      color_scheme: 'background',
+      // Figma footer's 2-column layout (contact+social | category links) —
+      // 'balanced' matches Houzez's own 3-column ratio choice for a
+      // similar contact-column-plus-links composition.
+      column_ratio: 'balanced',
+      social_links: [
+        { id: 'barger-social-x', platform: 'x', url: '#' },
+        { id: 'barger-social-instagram', platform: 'instagram', url: '#' },
+        { id: 'barger-social-facebook', platform: 'facebook', url: '#' },
+        { id: 'barger-social-youtube', platform: 'youtube', url: '#' },
+        { id: 'barger-social-linkedin', platform: 'linkedin', url: '#' },
+      ],
+      address_heading: 'Tangerang',
+      address_body: 'Alam Sutera, Jl. Jalur Sutera Boulevard No.45, Kunciran, Kec. Pinang, Kota Tangerang, Banten 15320',
+      phone: '0812-3456-7890',
+      email: 'info@barger.com',
+      link_columns: [
+        {
+          id: 'barger-footer-category',
+          heading: 'Category',
+          // Figma footer splits its 6 category links into two side-by-side
+          // 3-item groups (Best Seller/Burger/Side Dish |
+          // Chicken/Drinks/Dessert) — same 2-column convention as Houzez's
+          // own category footer column.
+          links_layout: '2-column',
+          links: [
+            { id: 'barger-footer-category-bestseller', label: 'Best Seller', url: '/shop' },
+            { id: 'barger-footer-category-burger', label: 'Burger', url: '/shop?category=Burger' },
+            { id: 'barger-footer-category-sidedish', label: 'Side Dish', url: '/shop?category=Side%20Dish' },
+            { id: 'barger-footer-category-chicken', label: 'Chicken', url: '/shop?category=Chicken' },
+            { id: 'barger-footer-category-drinks', label: 'Drinks', url: '/shop?category=Drinks' },
+            { id: 'barger-footer-category-dessert', label: 'Dessert', url: '/shop?category=Dessert' },
+          ],
+        },
+      ],
+      copyright_text: '©2024 PT Barger. All rights reserved.',
+      show_social_icons: true,
+      social_heading: 'Follow Us',
+      show_copyright: true,
+    },
+    media: media('barger', [
+      // Real hero photo — downloaded from the Figma banner node (96:114738,
+      // an Unsplash photo per its export metadata, free-license), replacing
+      // the earlier loremflickr placeholder — resized/compressed from the
+      // Figma export's original 2880x1919 for a reasonable page weight.
+      { key: 'banner', filename: 'assets/barger-banner.jpg', width: 1600, height: 1066, size: 420270 },
+      // Real overhead burger-tray photo — downloaded directly from the
+      // Figma "Catering for events?" node (366:104203), replacing the
+      // earlier unrelated loremflickr placeholder (a water-buffalo photo
+      // that had nothing to do with the design).
+      { key: 'appointment', filename: 'assets/barger-appointment.jpg', width: 1440, height: 331, size: 595375 },
+      { key: 'contact', filename: 'assets/barger-contact.jpg', width: 520, height: 520, size: 39587 },
+    ]),
+    pages: [
+      {
+        id: 'home', name: 'Home', type: 'system', slug: '/', seo: {}, hiddenFromNav: false,
+        sections: [
+          // Full-bleed "Greatest Barger" hero over a dark-overlaid photo,
+          // centered text — matches the Figma homepage hero (node
+          // 96:114738's Banner) and Figma's 3-dot carousel indicator (the
+          // carousel controls only need `extra_slides` to have entries; no
+          // second/third hero photo was sourced yet, so — same convention
+          // Houzez/Xinear's own hero already uses — these extra slots reuse
+          // the one real banner image).
+          defaultSection(
+            'barger-home-hero',
+            'hero_banner',
+            {
+              background_image: image('barger-banner'),
+              // Figma's hero shows a 3-dot carousel indicator — reusing the
+              // one real banner photo for the extra slots, same convention
+              // Houzez/Xinear's own hero already uses when a theme has only
+              // one hero photo but the reference design still shows carousel
+              // controls.
+              extra_slides: [
+                { id: 'barger-hero-slide-2', image: image('barger-banner') },
+                { id: 'barger-hero-slide-3', image: image('barger-banner') },
+              ],
+              overlay_style: 'dark', overlay_opacity: 45,
+              text_alignment: 'center', content_position: 'center',
+              // Figma's Banner frame (96:114738) is 1440x468 — a wide,
+              // short strip, not the schema's 500px default — and runs
+              // edge-to-edge with no visible gap above/below (its own
+              // frame has no padding around the photo).
+              min_height: 468, padding_top: 0, padding_bottom: 0,
+            },
+            [block('heading', { text: 'Greatest Barger', size: 'xlarge', weight: 'normal', alignment: 'center' })],
+          ),
+          // Category pill bar (Best Seller/Burger/Side Dish/Chicken/Drinks/
+          // Dessert) — matches Figma's "Border" row (node 96:114743) exactly:
+          // a single rounded-full dark capsule of text-only labels, not an
+          // image-thumbnail row.
+          defaultSection('barger-home-categories', 'collection_list', {
+            show_heading: false, display_style: 'pills',
+            collections: BARGER_CATEGORY_ITEMS,
+          }),
+          // Figma's "Best Seller" featured_products row (node 96:114756).
+          defaultSection('barger-home-bestseller', 'featured_products', {
+            heading: 'Best Seller', columns_desktop: '4', mobile_layout: 'horizontal_scroll',
+            products: BARGER_BEST_SELLER_PRODUCTS,
+          }),
+          // "Catering for events?" appointment CTA (node 366:104201) — same
+          // full-bleed dark-overlay hero_banner pattern as Houzez's own
+          // Appointment CTA, reworded for Barger's catering copy.
+          defaultSection(
+            'barger-home-appointment',
+            'hero_banner',
+            {
+              background_image: image('barger-appointment'), min_height: 331,
+              overlay_style: 'dark', overlay_opacity: 45,
+              // 'background' (not 'primary', unlike Houzez's own version of
+              // this CTA) — Barger's dark-mode `primary_text` is dark
+              // (#1b1916, meant for white-on-primary buttons), which would
+              // render illegibly-dark heading/subhead text over this
+              // dark-overlaid photo; `background`'s text slot
+              // (`text_primary`, white in the dark palette) is what actually
+              // gives white text here.
+              color_scheme: 'background', text_alignment: 'center', content_position: 'center',
+              padding_top: 0, padding_bottom: 0,
+            },
+            [
+              block('heading', { text: 'Catering for events?' }),
+              block('subheading', { text: 'Book an appointment to discuss your needs!' }),
+              block('button', { label: 'Book an Appointment', url: '/appointment' }),
+            ],
+          ),
+          // "What They Say" testimonials (node 96:126576) — same 3-card
+          // layout/reviewer names Houzez's Figma reuses in this file, with
+          // F&B-appropriate quote copy (the Figma text itself carries
+          // leftover clothing-store placeholder copy from another template
+          // in this same file, not real Barger review copy).
+          defaultSection(
+            'barger-home-testimonials',
+            'testimonials',
+            {
+              heading: 'What They Say', columns_desktop: '3',
+              heading_size: 'display', heading_align: 'center', card_hierarchy: 'name_first',
+              color_scheme: 'background',
+              padding_top: { $res: true, mobile: 40, desktop: 80 },
+            },
+            [
+              block('quote', { quote: 'Best burger in town! Juicy, affordable, and the fries are always crispy.', reviewer_name: 'John Doe', star_rating: '5' }),
+              block('quote', { quote: 'Great value for the price and the staff are always friendly. My go-to spot for lunch.', reviewer_name: 'Angelina Carpenter', star_rating: '5' }),
+              block('quote', { quote: 'Fast service and consistently great taste. The fried chicken bucket is a must-try!', reviewer_name: 'Nichole Smith', star_rating: '5' }),
+            ],
+          ),
+          // "Leave Us a Rating" (node 96:126625) — inline Name/Review +
+          // star rating, matching Houzez's own rating_form layout.
+          // node 96:126625 — centered stacked layout (stars, then heading,
+          // then full-width Name/Review fields and a centered button), not
+          // the inline Name|Review|Rating row Houzez's own reference uses.
+          defaultSection('barger-home-rating', 'rating_form', {
+            heading: 'Leave us your thoughts on how do you like our products.',
+            name_field_label: 'Name', message_field_label: 'Reviews', button_label: 'Give Rating',
+            layout: 'stacked',
+          }),
+          // "Contact Us" (node 96:114891) — split form-beside-photo, same
+          // composition as Houzez's contact_form (minus the salutation
+          // dropdown, which Barger's Figma doesn't show).
+          defaultSection(
+            'barger-home-contact',
+            'contact_form',
+            { reply_to_email: '', layout: 'split', image: image('barger-contact') },
+            [
+              block('heading', { text: 'Contact Us' }),
+              block('text', { content: 'Contact us for further business inquiries or collaborations' }),
+              block('form_field', { label: 'Name', field_type: 'text', required: true }),
+              block('form_field', { label: 'Email', field_type: 'email', required: true }),
+              block('form_field', { label: 'Phone Number', field_type: 'tel', required: false }),
+              block('form_field', { label: 'Message', field_type: 'textarea', required: true }),
+            ],
+          ),
+          // "Visit Our Restaurant!" (node 96:114903) — map + address, same
+          // pattern/address string as the footer's own contact info.
+          defaultSection(
+            'barger-home-map',
+            'map_embed',
+            {
+              address: 'Alam Sutera, Jl. Jalur Sutera Boulevard No.45, Kunciran, Kec. Pinang, Kota Tangerang, Banten 15320',
+              map_height: 320, map_position: 'left', heading_style: 'prominent',
+            },
+            [block('heading', { text: 'Visit Our Restaurant!' }), block('text', { content: 'Come see our great craftmanship here.' })],
+          ),
+          // "Wanna do custom bulk orders?" (node 96:114918) — split
+          // form-beside-photo bulk/custom-order request, reusing the
+          // contact photo (no second photo sourced yet).
+          defaultSection(
+            'barger-home-bulk-order',
+            'contact_form',
+            { reply_to_email: '', layout: 'split', image: image('barger-contact') },
+            [
+              block('heading', { text: 'Wanna do custom bulk orders?' }),
+              block('text', { content: 'Leave your request no matter how ridiculous it is!' }),
+              block('form_field', { label: 'Name', field_type: 'text', required: true }),
+              block('form_field', { label: 'Phone Number', field_type: 'tel', required: true }),
+              block('form_field', { label: 'Email', field_type: 'email', required: false }),
+              block('form_field', { label: 'Order Details', field_type: 'textarea', required: true }),
+            ],
+          ),
         ],
       },
     ],

@@ -18,7 +18,7 @@
  * confirmed separately per US-9.4) — see TRANSIENT_ACTION_TYPES there.
  */
 
-import { mergeRequiredSystemPages, requiredSystemPages, REQUIRED_SYSTEM_TYPES } from './defaultTheme';
+import { mergeRequiredSystemPages, requiredSystemPages, REQUIRED_SYSTEM_TYPES, POLICY_SYSTEM_TYPES } from './defaultTheme';
 import { SHOP_CORE_SECTION_ID } from '../sections/catalog_list/schema';
 import { PRODUCT_CORE_SECTION_ID } from '../sections/product_detail/schema';
 import { EDITORIAL_COLLECTION_LIST_CORE_SECTION_ID } from '../sections/editorial_collection_list/schema';
@@ -127,6 +127,31 @@ export const ACTIONS = {
 // disable its Delete button for the same two ids without duplicating them.
 export const PROTECTED_MENU_IDS = ['main-menu', 'footer-menu'];
 
+// Canonical "factory" item list for the two default menus, used both as the
+// fallback below (when no `menus` is supplied to createInitialState) and by
+// MenusManagement.jsx's "Restore to Default" button — a single source of
+// truth regardless of which theme template actually seeded the live items,
+// so restoring always lands on the same known-good set. Appointment/
+// Reservation/Waitlist/Reviews/Contact/Location/Quote each link to their own
+// "#<anchor>" rather than a real page path since those scroll to a section
+// on the homepage instead of navigating away.
+export const DEFAULT_MENU_ITEMS = {
+  'main-menu': [
+    { id: 'main-menu-default-home', label: 'Home', url: '/' },
+    { id: 'main-menu-default-shop', label: 'Shop', url: '/shop' },
+    { id: 'main-menu-default-service', label: 'Service', url: '/service' },
+    { id: 'main-menu-default-collection', label: 'Collection', url: '/collection' },
+    { id: 'main-menu-default-appointment', label: 'Make an Appoinment', url: '#appointment' },
+    { id: 'main-menu-default-reservation', label: 'Reservation', url: '#reservation' },
+    { id: 'main-menu-default-waitlist', label: 'Waitlist', url: '#waitlist' },
+    { id: 'main-menu-default-reviews', label: 'Reviews', url: '#review' },
+    { id: 'main-menu-default-contact', label: 'Contact Us', url: '#contact' },
+    { id: 'main-menu-default-location', label: 'Location', url: '#location' },
+    { id: 'main-menu-default-quote', label: 'Request Quote', url: '#quote' },
+  ],
+  'footer-menu': [],
+};
+
 export function createInitialState({ storeId, pages, theme, header, footer, activeTemplateId = null, menus }) {
   return {
     storeId,
@@ -154,8 +179,8 @@ export function createInitialState({ storeId, pages, theme, header, footer, acti
     // lets a caller (e.g. createDefaultGlobals's page-roster-derived nav)
     // seed real starting items instead of always starting empty.
     menus: menus ?? {
-      'main-menu': { id: 'main-menu', name: 'Main menu', items: [] },
-      'footer-menu': { id: 'footer-menu', name: 'Footer menu', items: [] },
+      'main-menu': { id: 'main-menu', name: 'Header Menu', items: DEFAULT_MENU_ITEMS['main-menu'] },
+      'footer-menu': { id: 'footer-menu', name: 'Footer menu', items: DEFAULT_MENU_ITEMS['footer-menu'] },
     },
   };
 }
@@ -602,11 +627,19 @@ export function builderReducer(state, action) {
     case ACTIONS.UPDATE_PAGE:
       return {
         ...state,
-        pages: updatePage(state.pages, action.pageId, (page) => ({
-          ...page,
-          ...action.patch,
-          updatedAt: Date.now(),
-        })),
+        pages: updatePage(state.pages, action.pageId, (page) => {
+          // Written-policy pages (Settings > Policies) are reserved: name and
+          // slug are locked so their footer/menu links and Settings rows
+          // never break — only content/seo/visibility stay editable through
+          // this generic patch path.
+          const isLockedPolicy = page.type === 'system' && POLICY_SYSTEM_TYPES.includes(page.systemType);
+          const { name: _name, slug: _slug, ...restPatch } = action.patch ?? {};
+          return {
+            ...page,
+            ...(isLockedPolicy ? restPatch : action.patch),
+            updatedAt: Date.now(),
+          };
+        }),
       };
 
     // Bulk Set Pages Visible/Hidden/Scheduled — same visibility field

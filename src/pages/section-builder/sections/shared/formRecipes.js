@@ -19,9 +19,29 @@
  */
 
 export const DEFAULT_FORM_RECIPE = {
-  field: { height: 44, radius: 8, fontSize: 14, borderColor: undefined },
+  field: { height: 44, radius: 8, fontSize: 14, borderColor: undefined, background: undefined, placeholderColor: undefined },
   label: { fontSize: 12, color: undefined },
   starSize: 22,
+  starIdleColor: undefined,
+  stackedGap: 12,
+  inlineColumns: '1fr 1fr 1fr',
+  inlineGap: 16,
+};
+
+/** Barger's "Leave Us a Rating" stacked form (node 96:126625's own
+ * "[New] Text Field - Barger" field, 128:42642/128:42643) — a flat 46px/
+ * 10px-radius surface-2 field with a #333 (outline-1) border and #a9a9a9
+ * (onSurface-3) placeholder text, not the borderless/white-field generic
+ * default. `starIdleColor` (white/text_primary) is that same node's own
+ * rating-widget SVG (stroke="white") — its idle/unselected stars read as a
+ * neutral outline, not the golden `colors.rating` fill reserved for an
+ * actually-selected star (see rating_form/Renderer.jsx's own hover logic). */
+export const BARGER_FORM_RECIPE = {
+  field: { height: 46, radius: 10, fontSize: 16, borderColor: '#333333', background: '#262522', placeholderColor: '#a9a9a9' },
+  label: { fontSize: 12, color: undefined },
+  starSize: 20,
+  starIdleColor: '#ffffff',
+  stackedGap: 24,
   inlineColumns: '1fr 1fr 1fr',
   inlineGap: 16,
 };

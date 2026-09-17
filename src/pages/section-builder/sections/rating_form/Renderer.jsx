@@ -42,10 +42,23 @@ function RatingFormRenderer({ data, theme, onEdit, isMobile, breakpoint }) {
 
   if (data.layout !== 'inline') {
     // 'stacked' layout — centered column: stars row first, then a plain
-    // (not bold-heading-weight) subtitle line, then full-width Name/Message
-    // fields and a centered button, matching Xinear's reference exactly
-    // (see get_design_context for node 73:33802) rather than the generic
-    // left-aligned block this used to render as.
+    // (not bold-heading-weight) subtitle line, then full-width Name/Review
+    // fields and a centered button. Field geometry/colors come from the
+    // theme's own form recipe (see formRecipes.js) — Barger's own reference
+    // (node 96:126625) is a flat surface-2 field with a visible border and
+    // muted placeholder, not the borderless/white generic default every
+    // other theme still gets via DEFAULT_FORM_RECIPE.
+    const recipe = resolveFormRecipe(theme);
+    const stackedFieldStyle = {
+      height: `${recipe.field.height}px`,
+      borderRadius: `${recipe.field.radius}px`,
+      fontSize: `${recipe.field.fontSize}px`,
+      borderColor: recipe.field.borderColor,
+      backgroundColor: recipe.field.background,
+      color: recipe.field.placeholderColor,
+    };
+    const stackedFieldClass = `w-full border px-4 ${recipe.field.borderColor ? '' : 'border-gray-300'}`;
+    const starIdleColor = recipe.starIdleColor ?? starColor;
     const stackedHeading = onEdit ? (
       <EditableText
         as="p"
@@ -59,32 +72,25 @@ function RatingFormRenderer({ data, theme, onEdit, isMobile, breakpoint }) {
     );
     return (
       <section className="flex flex-col items-center px-6 text-center">
-        <div className="mb-2 flex gap-1" style={{ color: starColor }} onMouseLeave={() => setHoveredStar(0)}>
-          {Array.from({ length: 5 }).map((_, i) => (
-            <Star
-              key={i}
-              size={32}
-              fill={i < hoveredStar ? starColor : 'none'}
-              stroke={starColor}
-              className="cursor-pointer transition-transform hover:scale-110"
-              onMouseEnter={() => setHoveredStar(i + 1)}
-            />
-          ))}
+        <div className="mb-2 flex gap-1" onMouseLeave={() => setHoveredStar(0)}>
+          {Array.from({ length: 5 }).map((_, i) => {
+            const filled = i < hoveredStar;
+            return (
+              <Star
+                key={i}
+                size={recipe.starSize}
+                fill={filled ? starColor : 'none'}
+                stroke={filled ? starColor : starIdleColor}
+                className="cursor-pointer transition-transform hover:scale-110"
+                onMouseEnter={() => setHoveredStar(i + 1)}
+              />
+            );
+          })}
         </div>
         {stackedHeading}
-        <div className="flex w-full max-w-2xl flex-col gap-3">
-          <input
-            type="text"
-            disabled
-            placeholder={data.name_field_label || 'Name'}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
-          />
-          <textarea
-            disabled
-            placeholder={data.message_field_label || 'Message'}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
-            rows={3}
-          />
+        <div className="flex w-full max-w-2xl flex-col" style={{ gap: `${recipe.stackedGap}px` }}>
+          <input type="text" disabled placeholder={data.name_field_label || 'Name'} className={stackedFieldClass} style={stackedFieldStyle} />
+          <input type="text" disabled placeholder={data.message_field_label || 'Review'} className={stackedFieldClass} style={stackedFieldStyle} />
           <div className="flex justify-center">{buttonEl}</div>
         </div>
       </section>

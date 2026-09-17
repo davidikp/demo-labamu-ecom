@@ -37,9 +37,14 @@ function TestimonialsRenderer({ data, blocks = [], theme, mediaLibrary, onEdit, 
   // every other heading_size step uses — and gets golden's 32px bottom
   // margin (mb-8) instead of the shared mb-6, scoped to this section only.
   const headingAlignClass = data.heading_align === 'center' ? 'text-center' : '';
+  // No `text-gray-900` here (unlike before) — SectionShell already sets an
+  // inherited `color: scheme.text` on this section's own wrapper (see
+  // ui/SectionShell.jsx/resolveSectionScheme), which a hardcoded gray class
+  // would otherwise override and render illegibly dark on a dark-background
+  // theme like Barger.
   const headingClass = isDisplayHeading
-    ? `mb-8 ${DISPLAY_HEADING_CLASS} text-gray-900 ${headingAlignClass}`
-    : `mb-6 font-semibold text-gray-900 ${HEADING_SIZE_CLASS[data.heading_size] ?? HEADING_SIZE_CLASS.medium} ${headingAlignClass}`;
+    ? `mb-8 ${DISPLAY_HEADING_CLASS} ${headingAlignClass}`
+    : `mb-6 font-semibold ${HEADING_SIZE_CLASS[data.heading_size] ?? HEADING_SIZE_CLASS.medium} ${headingAlignClass}`;
   // Only the radius comes from the theme's card recipe — `card_shadow` is a
   // hover-affordance token meant for clickable product cards (see
   // shared/ProductCard.jsx), not a resting testimonial card; applying it
@@ -48,6 +53,17 @@ function TestimonialsRenderer({ data, blocks = [], theme, mediaLibrary, onEdit, 
   const { borderRadius } = themedCardStyle(theme?.layout);
   const nameFirst = data.card_hierarchy === 'name_first';
   const bodyColor = theme?.colors?.text_secondary;
+  // Card fill/border both read off `colors.surface` (node 96:126580's own
+  // `bg-[#262522]`/`border-[#262522]` — one shade up from the section's own
+  // `#1b1916` page background, fill and border the same color so the
+  // border itself is invisible but the card still reads as a raised tile),
+  // not a distinct light "bg-white" panel like this previously hardcoded
+  // regardless of theme (fine for Houzez/Xinear's own white page
+  // background, illegible as a light box on Barger's dark one). Falls back
+  // to the original white/gray-200 when no theme is passed, so a bare unit
+  // test render is unchanged.
+  const cardBg = theme?.colors?.surface;
+  const cardBorder = theme?.colors?.surface ?? theme?.colors?.border;
 
   return (
     <StorefrontContainer as="section" theme={theme}>
@@ -73,18 +89,19 @@ function TestimonialsRenderer({ data, blocks = [], theme, mediaLibrary, onEdit, 
       ) : (
         <div className={`grid gap-6 ${colsClass}`}>
           {quotes.map((b) => {
+            const nameMutedClass = nameFirst ? '' : bodyColor ? 'text-xs font-medium' : 'text-xs font-medium text-gray-500';
             const nameEl = blockCtx ? (
               <EditableText
-                className={nameFirst ? 'mb-3 block text-base font-bold' : 'text-xs font-medium text-gray-500'}
-                style={nameFirst ? { color: theme?.colors?.text_primary } : undefined}
+                className={nameFirst ? `mb-3 block text-base font-bold` : nameMutedClass}
+                style={{ color: nameFirst ? theme?.colors?.text_primary : bodyColor }}
                 value={b.data?.reviewer_name}
                 placeholder={t('sectionBuilder:sections.testimonials.defaultAuthor')}
                 onCommit={(v) => blockCtx.onEdit(b.id, 'reviewer_name', v)}
               />
             ) : (
               <p
-                className={nameFirst ? 'mb-3 text-base font-bold' : 'text-xs font-medium text-gray-500'}
-                style={nameFirst ? { color: theme?.colors?.text_primary } : undefined}
+                className={nameFirst ? 'mb-3 text-base font-bold' : nameMutedClass}
+                style={{ color: nameFirst ? theme?.colors?.text_primary : bodyColor }}
               >
                 {b.data?.reviewer_name || t('sectionBuilder:sections.testimonials.defaultAuthor')}
               </p>
@@ -111,7 +128,10 @@ function TestimonialsRenderer({ data, blocks = [], theme, mediaLibrary, onEdit, 
                 onSelect={blockCtx ? () => blockCtx.onSelect(b.id) : undefined}
                 label={t('sectionBuilder:sections.testimonials.blockLabel', 'Testimonial')}
               >
-                <div className="h-full border border-gray-200 bg-white p-6" style={{ borderRadius }}>
+                <div
+                  className={`h-full border p-6 ${cardBg ? '' : 'border-gray-200 bg-white'}`}
+                  style={{ borderRadius, backgroundColor: cardBg, borderColor: cardBorder }}
+                >
                   <div className="mb-4 flex gap-1" style={{ color: starColor }}>
                     {Array.from({ length: Number(b.data?.star_rating ?? 5) }).map((_, i) => (
                       <Star key={i} size={24} fill={starColor} stroke={starColor} />

@@ -9,9 +9,8 @@ import { createFreshState } from '../section-builder/state/useSectionBuilder';
 import { runDraftAction } from '../section-builder/state/runDraftAction';
 import { ACTIONS } from '../section-builder/state/builderReducer';
 import { slugify, isSlugTaken, createPageId, visibilityBucket, pageUrlFor } from '../section-builder/sections/pageHelpers';
-import { schemaForType } from '../section-builder/sections/index';
-import { defaultsForSchema } from '../section-builder/sections/schemaDefaults';
-import { makeBlock } from '../section-builder/sections/blockHelpers';
+import { POLICY_SYSTEM_TYPES } from '../section-builder/state/defaultTheme';
+import { syncSectionsWithContent } from '../section-builder/sections/pageContentSync';
 import ConfirmDialog from '../section-builder/ui/ConfirmDialog';
 import RichTextEditor from './RichTextEditor';
 import GenerateTextModal from './GenerateTextModal';
@@ -60,64 +59,6 @@ function isForcedSaveFailure(name) {
   return name.trim().toLowerCase().includes('(save fail)');
 }
 
-// Stable id for the single auto-generated `rich_text` section that mirrors
-// this page's Title+Content fields — keyed off the page id so it can be
-// found/replaced idempotently on every save (never duplicated) instead of
-// being regenerated with a random uuid each time.
-function contentSyncSectionId(pageId) {
-  return `${pageId}-content-sync`;
-}
-
-// Splits the RichTextEditor's Tiptap HTML into plain-text paragraphs, one
-// per block-level element (<p>, <h1-6>, <li>, ...). The section-builder's
-// own text-block editor (`EditableText`) is a plain contenteditable field,
-// not an HTML renderer — feeding it raw HTML would show literal "<p>" tags
-// while editing (it only gets interpreted as HTML in the site's read-only
-// render). Stripping tags per-paragraph keeps paragraph breaks (as separate
-// blocks) while avoiding that literal-markup artifact in the editor.
-function splitContentIntoParagraphs(html) {
-  if (!html) return [];
-  const doc = new DOMParser().parseFromString(html, 'text/html');
-  const blocks = Array.from(doc.body.querySelectorAll('p, h1, h2, h3, h4, h5, h6, li'));
-  const source = blocks.length ? blocks : [doc.body];
-  return source
-    .map((el) => el.textContent.trim())
-    .filter(Boolean);
-}
-
-// Builds/refreshes the auto-managed rich_text section mirroring Title
-// (heading block) + Content (one text block per paragraph) so "Edit in
-// Editor" and the section-builder preview show something in sync with the
-// Page Editor fields, not an empty canvas.
-function buildContentSyncSection(pageId, form) {
-  const headingBlock = makeBlock('rich_text', 'heading');
-  headingBlock.data = { ...headingBlock.data, text: form.name };
-
-  const paragraphs = splitContentIntoParagraphs(form.content);
-  const textBlocks = (paragraphs.length ? paragraphs : ['']).map((text) => {
-    const block = makeBlock('rich_text', 'text');
-    block.data = { ...block.data, content: text };
-    return block;
-  });
-
-  return {
-    id: contentSyncSectionId(pageId),
-    type: 'rich_text',
-    data: defaultsForSchema(schemaForType('rich_text')),
-    blocks: [headingBlock, ...textBlocks],
-  };
-}
-
-// Replaces (or inserts) the auto-managed content-sync section within an
-// existing sections array — kept as the FIRST section (matching the
-// natural reading order of a custom page's own Title/Content, ahead of
-// any other authored sections), leaving every other section untouched.
-function syncSectionsWithContent(sections, pageId, form) {
-  const syncId = contentSyncSectionId(pageId);
-  const withoutSync = (sections ?? []).filter((s) => s.id !== syncId);
-  return [buildContentSyncSection(pageId, form), ...withoutSync];
-}
-
 // Duplicate a Page — distinct auto-generated titles ("Copy of X", "Copy of X
 // (2)", ...) instead of always appending the same " copy" suffix, so
 // duplicating the same page repeatedly doesn't produce indistinguishable
@@ -163,6 +104,10 @@ export default function PageEditor() {
   const [draft, setDraft] = useState(() => loadDraft(STORE_ID) ?? createFreshState(STORE_ID));
   const [pageId, setPageId] = useState(routePageId ?? null);
   const existingPage = useMemo(() => draft.pages.find((p) => p.id === pageId) ?? null, [draft, pageId]);
+  // Written-policy pages (Settings > Policies) are reserved: only Content is
+  // editable here — Title/URL handle are locked, matching the reducer guard
+  // in builderReducer.js's UPDATE_PAGE case.
+  const isLockedPolicy = existingPage?.type === 'system' && POLICY_SYSTEM_TYPES.includes(existingPage.systemType);
 
   const initialForm = useMemo(() => {
     const page = existingPage ?? blankPage();
@@ -659,12 +604,13 @@ export default function PageEditor() {
                 <input
                   type="text"
                   value={form.name}
+                  disabled={isLockedPolicy}
                   onChange={(e) => {
                     setName(e.target.value);
                     if (titleError) setTitleError(null);
                   }}
                   placeholder={t('sectionBuilder:onlineStore.pageEditor.titlePlaceholder', 'e.g. About us')}
-                  className={`w-full h-11 rounded-lg border pl-4 pr-4 text-[15px] text-gray-800 outline-none focus:shadow-[0_0_0_3px_rgba(0,107,255,0.12)] ${
+                  className={`w-full h-11 rounded-lg border pl-4 pr-4 text-[15px] text-gray-800 outline-none focus:shadow-[0_0_0_3px_rgba(0,107,255,0.12)] disabled:bg-gray-50 disabled:text-gray-500 ${
                     titleError ? 'border-red-400 focus:border-red-400' : 'border-gray-300 focus:border-[#006BFF]'
                   }`}
                 />
@@ -741,13 +687,14 @@ export default function PageEditor() {
                 <input
                   type="text"
                   value={form.urlHandle}
+                  disabled={isLockedPolicy}
                   onChange={(e) => {
                     if (isCreate) setUrlHandleTouched(true);
                     patchForm({ urlHandle: e.target.value });
                     if (urlHandleError) setUrlHandleError(null);
                   }}
                   onBlur={(e) => patchForm({ urlHandle: slugify(e.target.value) })}
-                  className="flex-1 h-10 px-1.5 text-sm text-gray-800 outline-none"
+                  className="flex-1 h-10 px-1.5 text-sm text-gray-800 outline-none disabled:bg-gray-50 disabled:text-gray-500"
                 />
               </div>
               {urlHandleError && <p className="mt-1 text-xs text-red-600">{urlHandleError}</p>}
